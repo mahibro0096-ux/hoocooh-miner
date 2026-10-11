@@ -129,11 +129,16 @@ module.exports = async (req, res) => {
         return;
       }
 
-      // Mark challenge as used immediately to prevent replay attacks
-      await challengesCol.updateOne(
-        { _id: challenge._id },
+      // Mark challenge as used ATOMICALLY (only if still unused). Two parallel verify calls for the same
+      // solved puzzle used to both pass and each receive a captcha token (1 puzzle = 2 reward claims).
+      const burnChallengeRes = await challengesCol.updateOne(
+        { _id: challenge._id, used: false },
         { $set: { used: true, verifiedAt: now } }
       );
+      if (!burnChallengeRes || burnChallengeRes.modifiedCount === 0) {
+        res.status(400).json({ error: "Invalid or expired challenge. Please try again." });
+        return;
+      }
 
       if (now - challenge.createdAt > CHALLENGE_EXPIRY_MS) {
         res.status(400).json({ error: "Challenge expired. Please try again." });
