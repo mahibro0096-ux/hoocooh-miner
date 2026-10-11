@@ -1076,22 +1076,73 @@ module.exports = async (req, res) => {
         }
 
         const allUsers = await usersCol.find({}, { projection: { telegramId: 1 } }).toArray();
-        const total = allUsers.length;
 
-        // Perform async broadcast in batches
+        // 1) DEDUPE recipients: the same Telegram person can exist as several user documents
+        //    (string vs number telegramId, merged/duplicate accounts). Send to each person ONCE.
+        const recipientSet = new Set();
+        for (const u of allUsers) {
+          const tid = u && u.telegramId != null ? String(u.telegramId).trim() : "";
+          if (tid) recipientSet.add(tid);
+        }
+        const recipients = Array.from(recipientSet);
+        const total = recipients.length;
+
+        // 2) PER-RECIPIENT DELIVERY LOG: a broadcast id is derived from the exact content. Before sending to
+        //    a person we atomically claim (broadcastId + telegramId) with a unique index. If the admin clicks
+        //    twice, the request is retried, or Vercel times out and the admin sends the same broadcast again,
+        //    people who already received it are skipped - nobody gets the same message twice.
+        //    Claims auto-expire after 6 hours (TTL), so the same text can be broadcast again later.
+        const cleanMsg = message.trim();
+        const cleanPhoto = (photoUrl || "").trim();
+        const cleanBtnText = (buttonText || "").trim();
+        const cleanBtnUrl = (buttonUrl || "").trim();
+        const broadcastId = crypto
+          .createHash("sha1")
+          .update([cleanMsg, cleanPhoto, cleanBtnText, cleanBtnUrl].join("\u0001"))
+          .digest("hex");
+
+        const deliveriesCol = db.collection("broadcast_deliveries");
+        try {
+          await deliveriesCol.createIndex({ broadcastId: 1, telegramId: 1 }, { unique: true });
+          await deliveriesCol.createIndex({ createdAt: 1 }, { expireAfterSeconds: 6 * 60 * 60 });
+        } catch (idxErr) {
+          console.warn("broadcast_deliveries index warning:", idxErr.message);
+        }
+
         let sentCount = 0;
         let failCount = 0;
+        let skippedCount = 0;
 
-        for (const u of allUsers) {
-          const tid = u.telegramId;
-          if (!tid) continue;
-          const ok = await sendTelegramMsg(botToken, tid, message.trim(), {
-            photoUrl: (photoUrl || "").trim() || null,
-            buttonText: (buttonText || "").trim() || null,
-            buttonUrl: (buttonUrl || "").trim() || null
+        for (const tid of recipients) {
+          let claimed = false;
+          try {
+            await deliveriesCol.insertOne({ broadcastId, telegramId: tid, createdAt: new Date() });
+            claimed = true;
+          } catch (claimErr) {
+            if (claimErr && claimErr.code === 11000) {
+              skippedCount++; // already sent (or being sent) for this exact broadcast
+              continue;
+            }
+            // Any other DB error: do not risk a duplicate, skip this person
+            failCount++;
+            continue;
+          }
+
+          const ok = await sendTelegramMsg(botToken, tid, cleanMsg, {
+            photoUrl: cleanPhoto || null,
+            buttonText: cleanBtnText || null,
+            buttonUrl: cleanBtnUrl || null
           });
-          if (ok) sentCount++;
-          else failCount++;
+
+          if (ok) {
+            sentCount++;
+          } else {
+            failCount++;
+            // Release the claim so a re-run can retry this person (e.g. temporary network error)
+            if (claimed) {
+              try { await deliveriesCol.deleteOne({ broadcastId, telegramId: tid }); } catch (e) {}
+            }
+          }
 
           // Respect Telegram 30 msgs/sec limits: 35ms pause
           await new Promise(r => setTimeout(r, 35));
@@ -1099,9 +1150,10 @@ module.exports = async (req, res) => {
 
         res.status(200).json({
           ok: true,
-          message: `Broadcast finished: ${sentCount} sent, ${failCount} failed.`,
+          message: `Broadcast finished: ${sentCount} sent, ${failCount} failed, ${skippedCount} skipped (already received).`,
           sentCount,
           failCount,
+          skippedCount,
           totalUsers: total
         });
         return;
