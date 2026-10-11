@@ -188,15 +188,23 @@ module.exports = async (req, res) => {
       const newTickets = Number(user.spinTickets || 0) + claimable;
       const newClaimed = alreadyClaimed + claimable;
 
-      await usersCol.updateOne(
-        { _id: user._id },
+      // ATOMIC compare-and-set: only succeeds if claimedRefTickets is still exactly what we read.
+      // A concurrent/duplicate request sees a changed value and gets modifiedCount 0 -> no double tickets.
+      const claimRefRes = await usersCol.updateOne(
         {
-          $set: {
-            spinTickets: newTickets,
-            claimedRefTickets: newClaimed
-          }
+          _id: user._id,
+          claimedRefTickets: (user.claimedRefTickets == null ? null : user.claimedRefTickets)
+        },
+        {
+          $inc: { spinTickets: claimable },
+          $set: { claimedRefTickets: newClaimed }
         }
       );
+
+      if (!claimRefRes || claimRefRes.modifiedCount === 0) {
+        res.status(409).json({ error: "Tickets already claimed or claim in progress. Please refresh." });
+        return;
+      }
 
       res.status(200).json({
         ok: true,
@@ -264,27 +272,42 @@ module.exports = async (req, res) => {
 
       spinWatchedToday += 1;
       const newTickets = Number(user.spinTickets || 0) + 1;
-      const totalAds = Number(user.totalAdsWatched || 0) + 1;
 
       const isCompleted = (spinWatchedToday >= MAX_SPIN_ADS_PER_DAY);
-      const updatePayload = {
-        spinTickets: newTickets,
+      const setPayload = {
         spinAdsWatchedToday: spinWatchedToday,
         spinAdsCycleStartedAt: spinCycleStart,
-        totalAdsWatched: totalAds,
         lastSpinAdWatchedAt: now,
         lastActiveAt: new Date()
       };
 
       if (isCompleted) {
-        updatePayload.spinCycleCompletedAt = now;
-        updatePayload.spinReminderSent = false;
+        setPayload.spinCycleCompletedAt = now;
+        setPayload.spinReminderSent = false;
       }
 
-      await usersCol.updateOne(
-        { _id: user._id },
-        { $set: updatePayload }
+      // ATOMIC compare-and-set: the claim only succeeds if lastSpinAdWatchedAt is still exactly the value
+      // we read at the start. Two simultaneous requests for ONE ad both read the same old value, but only
+      // the first write changes it - the second matches 0 documents and gets NO ticket.
+      const claimSpinRes = await usersCol.updateOne(
+        {
+          _id: user._id,
+          lastSpinAdWatchedAt: (user.lastSpinAdWatchedAt == null ? null : user.lastSpinAdWatchedAt)
+        },
+        {
+          $inc: { spinTickets: 1, totalAdsWatched: 1 },
+          $set: setPayload
+        }
       );
+
+      if (!claimSpinRes || claimSpinRes.modifiedCount === 0) {
+        res.status(409).json({
+          error: "This ad was already counted. Please wait a moment.",
+          duplicate: true,
+          correctTickets: Number(user.spinTickets || 0)
+        });
+        return;
+      }
 
       res.status(200).json({
         ok: true,
@@ -374,24 +397,27 @@ module.exports = async (req, res) => {
       }
     }
 
-    // Atomically increment ad watch count and credit reward with daily limit guard
-    // This makes it impossible for concurrent spam requests to claim duplicate rewards
+    // ATOMIC compare-and-set claim (one ad = exactly one reward, even with double-tap / duplicate / parallel requests):
+    // The filter requires lastWatchAdAt to be EXACTLY the value read at the top of this request.
+    // Every successful claim overwrites lastWatchAdAt with `now`, so a second request that read the same
+    // old value matches 0 documents and gets no reward. Counts are $set from the fresh read (guarded by
+    // the same compare-and-set), which also makes the 24h cycle reset correct.
+    const newWatched = watchedToday + 1;
+    const newEarned = earnedToday + currentAdReward;
+
     const claimAdRes = await usersCol.findOneAndUpdate(
       {
         _id: user._id,
-        $or: [
-          { adsCycleStartedAt: { $ne: cycleStart } },
-          { adsWatchedToday: { $lt: MAX_ADS_PER_DAY } }
-        ]
+        lastWatchAdAt: (user.lastWatchAdAt == null ? null : user.lastWatchAdAt)
       },
       {
         $inc: {
           balance: currentAdReward,
-          adsWatchedToday: 1,
-          adsEarnedToday: currentAdReward,
           totalAdsWatched: 1
         },
         $set: {
+          adsWatchedToday: newWatched,
+          adsEarnedToday: newEarned,
           adsCycleStartedAt: cycleStart,
           lastWatchAdAt: now,
           lastActiveAt: new Date()
@@ -400,11 +426,14 @@ module.exports = async (req, res) => {
       { returnDocument: "after" }
     );
 
-    const updatedUser = claimAdRes && (claimAdRes.value || claimAdRes);
+    const updatedUser = claimAdRes && (claimAdRes.value || (claimAdRes._id ? claimAdRes : null));
     if (!updatedUser) {
-      res.status(400).json({
-        error: "Daily limit of 10 ads reached! Next ads available in 24 hours.",
-        maxAds: MAX_ADS_PER_DAY
+      // Duplicate / parallel request for the same ad: reward was already given by the first request.
+      // NOT flagged - this is not fraud, just a duplicate call.
+      res.status(409).json({
+        error: "This ad reward was already credited.",
+        duplicate: true,
+        correctBalance: Number(user.balance || 0)
       });
       return;
     }
