@@ -992,6 +992,16 @@
     setTimeout(function(){ toastEl.classList.remove("show"); }, 3000);
   }
 
+  // Safe HTML escaper (used when injecting user-controlled text into HTML / inline handlers)
+  function escapeHtml(str) {
+    return String(str == null ? "" : str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
   window.copyToClipboard = function(text, successMsg) {
     if (!text || text === "N/A") {
       showToast("Nothing to copy");
@@ -1800,7 +1810,7 @@
             <div class="s-lbl">Multi-Acc Strikes</div>
             <div class="s-val" style="color: ${u.deviceViolationsCount > 0 ? '#ef4444' : 'inherit'};">${u.deviceViolationsCount || 0}</div>
           </div>
-          <div class="u-stat-box" style="cursor: pointer; border: 1px solid var(--accent); background: rgba(0,255,200,0.06);" onclick="viewUserReferralsModal('${u.telegramId}', '${escapeHtml(u.name)}')" title="Click to view all invited friends">
+          <div class="u-stat-box" style="cursor: pointer; border: 1px solid var(--accent); background: rgba(0,255,200,0.06);" onclick="viewUserReferralsModal('${u.telegramId}', ${escapeHtml(JSON.stringify(u.name || ''))})" title="Click to view all invited friends">
             <div class="s-lbl" style="color: var(--accent);">Invited Friends 👥</div>
             <div class="s-val accent" style="display: flex; align-items: center; justify-content: space-between;">
               <span>${u.recruitsCount}</span>
