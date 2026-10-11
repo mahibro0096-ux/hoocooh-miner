@@ -432,6 +432,56 @@ module.exports = async (req, res) => {
         return;
       }
 
+      // 3a. Get Referrals of a Specific User
+      if (action === "user_referrals") {
+        const uid = String(req.query.userId || req.query.uid || req.query.telegramId || "").trim();
+        if (!uid) {
+          res.status(400).json({ error: "User ID required" });
+          return;
+        }
+
+        const numId = Number(uid);
+        const parentUser = await usersCol.findOne({
+          $or: [{ telegramId: uid }, ...(numId ? [{ telegramId: numId }] : [])]
+        });
+
+        const referrals = await usersCol.find({
+          $or: [
+            { referredBy: uid },
+            ...(numId ? [{ referredBy: String(numId) }, { referredBy: numId }] : [])
+          ]
+        }).sort({ createdAt: -1 }).toArray();
+
+        const mappedRefs = referrals.map(u => ({
+          id: String(u._id),
+          telegramId: String(u.telegramId),
+          name: (u.firstName || "") + (u.lastName ? " " + u.lastName : "") || "Miner",
+          username: u.username ? ("@" + u.username) : "N/A",
+          photoUrl: u.photoUrl || "",
+          balance: Number(u.balance || 0),
+          minerLevel: u.minerLevel || 1,
+          totalAdsWatched: Number(u.totalAdsWatched || 0),
+          isBanned: !!u.isBanned,
+          isIdentityVerified: !!u.isIdentityVerified,
+          referralRewarded: !!u.referralRewarded,
+          createdAt: u.createdAt || null
+        }));
+
+        res.status(200).json({
+          ok: true,
+          user: parentUser ? {
+            telegramId: String(parentUser.telegramId),
+            name: (parentUser.firstName || "") + (parentUser.lastName ? " " + parentUser.lastName : "") || "Miner",
+            username: parentUser.username ? ("@" + parentUser.username) : "N/A",
+            recruitsCount: Number(parentUser.recruitsCount || 0),
+            refEarnings: Number(parentUser.refEarnings || 0)
+          } : null,
+          totalReferrals: mappedRefs.length,
+          referrals: mappedRefs
+        });
+        return;
+      }
+
       // 3b. High Risk Users List (Fraud Risk Score 80% - 100%)
       if (action === "high_risk_users") {
         const candidates = await usersCol.find({
