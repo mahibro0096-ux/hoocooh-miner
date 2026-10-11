@@ -659,11 +659,34 @@ module.exports = async (req, res) => {
         let autoPaySuccess = false;
         let autoPayMsg = "";
 
+        // ATOMIC CLAIM BEFORE PAYING: move PENDING -> PROCESSING first. Only ONE request can win this.
+        // Previously the real TON payout was sent first and the status changed afterwards, so a double
+        // click / two admins / a retry could send the same payout twice.
+        const claimPayoutRes = await withdrawalsCol.updateOne(
+          { ...wQuery, status: "PENDING" },
+          { $set: { status: "PROCESSING", processingAt: now } }
+        );
+        if (!claimPayoutRes || claimPayoutRes.modifiedCount === 0) {
+          res.status(400).json({ error: "Withdrawal has already been processed or is being processed right now." });
+          return;
+        }
+        const releasePayoutClaim = async () => {
+          try { await withdrawalsCol.updateOne({ ...wQuery, status: "PROCESSING" }, { $set: { status: "PENDING" }, $unset: { processingAt: "" } }); } catch (e) {}
+        };
+
         // If no manual TxHash provided, try automated TON payout dispatcher
         if (!finalTx) {
-          const autoPayRes = await dispatchTonPayout(w.walletAddress, tonVal, `HOOCOOH Payout UID ${w.telegramId}`);
+          let autoPayRes;
+          try {
+            autoPayRes = await dispatchTonPayout(w.walletAddress, tonVal, `HOOCOOH Payout UID ${w.telegramId}`);
+          } catch (payErr) {
+            await releasePayoutClaim();
+            res.status(500).json({ error: `Auto-pay error: ${payErr && payErr.message ? payErr.message : payErr}` });
+            return;
+          }
           if (autoPayRes.isConfigured) {
             if (!autoPayRes.success) {
+              await releasePayoutClaim();
               res.status(400).json({
                 error: `Auto-pay halted: ${autoPayRes.message || autoPayRes.error}`
               });
@@ -678,9 +701,9 @@ module.exports = async (req, res) => {
           }
         }
 
-        // Atomically update withdrawal ONLY if it is still PENDING
+        // Finalize: PROCESSING (claimed above by this request) -> APPROVED
         const approveUpdateRes = await withdrawalsCol.updateOne(
-          { ...wQuery, status: "PENDING" },
+          { ...wQuery, status: "PROCESSING" },
           {
             $set: {
               status: "APPROVED",
