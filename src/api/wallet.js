@@ -62,6 +62,11 @@ module.exports = async (req, res) => {
       return;
     }
 
+    if (user.accountLocked) {
+      res.status(403).json({ error: "Your account is temporarily locked for security review. Please contact support." });
+      return;
+    }
+
     // 1. GET: Fetch wallet summary and transaction history
     if (req.method === "GET") {
       const txs = await withdrawalsCol

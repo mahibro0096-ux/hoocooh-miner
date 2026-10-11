@@ -422,6 +422,9 @@ module.exports = async (req, res) => {
           penaltyNotice: u.penaltyNotice || "",
           registeredIp: u.registeredIp || u.lastIp || "N/A",
           boundWalletAddress: u.boundWalletAddress || null,
+          accountLocked: !!u.accountLocked,
+          velocityFlaggedAt: u.velocityFlaggedAt || null,
+          velocityFlaggedReason: u.velocityFlaggedReason || "",
           bannedAt: u.bannedAt || null,
           dataPurged: !!u.dataPurged,
           purgedAt: u.purgedAt || null,
@@ -524,6 +527,9 @@ module.exports = async (req, res) => {
           penaltyNotice: u.penaltyNotice || "",
           registeredIp: u.registeredIp || u.lastIp || "N/A",
           boundWalletAddress: u.boundWalletAddress || null,
+          accountLocked: !!u.accountLocked,
+          velocityFlaggedAt: u.velocityFlaggedAt || null,
+          velocityFlaggedReason: u.velocityFlaggedReason || "",
           bannedAt: u.bannedAt || null,
           dataPurged: !!u.dataPurged,
           purgedAt: u.purgedAt || null,
@@ -812,7 +818,8 @@ module.exports = async (req, res) => {
             $set: {
               status: "REJECTED",
               reason: rejReason,
-              rejectedAt: now
+              rejectedAt: now,
+              rejectedAtDate: new Date()
             }
           }
         );
@@ -986,6 +993,9 @@ module.exports = async (req, res) => {
             $set: {
               isBanned: false,
               banReason: null,
+              accountLocked: false,
+              velocityFlaggedAt: null,
+              velocityFlaggedReason: null,
               unbannedAt: Date.now(),
               bannedAt: null,
               bannedAtDate: null,

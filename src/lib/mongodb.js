@@ -31,18 +31,29 @@ async function ensureIndexes(db) {
     const codesCol = db.collection("user_verification_codes");
     const withdrawalsCol = db.collection("withdrawals");
     const tasksCol = db.collection("tasks");
+    const ipVelocityCol = db.collection("ipSignupVelocity");
+    const ipRegistryCol = db.collection("ipRegistry");
+    const broadcastCol = db.collection("broadcast_deliveries");
+    const adminStateCol = db.collection("adminState");
 
-    // 1. Users: fast query on telegramId, leaderboard sorting & 60-day (2 months = 5,184,000s) Inactivity TTL
+    // 1. Users: fast query on telegramId, leaderboard sorting & 90-day (7,776,000s) Inactivity TTL + 60-day (5,184,000s) Banned TTL
     usersCol.createIndex({ telegramId: 1 }).catch(() => {});
     usersCol.createIndex({ totalMinedCoins: -1, minerLevel: -1 }).catch(() => {});
     usersCol.createIndex({ recruitsCount: -1 }).catch(() => {});
+    usersCol.createIndex({ referredBy: 1 }).catch(() => {});
+    usersCol.createIndex({ isBanned: 1 }).catch(() => {});
     await safeCreateTTLIndex(
       usersCol,
       { lastActiveAt: 1 },
-      { expireAfterSeconds: 60 * 24 * 60 * 60, name: "ttl_users_inactivity_60d" }
+      { expireAfterSeconds: 90 * 24 * 60 * 60, name: "ttl_users_inactivity_90d" }
+    );
+    await safeCreateTTLIndex(
+      usersCol,
+      { bannedAtDate: 1 },
+      { expireAfterSeconds: 60 * 24 * 60 * 60, partialFilterExpression: { isBanned: true }, name: "ttl_users_banned_60d" }
     );
 
-    // 2. Captcha Tokens: 10-Minute TTL to prevent storage explosion on 100k users
+    // 2. Captcha Tokens & Challenges: 10-Minute TTL to prevent storage explosion
     await safeCreateTTLIndex(
       tokensCol,
       { createdAtDate: 1 },
@@ -50,7 +61,6 @@ async function ensureIndexes(db) {
     );
     tokensCol.createIndex({ token: 1 }).catch(() => {});
 
-    // 3. Captcha Challenges: 10-Minute TTL
     await safeCreateTTLIndex(
       challengesCol,
       { createdAtDate: 1 },
@@ -58,7 +68,7 @@ async function ensureIndexes(db) {
     );
     challengesCol.createIndex({ challengeId: 1 }).catch(() => {});
 
-    // 4. Verification Codes: 1-Hour TTL
+    // 3. Verification Codes: 1-Hour TTL
     await safeCreateTTLIndex(
       codesCol,
       { createdAtDate: 1 },
@@ -66,11 +76,41 @@ async function ensureIndexes(db) {
     );
     codesCol.createIndex({ userId: 1, used: 1 }).catch(() => {});
 
-    // 5. Withdrawals Collection Indexes
+    // 4. Withdrawals: status indexes + 90-day (7,776,000s) Rejected TTL (Approved & Pending NEVER deleted)
     withdrawalsCol.createIndex({ telegramId: 1, status: 1 }).catch(() => {});
     withdrawalsCol.createIndex({ status: 1, createdAt: -1 }).catch(() => {});
+    await safeCreateTTLIndex(
+      withdrawalsCol,
+      { rejectedAtDate: 1 },
+      { expireAfterSeconds: 90 * 24 * 60 * 60, partialFilterExpression: { status: "REJECTED" }, name: "ttl_withdrawals_rejected_90d" }
+    );
 
-    // 6. Tasks Collection Indexes
+    // 5. IP Signup Velocity (24h TTL) & Device Registry (120d TTL) — NEWTUBE-TON architecture
+    await safeCreateTTLIndex(
+      ipVelocityCol,
+      { updatedAt: 1 },
+      { expireAfterSeconds: 24 * 60 * 60, name: "ttl_ip_signup_velocity_24h" }
+    );
+    await safeCreateTTLIndex(
+      ipRegistryCol,
+      { lastSeenAt: 1 },
+      { expireAfterSeconds: 120 * 24 * 60 * 60, name: "ttl_ip_registry_120d" }
+    );
+    ipRegistryCol.createIndex({ userId: 1 }).catch(() => {});
+
+    // 6. Broadcast Deliveries (30d TTL) & Transient Admin State (1h TTL)
+    await safeCreateTTLIndex(
+      broadcastCol,
+      { createdAt: 1 },
+      { expireAfterSeconds: 30 * 24 * 60 * 60, name: "ttl_broadcast_30d" }
+    );
+    await safeCreateTTLIndex(
+      adminStateCol,
+      { updatedAt: 1 },
+      { expireAfterSeconds: 3600, name: "ttl_admin_state_1h" }
+    );
+
+    // 7. Tasks Collection Indexes
     tasksCol.createIndex({ status: 1, createdAt: -1 }).catch(() => {});
 
   } catch (err) {
