@@ -6,7 +6,7 @@
   ],
   "routes": [
     {
-      "src": "/api/([^/]+?)(?:\\.js)?$",
+      "src": "/api/(.+?)(?:\\.js)?$",
       "dest": "/api/$1.js",
       "headers": {
         "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate"
