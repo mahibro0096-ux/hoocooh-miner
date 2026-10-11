@@ -9971,7 +9971,7 @@
   };
 
   // ========================================================
-  // ADSGRAM STARTUP TASK POPUP (Block ID: task-53272)
+  // ADSGRAM STARTUP TASK POPUP (Block ID: task-53272)  -- CURRENTLY DISABLED (see ADSGRAM_STARTUP_TASK_ENABLED below)
   // EVERY time a user opens the mini app: as soon as the loading screen is
   // finished (user lands on the home page) the AdsGram task card pops up
   // ONCE for that app-open (state is in memory only, so it shows again on
@@ -10098,8 +10098,12 @@
     })();
   }
 
-  // Start right now (app open) - not after login/verification/terms
-  initAdsgramStartupTask();
+  // The Task popup (task-53272) is kept in the code but currently DISABLED.
+  // Set ADSGRAM_STARTUP_TASK_ENABLED = true to turn it on again.
+  var ADSGRAM_STARTUP_TASK_ENABLED = false;
+  if (ADSGRAM_STARTUP_TASK_ENABLED) {
+    initAdsgramStartupTask();
+  }
 
   // ========================================================
   // REAL ADSGRAM INTEGRATION
@@ -10211,6 +10215,79 @@
       }
     });
   }
+
+  // ========================================================
+  // ADSGRAM STARTUP INTERSTITIAL (int ad)
+  // EVERY time a user opens the mini app: as soon as the loading screen is
+  // finished (user lands on the home page) the AdsGram interstitial plays
+  // ONCE for that app-open (state is in memory only, so it plays again on
+  // the next app-open).
+  // - Silent: no toast, no reward, no side effects on any other feature
+  // - Protected by AdBarrier (never overlaps another ad)
+  // - If the SDK is missing / no ad is available / user closes it, the app
+  //   simply continues normally.
+  // Change ADSGRAM_STARTUP_INT_BLOCK_ID to use a different interstitial block.
+  // ========================================================
+  var ADSGRAM_STARTUP_INT_BLOCK_ID = "int-52852";
+  var adsgramStartupIntStarted = false;
+
+  function appLoadingScreenFinished() {
+    var ls = document.getElementById("appLoadingScreen");
+    return !ls || window.getComputedStyle(ls).display === "none";
+  }
+
+  function playAdsgramStartupInterstitial() {
+    if (!window.AdBarrier.acquire("adsgram")) {
+      console.warn("[AdsgramStartup] Skipped: another ad is currently active");
+      return;
+    }
+    var controller = getAdsgramController(ADSGRAM_STARTUP_INT_BLOCK_ID);
+    if (!controller) {
+      window.AdBarrier.release("adsgram");
+      console.warn("[AdsgramStartup] Skipped: Adsgram controller unavailable");
+      return;
+    }
+    var startedAt = Date.now();
+    try {
+      controller.show().then(function(result) {
+        window.AdBarrier.release("adsgram");
+        console.log("[AdsgramStartup] Interstitial finished. blockId:", ADSGRAM_STARTUP_INT_BLOCK_ID, "elapsedMs:", Date.now() - startedAt, result);
+      }).catch(function(err) {
+        window.AdBarrier.release("adsgram");
+        console.log("[AdsgramStartup] Interstitial closed / not shown:", err);
+      });
+    } catch (e) {
+      window.AdBarrier.release("adsgram");
+      console.warn("[AdsgramStartup] show() error:", e);
+    }
+  }
+
+  function initAdsgramStartupInterstitial() {
+    if (adsgramStartupIntStarted) return;
+    adsgramStartupIntStarted = true;
+
+    var totalWaitMs = 0;
+    var sdkWaitMs = 0;
+    (function waitForHome() {
+      if (appLoadingScreenFinished()) {
+        if (window.Adsgram) {
+          playAdsgramStartupInterstitial();
+          return;
+        }
+        sdkWaitMs += 300;
+        if (sdkWaitMs > 10000) {
+          console.warn("[AdsgramStartup] Adsgram SDK not available, skipping startup interstitial");
+          return;
+        }
+      }
+      totalWaitMs += 300;
+      if (totalWaitMs > 90000) return; // loading never finished -> give up
+      setTimeout(waitForHome, 300);
+    })();
+  }
+
+  // Start at app open; it waits by itself until the loading screen is finished
+  initAdsgramStartupInterstitial();
 
   function updateWatchSheetView1() {
     var watched = Number(user.adsWatchedToday) || 0;
