@@ -238,12 +238,6 @@ module.exports = async (req, res) => {
           return;
         }
 
-        const userCompleted = (user && user.completedTasks) || [];
-        if (userCompleted.includes(String(taskId))) {
-          res.status(400).json({ error: "Task already claimed" });
-          return;
-        }
-
         let objId;
         try { objId = new ObjectId(taskId); } catch(e) { objId = null; }
         const taskQuery = objId ? { _id: objId } : { _id: taskId };
@@ -252,6 +246,31 @@ module.exports = async (req, res) => {
         if (!taskObj) {
           res.status(404).json({ error: "Task not found" });
           return;
+        }
+
+        // CANONICAL task key: always the database _id as a string (lowercase hex).
+        // MongoDB accepts the same ObjectId in different spellings (e.g. UPPERCASE hex), so using the
+        // raw client-sent taskId as the "already claimed" key let one task be claimed again and again.
+        const taskKey = String(taskObj._id);
+
+        const userCompleted = (user && user.completedTasks) || [];
+        if (userCompleted.includes(taskKey) || userCompleted.includes(String(taskId))) {
+          res.status(400).json({ error: "Task already claimed" });
+          return;
+        }
+
+        // Only live, paid tasks can be claimed (same rule the task list uses). Unpaid / declined /
+        // finished tasks could not be claimed by normal users, and must not be claimable by ID either.
+        if (taskObj.status !== "active") {
+          res.status(400).json({ error: "This task is not active anymore." });
+          return;
+        }
+        {
+          const doneArr = taskObj.completedBy || [];
+          if (!taskObj.isUnlimited && taskObj.targetCount && doneArr.length >= taskObj.targetCount && !doneArr.includes(telegramId)) {
+            res.status(400).json({ error: "This task has reached its user limit." });
+            return;
+          }
         }
 
         // Verified task check: User must actually have joined the Telegram channel/group!
@@ -312,11 +331,11 @@ module.exports = async (req, res) => {
         const claimTaskRes = await usersCol.updateOne(
           {
             _id: user._id,
-            completedTasks: { $ne: String(taskId) }
+            completedTasks: { $nin: [taskKey, String(taskId)] }
           },
           {
             $inc: { balance: 10 },
-            $push: { completedTasks: String(taskId) },
+            $push: { completedTasks: taskKey },
             $set: { lastActiveAt: new Date() }
           }
         );
