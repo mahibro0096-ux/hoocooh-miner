@@ -117,44 +117,36 @@ module.exports = async (req, res) => {
           return;
         }
 
-        const tokensCol = db.collection("captcha_tokens");
-        const validToken = await tokensCol.findOne({
-          token: cleanCaptchaToken,
-          userId: { $in: [telegramId, Number(telegramId)] },
-          used: false
-        });
-
-        if (!validToken) {
-          res.status(403).json({ error: "Security verification invalid or expired. Please complete verification again." });
-          return;
-        }
-
-        const tokenAge = Date.now() - (validToken.createdAt || 0);
-        if (tokenAge > 180000) {
-          await tokensCol.updateOne({ _id: validToken._id }, { $set: { used: true } });
-          res.status(403).json({ error: "Security verification expired. Please complete verification again." });
-          return;
-        }
-
-        // Burn token immediately to prevent replay
-        await tokensCol.updateOne({ _id: validToken._id }, { $set: { used: true, usedAt: Date.now() } });
-
         const numAmount = parseInt(amount, 10);
         if (isNaN(numAmount) || numAmount < 1000) {
           res.status(400).json({ error: "Minimum withdrawal amount is 1,000 HOOCOOH Coins" });
           return;
         }
 
-        const currentBal = Number(user.balance || 0);
-        if (currentBal < numAmount) {
-          res.status(400).json({
-            error: `Insufficient balance! Current: ${currentBal.toLocaleString()} Coins. Requested: ${numAmount.toLocaleString()} Coins.`
-          });
+        const now = Date.now();
+        const tokensCol = db.collection("captcha_tokens");
+
+        // Atomically invalidate captcha token to prevent concurrent replay
+        const tokenResult = await tokensCol.findOneAndUpdate(
+          {
+            token: cleanCaptchaToken,
+            userId: { $in: [telegramId, Number(telegramId)] },
+            used: false,
+            createdAt: { $gte: now - 180000 } // Valid for 3 minutes
+          },
+          {
+            $set: { used: true, usedAt: now }
+          },
+          { returnDocument: "before" }
+        );
+
+        const validToken = tokenResult && (tokenResult.value || tokenResult);
+        if (!validToken) {
+          res.status(403).json({ error: "Security verification invalid, already used, or expired. Please complete verification again." });
           return;
         }
 
         let cleanAddress = "";
-        const now = Date.now();
 
         // Wallet Lock Logic:
         // Once a wallet address is used, it is permanently locked to the account.
@@ -194,16 +186,34 @@ module.exports = async (req, res) => {
           }
         }
 
+        // Atomically verify balance and deduct Coins in a single atomic operation
+        // This prevents race condition double-spending via simultaneous requests
+        const deductResult = await usersCol.findOneAndUpdate(
+          {
+            _id: user._id,
+            balance: { $gte: numAmount }
+          },
+          {
+            $inc: { balance: -numAmount },
+            $set: { lastActiveAt: new Date() }
+          },
+          { returnDocument: "after" }
+        );
+
+        const updatedUser = deductResult && (deductResult.value || deductResult);
+        if (!updatedUser) {
+          const freshUser = await usersCol.findOne({ _id: user._id });
+          const freshBal = Number(freshUser ? freshUser.balance : 0);
+          res.status(400).json({
+            error: `Insufficient balance! Current: ${freshBal.toLocaleString()} Coins. Requested: ${numAmount.toLocaleString()} Coins.`
+          });
+          return;
+        }
+
+        const newBal = Number(updatedUser.balance || 0);
         const activeCoinRate = await getCoinRate(db);
         const usdtVal = Number(calculateCoinsUsdt(numAmount, activeCoinRate).toFixed(4));
         const tonVal = Number((usdtVal * TON_PER_USD).toFixed(6));
-        const newBal = currentBal - numAmount;
-
-        // Deduct from user balance
-        await usersCol.updateOne(
-          { _id: user._id },
-          { $set: { balance: newBal, lastActiveAt: new Date() } }
-        );
 
         // Record withdrawal transaction in MongoDB with PENDING status
         const txDoc = {

@@ -13,11 +13,26 @@ module.exports = async (req, res) => {
     return;
   }
 
-  // 0. CRON JOB TRIGGER (compatible with cron-job.org & external services)
+  // 0. CRON JOB TRIGGER (compatible with Vercel Cron, cron-job.org & external services)
   // Check all pending task deposits on-chain and send 2-hour mining reminders
   const isCron = (req.query && (req.query.cron === "check_deposits" || req.query.cron === "deposit" || req.query.cron === "true" || req.query.cron === "mining_reminder" || req.query.cron === "mining")) ||
                  (req.headers && (req.headers["x-cron-check"] === "check_deposits" || (req.headers["user-agent"] && req.headers["user-agent"].includes("cron-job.org"))));
   if (isCron) {
+    // Authenticate cron trigger if CRON_SECRET or ADMIN_SECRET_KEY is configured
+    const cronSecret = process.env.CRON_SECRET || process.env.ADMIN_SECRET_KEY;
+    if (cronSecret) {
+      const authHeader = req.headers["authorization"] || "";
+      const cronKeyHeader = req.headers["x-cron-secret"] || req.headers["x-admin-key"] || "";
+      const queryKey = req.query ? (req.query.secret || req.query.key || req.query.adminKey || "") : "";
+      const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : authHeader.trim();
+      const providedKey = (cronKeyHeader || queryKey || bearerToken).trim();
+
+      if (providedKey !== cronSecret.trim()) {
+        res.status(401).json({ error: "Unauthorized cron trigger: Invalid or missing cron secret" });
+        return;
+      }
+    }
+
     try {
       const db = await getDb();
       const host = req.headers["x-forwarded-host"] || req.headers.host;

@@ -4,6 +4,8 @@ const { validateInitData } = require("../lib/telegramAuth");
 const { dispatchTonPayout } = require("../lib/tonAutoPay");
 const { purgeExpiredBannedUsers } = require("../lib/userHelper");
 
+const crypto = require("crypto");
+
 const ADMIN_SECRET = process.env.ADMIN_SECRET_KEY || "hoocooh_admin_2026";
 
 async function getAdminTelegramIds(db) {
@@ -47,7 +49,12 @@ function checkAdminAuth(req) {
   const bodyKey = req.body && req.body.adminKey;
   const queryKey = req.query && req.query.adminKey;
   const key = headerKey || bodyKey || queryKey;
-  return key && String(key).trim() === String(ADMIN_SECRET).trim();
+  if (!key) return false;
+
+  const provided = Buffer.from(String(key).trim());
+  const expected = Buffer.from(String(ADMIN_SECRET).trim());
+  if (provided.length !== expected.length) return false;
+  return crypto.timingSafeEqual(provided, expected);
 }
 
 async function sendTelegramMsg(botToken, chatId, text, options = {}) {
@@ -376,13 +383,15 @@ module.exports = async (req, res) => {
 
         const cleanUsername = q.replace(/^@/, "");
         const numId = Number(q);
+        const escapedQ = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const escapedUsername = cleanUsername.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
         const query = {
           $or: [
             { telegramId: q },
             ...(numId ? [{ telegramId: numId }] : []),
-            { username: { $regex: cleanUsername, $options: "i" } },
-            { firstName: { $regex: q, $options: "i" } }
+            { username: { $regex: escapedUsername, $options: "i" } },
+            { firstName: { $regex: escapedQ, $options: "i" } }
           ]
         };
 
