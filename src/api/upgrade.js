@@ -43,22 +43,33 @@ module.exports = async (req, res) => {
       return;
     }
 
-    const userBal = Number(user.balance || 0);
-    if (userBal < cost) {
+    // Atomically verify balance and current level, deduct cost, and increment level
+    // This prevents race condition duplicate upgrades or balance overdrafts
+    const upgradeRes = await users.findOneAndUpdate(
+      {
+        _id: user._id,
+        balance: { $gte: cost },
+        minerLevel: currentLevel
+      },
+      {
+        $inc: { balance: -cost, minerLevel: 1 },
+        $set: { lastActiveAt: new Date() }
+      },
+      { returnDocument: "after" }
+    );
+
+    const updatedUser = upgradeRes && (upgradeRes.value || upgradeRes);
+    if (!updatedUser) {
+      const freshUser = await users.findOne({ _id: user._id });
+      const freshBal = Number(freshUser ? freshUser.balance : 0);
       res.status(400).json({
-        error: `Insufficient balance! You need ${cost.toLocaleString()} HOOCOOH Coins to upgrade to Level ${currentLevel + 1}. Current balance: ${userBal.toLocaleString()}`
+        error: `Insufficient balance or level already updated! Cost: ${cost.toLocaleString()} Coins. Current balance: ${freshBal.toLocaleString()} Coins.`
       });
       return;
     }
 
-    const newLevel = currentLevel + 1;
-    const newBal = userBal - cost;
-
-    await users.updateOne(
-      { _id: user._id },
-      { $set: { balance: newBal, minerLevel: newLevel, lastActiveAt: new Date() } }
-    );
-
+    const newLevel = updatedUser.minerLevel;
+    const newBal = Number(updatedUser.balance || 0);
     const newMultiplier = getMultiplierForLevel(newLevel);
     const newName = LEVEL_NAMES[newLevel - 1] || "Miner";
 

@@ -374,36 +374,55 @@ module.exports = async (req, res) => {
       }
     }
 
-    watchedToday += 1;
-    earnedToday += currentAdReward;
-    const newBalance = Number(user.balance || 0) + currentAdReward;
-    const totalAds = Number(user.totalAdsWatched || 0) + 1;
-
-    await usersCol.updateOne(
-      { _id: user._id },
+    // Atomically increment ad watch count and credit reward with daily limit guard
+    // This makes it impossible for concurrent spam requests to claim duplicate rewards
+    const claimAdRes = await usersCol.findOneAndUpdate(
       {
+        _id: user._id,
+        $or: [
+          { adsCycleStartedAt: { $ne: cycleStart } },
+          { adsWatchedToday: { $lt: MAX_ADS_PER_DAY } }
+        ]
+      },
+      {
+        $inc: {
+          balance: currentAdReward,
+          adsWatchedToday: 1,
+          adsEarnedToday: currentAdReward,
+          totalAdsWatched: 1
+        },
         $set: {
-          balance: newBalance,
-          adsWatchedToday: watchedToday,
-          adsEarnedToday: earnedToday,
           adsCycleStartedAt: cycleStart,
-          totalAdsWatched: totalAds,
           lastWatchAdAt: now,
           lastActiveAt: new Date()
         }
-      }
+      },
+      { returnDocument: "after" }
     );
+
+    const updatedUser = claimAdRes && (claimAdRes.value || claimAdRes);
+    if (!updatedUser) {
+      res.status(400).json({
+        error: "Daily limit of 10 ads reached! Next ads available in 24 hours.",
+        maxAds: MAX_ADS_PER_DAY
+      });
+      return;
+    }
+
+    const finalWatchedToday = Number(updatedUser.adsWatchedToday || watchedToday + 1);
+    const finalEarnedToday = Number(updatedUser.adsEarnedToday || earnedToday + currentAdReward);
+    const finalBalance = Number(updatedUser.balance || 0);
 
     res.status(200).json({
       ok: true,
       reward: currentAdReward,
-      newBalance,
-      adsWatchedToday: watchedToday,
-      adsEarnedToday: earnedToday,
+      newBalance: finalBalance,
+      adsWatchedToday: finalWatchedToday,
+      adsEarnedToday: finalEarnedToday,
       adsCycleStartedAt: cycleStart,
-      remainingToday: MAX_ADS_PER_DAY - watchedToday,
+      remainingToday: Math.max(0, MAX_ADS_PER_DAY - finalWatchedToday),
       maxAds: MAX_ADS_PER_DAY,
-      requiresNextCaptcha: ((watchedToday + 1) % 3 === 0)
+      requiresNextCaptcha: ((finalWatchedToday + 1) % 3 === 0)
     });
   } catch (err) {
     console.error("ads.js error:", err);

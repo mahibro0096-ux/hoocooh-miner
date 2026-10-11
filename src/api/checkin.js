@@ -85,29 +85,48 @@ module.exports = async (req, res) => {
 
     const reward = rewardForCycleDay(dailyCycle, dailyDayIndex);
     const now = Date.now();
-    const newBalance = (Number(user.balance) || 0) + reward;
-    const newTotal = (Number(user.totalDailyEarned) || 0) + reward;
 
-    await users.updateOne(
-      { _id: user._id },
+    // Atomically claim daily checkin bonus (impossible for concurrent requests to both claim)
+    const cutoff24h = now - (24 * 60 * 60 * 1000);
+    const checkinRes = await users.findOneAndUpdate(
       {
+        _id: user._id,
+        $or: [
+          { lastCheckinAt: { $exists: false } },
+          { lastCheckinAt: null },
+          { lastCheckinAt: { $lte: cutoff24h } }
+        ]
+      },
+      {
+        $inc: {
+          balance: reward,
+          totalDailyEarned: reward
+        },
         $set: {
-          balance: newBalance,
           dailyCycle,
           dailyDayIndex,
           lastCheckinAt: now,
-          totalDailyEarned: newTotal,
           lastActiveAt: new Date()
         }
-      }
+      },
+      { returnDocument: "after" }
     );
 
+    const updatedUser = checkinRes && (checkinRes.value || checkinRes);
+    if (!updatedUser) {
+      res.status(400).json({ error: "Already checked in today", status: "waiting" });
+      return;
+    }
+
+    const finalBalance = Number(updatedUser.balance || 0);
+    const finalTotal = Number(updatedUser.totalDailyEarned || 0);
+
     res.status(200).json({
-      balance: newBalance,
+      balance: finalBalance,
       dailyCycle,
       dailyDayIndex,
       lastCheckinAt: now,
-      totalDailyEarned: newTotal,
+      totalDailyEarned: finalTotal,
       reward,
       level: user.minerLevel || 1,
       newActionToken: createActionToken(uid, "checkin")
