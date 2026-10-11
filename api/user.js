@@ -247,10 +247,25 @@ module.exports = async (req, res) => {
           return;
         }
 
-        await codesCol.updateOne(
-          { _id: activeRecord._id },
+        // ATOMIC burn: only ONE request can consume this code. A duplicate / double-tap submit
+        // (that would otherwise run the referral reward block twice) is stopped here.
+        const burnCodeRes = await codesCol.updateOne(
+          { _id: activeRecord._id, used: false },
           { $set: { used: true, verifiedAt: now } }
         );
+        if (!burnCodeRes || burnCodeRes.modifiedCount === 0) {
+          const freshUser = await users.findOne({ _id: user._id });
+          res.status(200).json({
+            ok: true,
+            verified: true,
+            identityVerifiedAt: (freshUser && freshUser.identityVerifiedAt) || now,
+            expiresAt: now + (24 * 60 * 60 * 1000),
+            balance: Number(freshUser ? freshUser.balance : user.balance) || 0,
+            referralRewardGiven: false,
+            message: "Identity verified successfully!"
+          });
+          return;
+        }
 
         await users.updateOne(
           { _id: user._id },
@@ -272,44 +287,52 @@ module.exports = async (req, res) => {
         let userBalance = Number(user.balance) || 0;
         let referralRewardGiven = false;
 
-        if (referrerId && !user.referralRewarded && String(referrerId) !== telegramId) {
+        if (referrerId && String(referrerId) !== telegramId) {
           const inviter = await findUserById(users, referrerId);
           if (inviter && String(inviter.telegramId) !== telegramId) {
             const welcomeBonus = 50; // New verified recruit gets 50 HOOCOOH
-            userBalance += welcomeBonus;
-            user.balance = userBalance;
 
-            // Mark referral as rewarded on this user
-            await users.updateOne(
-              { _id: user._id },
+            // ATOMIC one-time claim: only succeeds if referralRewarded is not already true.
+            // Whichever request wins this update (modifiedCount 1) pays the inviter + sends the
+            // notification. Any duplicate/parallel request gets modifiedCount 0 and does NOTHING,
+            // so one referred user can NEVER reward the inviter twice or trigger a 2nd message.
+            const claimRefRes = await users.updateOne(
+              { _id: user._id, referralRewarded: { $ne: true } },
               {
                 $set: {
+                  referredBy: String(inviter.telegramId),
                   referralRewarded: true,
-                  referralRewardedAt: now,
-                  balance: userBalance
-                }
+                  referralRewardedAt: now
+                },
+                $inc: { balance: welcomeBonus }
               }
             );
 
-            // Reward inviter: +1 recruit, +100 HOOCOOH to earnings and balance
-            await users.updateOne(
-              { _id: inviter._id },
-              {
-                $inc: {
-                  recruitsCount: 1,
-                  refEarnings: 100,
-                  balance: 100
+            if (claimRefRes && claimRefRes.modifiedCount === 1) {
+              const freshRecruit = await users.findOne({ _id: user._id });
+              userBalance = Number(freshRecruit ? freshRecruit.balance : (userBalance + welcomeBonus)) || 0;
+              user.balance = userBalance;
+
+              // Reward inviter: +1 recruit, +100 HOOCOOH to earnings and balance
+              await users.updateOne(
+                { _id: inviter._id },
+                {
+                  $inc: {
+                    recruitsCount: 1,
+                    refEarnings: 100,
+                    balance: 100
+                  }
                 }
-              }
-            );
+              );
 
-            // Notify inviter via Telegram bot with Open HOOCOOH Mine button
-            const reqProto = req.headers["x-forwarded-proto"] || "https";
-            const reqHost = req.headers["x-forwarded-host"] || req.headers.host;
-            const userBaseUrl = reqHost ? `${reqProto}://${reqHost}` : "";
-            notifyInviterReferralSuccess(process.env.TELEGRAM_BOT_TOKEN, inviter, user, userBaseUrl).catch(() => {});
+              // Notify inviter via Telegram bot with Open HOOCOOH Mine button (sent exactly once)
+              const reqProto = req.headers["x-forwarded-proto"] || "https";
+              const reqHost = req.headers["x-forwarded-host"] || req.headers.host;
+              const userBaseUrl = reqHost ? `${reqProto}://${reqHost}` : "";
+              notifyInviterReferralSuccess(process.env.TELEGRAM_BOT_TOKEN, inviter, user, userBaseUrl).catch(() => {});
 
-            referralRewardGiven = true;
+              referralRewardGiven = true;
+            }
           }
         }
 
@@ -361,32 +384,40 @@ module.exports = async (req, res) => {
 
           if (isVerifiedNow && !user.referralRewarded) {
             const welcomeBonus = 50; // Verified recruit gets 50 HOOCOOH
-            user.balance = (Number(user.balance) || 0) + welcomeBonus;
 
-            await users.updateOne(
-              { _id: user._id },
-              { $set: { referredBy: user.referredBy, referralRewarded: true, referralRewardedAt: now, balance: user.balance } }
-            );
-
-            // Reward inviter: +1 recruit, +100 HOOCOOH to earnings and balance
-            await users.updateOne(
-              { _id: inviter._id },
+            // ATOMIC one-time claim (same guard as submit_code): only one request can ever win it.
+            const claimRefRes = await users.updateOne(
+              { _id: user._id, referralRewarded: { $ne: true } },
               {
-                $inc: {
-                  recruitsCount: 1,
-                  refEarnings: 100,
-                  balance: 100
-                }
+                $set: { referredBy: user.referredBy, referralRewarded: true, referralRewardedAt: now },
+                $inc: { balance: welcomeBonus }
               }
             );
 
-            // Notify inviter via Telegram bot matching media_1791524423871.png
-            notifyInviterReferralSuccess(process.env.TELEGRAM_BOT_TOKEN, inviter, user).catch(() => {});
+            if (claimRefRes && claimRefRes.modifiedCount === 1) {
+              user.balance = (Number(user.balance) || 0) + welcomeBonus;
+
+              // Reward inviter: +1 recruit, +100 HOOCOOH to earnings and balance
+              await users.updateOne(
+                { _id: inviter._id },
+                {
+                  $inc: {
+                    recruitsCount: 1,
+                    refEarnings: 100,
+                    balance: 100
+                  }
+                }
+              );
+
+              // Notify inviter via Telegram bot (sent exactly once)
+              notifyInviterReferralSuccess(process.env.TELEGRAM_BOT_TOKEN, inviter, user).catch(() => {});
+            }
           } else {
             // Unverified: simply record referredBy. Inviter gets NOTHING until verification!
+            // Never overwrites an already-rewarded user or an already-bound inviter.
             await users.updateOne(
-              { _id: user._id },
-              { $set: { referredBy: user.referredBy, referralRewarded: false } }
+              { _id: user._id, referralRewarded: { $ne: true }, referredBy: null },
+              { $set: { referredBy: user.referredBy } }
             );
           }
         }
