@@ -9526,6 +9526,11 @@
   var PUZZLE_SIZE = 44;
 
   function closeSecurityCaptcha() {
+    // If the Watch & Earn puzzle is closed without solving, free the one-ad-one-claim lock
+    if (window._watchCaptchaOpen) {
+      window._watchCaptchaOpen = false;
+      if (typeof window._watchEarnRelease === "function") window._watchEarnRelease();
+    }
     if (secModal) secModal.classList.remove("open");
     isCaptchaSolving = false;
     isDraggingSlider = false;
@@ -10183,8 +10188,18 @@
   }
 
   // Image 1 Sheet Primary Button: "▶ Watch Ad & Earn" -> Plays AdsGram Fullscreen Ad -> Then Puzzle Verification
+  // One-ad-one-reward lock: stays held from the click until the reward claim finished (or failed),
+  // so double taps / re-opened sheet can never start a second claim for the same ad.
+  var _watchEarnBusy = false;
+  var _watchEarnBusyTimer = null;
+  function setWatchEarnBusy(v) {
+    _watchEarnBusy = v;
+    clearTimeout(_watchEarnBusyTimer);
+    if (v) _watchEarnBusyTimer = setTimeout(function() { _watchEarnBusy = false; }, 120000); // safety auto-release
+  }
   if (sheetStartAdBtn) {
     sheetStartAdBtn.addEventListener("click", function() {
+      if (_watchEarnBusy) return;
       var watched = Number(user.adsWatchedToday) || 0;
       var now = Date.now();
       var cycleStart = user.adsCycleStartedAt ? Number(user.adsCycleStartedAt) : 0;
@@ -10195,11 +10210,15 @@
         return;
       }
 
+      setWatchEarnBusy(true);
+      var _adCallbackFired = false;
       sheetStartAdBtn.disabled = true;
       sheetStartAdBtn.innerHTML = '<span>⏳ Playing Ad...</span>';
 
       playAdsgramFullscreenAd(
         function onWatchedSuccess(result, elapsedMs) {
+          if (_adCallbackFired) return; // never claim twice for one ad
+          _adCallbackFired = true;
           // Watched at least 9 seconds! Close sheet
           closeWatchEarnFlowModal();
 
@@ -10256,11 +10275,17 @@
             }).catch(function(err) {
               showToast("Network error. Please try again.");
               renderAds();
+            }).then(function() {
+              setWatchEarnBusy(false);
             });
           }
 
           if (requiresCaptcha) {
+            window._watchCaptchaOpen = true;
+            window._watchEarnRelease = function() { setWatchEarnBusy(false); };
             openSecurityCaptcha(function(verifiedCaptchaToken) {
+              window._watchCaptchaOpen = false;
+              setWatchEarnBusy(true);
               claimAdReward(verifiedCaptchaToken, elapsedMs);
             });
           } else {
@@ -10268,6 +10293,7 @@
           }
         },
         function onSkippedOrFailed(reason, elapsedMs) {
+          setWatchEarnBusy(false);
           sheetStartAdBtn.disabled = false;
           sheetStartAdBtn.innerHTML = '<span>▶ Watch Ad & Earn</span>';
           if (reason === "skipped_under_9s") {
