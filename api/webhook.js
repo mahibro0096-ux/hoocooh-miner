@@ -254,7 +254,23 @@ async function handleAdminApproveWithdrawal(db, botToken, wid, baseUrl) {
   const tonVal = w.tonAmount !== undefined ? Number(w.tonAmount) : Number(((w.usdtAmount || 0) * (0.019 / 0.03)).toFixed(4));
   let finalTx = "";
 
-  const autoPayRes = await dispatchTonPayout(w.walletAddress, tonVal, `HOOCOOH Payout UID ${w.telegramId}`);
+  // ATOMIC CLAIM BEFORE PAYING: PENDING -> PROCESSING. Only one request can win it, so a double tap on
+  // the Approve button / Telegram callback retry can never send the real TON payout twice.
+  const claimPayoutRes = await withdrawalsCol.updateOne(
+    { ...wQuery, status: "PENDING" },
+    { $set: { status: "PROCESSING", processingAt: now } }
+  );
+  if (!claimPayoutRes || claimPayoutRes.modifiedCount === 0) {
+    return { ok: false, message: "Already processed or being processed right now." };
+  }
+
+  let autoPayRes;
+  try {
+    autoPayRes = await dispatchTonPayout(w.walletAddress, tonVal, `HOOCOOH Payout UID ${w.telegramId}`);
+  } catch (payErr) {
+    try { await withdrawalsCol.updateOne({ ...wQuery, status: "PROCESSING" }, { $set: { status: "PENDING" }, $unset: { processingAt: "" } }); } catch (e) {}
+    return { ok: false, message: `Auto-pay error: ${payErr && payErr.message ? payErr.message : payErr}` };
+  }
   if (autoPayRes && autoPayRes.isConfigured && autoPayRes.success) {
     finalTx = autoPayRes.txHash;
   } else {
@@ -262,7 +278,7 @@ async function handleAdminApproveWithdrawal(db, botToken, wid, baseUrl) {
   }
 
   const approveUpdateRes = await withdrawalsCol.updateOne(
-    { ...wQuery, status: "PENDING" },
+    { ...wQuery, status: "PROCESSING" },
     {
       $set: {
         status: "APPROVED",
