@@ -2,11 +2,11 @@
   "version": 2,
   "builds": [
     { "src": "public/**", "use": "@vercel/static" },
-    { "src": "api/**/*.js", "use": "@vercel/node" }
+    { "src": "api/*.js", "use": "@vercel/node" }
   ],
   "routes": [
     {
-      "src": "/api/(.+?)(?:\\.js)?$",
+      "src": "/api/([^/]+?)(?:\\.js)?$",
       "dest": "/api/$1.js",
       "headers": {
         "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate"
