@@ -12,7 +12,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
-<script type="text/javascript" src="https://cdn.tgads.space/assets/js/adexium-widget.min.js"></script>
 <style>
   :root {
     --bg: #eff5f5;
@@ -9929,11 +9928,11 @@
   // ========================================================
   // ========================================================
   // GLOBAL AD BARRIER & MUTUAL EXCLUSION LOCK
-  // Ensures only 1 ad plays at a time across all SDKs (Adsgram, Adexium).
+  // Ensures only 1 ad plays at a time (Adsgram).
   // No ad runs in the background while another is active!
   // ========================================================
   window.AdBarrier = {
-    activeAd: null, // "adsgram" | "adexium"
+    activeAd: null, // "adsgram"
     lockTime: 0,
 
     acquire: function(name) {
@@ -9972,43 +9971,135 @@
   };
 
   // ========================================================
-  // ADEXIUM INTERSTITIAL / BANNER WIDGET INTEGRATION
-  // WID: 9e948d5e-d29e-4815-9a23-9895e39562fa
-  // Runs on app startup / autoMode while respecting AdBarrier
+  // ADSGRAM STARTUP TASK POPUP (Block ID: task-53272)
+  // EVERY time a user opens the mini app: as soon as the loading screen is
+  // finished (user lands on the home page) the AdsGram task card pops up
+  // ONCE for that app-open (state is in memory only, so it shows again on
+  // the next app-open).
+  // The card is pre-loaded in the background while the splash is showing, and
+  // is revealed the moment the loading screen is gone.
+  // - If AdsGram has no task to show (onBannerNotFound) or the SDK did not
+  //   load, nothing is shown and the app continues normally.
   // ========================================================
-  var adexiumWidgetInstance = null;
-  function initAdexiumWidget() {
-    if (typeof AdexiumWidget !== "function") {
-      setTimeout(initAdexiumWidget, 1500);
-      return;
-    }
-    if (adexiumWidgetInstance) return;
+  var ADSGRAM_STARTUP_TASK_BLOCK_ID = "task-53272";
+  var adsgramStartupTaskStarted = false;
+  var adsgramStartupTaskOverlay = null;
 
-    try {
-      adexiumWidgetInstance = new AdexiumWidget({
-        wid: '9e948d5e-d29e-4815-9a23-9895e39562fa',
-        adFormat: 'interstitial'
-      });
-
-      // Auto-trigger on load only if no other ad is active
-      setTimeout(function() {
-        if (!window.AdBarrier.isBusy() && adexiumWidgetInstance && typeof adexiumWidgetInstance.autoMode === "function") {
-          if (window.AdBarrier.acquire("adexium")) {
-            try {
-              adexiumWidgetInstance.autoMode();
-            } catch(e) {
-              console.warn("adexium autoMode error:", e);
-            }
-            setTimeout(function() {
-              window.AdBarrier.release("adexium");
-            }, 6000);
-          }
-        }
-      }, 2500);
-    } catch(err) {
-      console.warn("Adexium widget init error:", err);
-    }
+  function adsgramLoadingFinished() {
+    var ls = document.getElementById("appLoadingScreen");
+    return !ls || window.getComputedStyle(ls).display === "none";
   }
+
+  function closeAdsgramStartupTask() {
+    var ov = adsgramStartupTaskOverlay;
+    if (!ov) return;
+    adsgramStartupTaskOverlay = null;
+    ov.classList.remove("agst-show");
+    setTimeout(function() {
+      if (ov.parentNode) ov.parentNode.removeChild(ov);
+    }, 260);
+  }
+
+  function showAdsgramStartupTask() {
+    if (adsgramStartupTaskOverlay) return;
+
+    if (!document.getElementById("adsgramStartupTaskStyle")) {
+      var st = document.createElement("style");
+      st.id = "adsgramStartupTaskStyle";
+      st.textContent =
+        "#adsgramStartupTaskOverlay{position:fixed;inset:0;z-index:99999990;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;background:rgba(5,10,16,0.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .25s ease,visibility .25s ease;}" +
+        "#adsgramStartupTaskOverlay.agst-show{opacity:1;visibility:visible;pointer-events:auto;}" +
+        "#adsgramStartupTaskOverlay .agst-card{position:relative;width:100%;max-width:360px;box-sizing:border-box;padding:34px 16px 16px;border-radius:20px;background:var(--card-bg,#fff);color:var(--text,#0e2029);border:1px solid var(--border,rgba(14,32,41,0.07));box-shadow:0 18px 44px rgba(0,0,0,0.38);}" +
+        "#adsgramStartupTaskOverlay .agst-label{position:absolute;top:11px;left:16px;font-size:10px;font-weight:800;letter-spacing:.9px;text-transform:uppercase;color:var(--text-dim,#778d99);}" +
+        "#adsgramStartupTaskOverlay .agst-close{position:absolute;top:6px;right:8px;width:30px;height:30px;border:none;border-radius:50%;background:rgba(127,127,127,0.18);color:inherit;font-size:14px;line-height:30px;text-align:center;cursor:pointer;padding:0;}" +
+        "#adsgramStartupTaskOverlay adsgram-task{display:block;width:100%;min-height:24px;}" +
+        "#adsgramStartupTaskOverlay .agst-btn{display:inline-block;padding:7px 16px;border-radius:12px;background:var(--accent,#20b8a3);color:#fff;font-weight:800;font-size:13px;cursor:pointer;}" +
+        "#adsgramStartupTaskOverlay .agst-btn-done{opacity:.65;cursor:default;}";
+      document.head.appendChild(st);
+    }
+
+    var ov = document.createElement("div");
+    ov.id = "adsgramStartupTaskOverlay";
+    ov.innerHTML =
+      '<div class="agst-card">' +
+        '<div class="agst-label">Sponsored</div>' +
+        '<button type="button" class="agst-close" aria-label="Close">\u2715</button>' +
+        '<adsgram-task data-block-id="' + ADSGRAM_STARTUP_TASK_BLOCK_ID + '" class="agst-task">' +
+          '<div slot="button" class="agst-btn">Go</div>' +
+          '<div slot="claim" class="agst-btn">Claim</div>' +
+          '<div slot="done" class="agst-btn agst-btn-done">Done \u2713</div>' +
+        '</adsgram-task>' +
+      '</div>';
+    document.body.appendChild(ov);
+    adsgramStartupTaskOverlay = ov;
+
+    var taskEl = ov.querySelector("adsgram-task");
+    var settled = false;
+    var poll = null;
+
+    function abortShow(why, force) {
+      if (settled && !force) return;
+      settled = true;
+      if (poll) clearInterval(poll);
+      console.warn("[AdsgramTask] Not shown:", why);
+      if (adsgramStartupTaskOverlay === ov) adsgramStartupTaskOverlay = null;
+      if (ov.parentNode) ov.parentNode.removeChild(ov);
+    }
+
+    ov.querySelector(".agst-close").addEventListener("click", closeAdsgramStartupTask);
+    ov.addEventListener("click", function(e) {
+      if (e.target === ov) closeAdsgramStartupTask();
+    });
+
+    taskEl.addEventListener("onBannerNotFound", function() { abortShow("no task available (onBannerNotFound)", true); });
+    taskEl.addEventListener("onError", function() { abortShow("AdsGram reported an error (onError)", true); });
+    taskEl.addEventListener("reward", function(e) {
+      console.log("[AdsgramTask] Task completed. blockId:", ADSGRAM_STARTUP_TASK_BLOCK_ID, e && e.detail);
+      setTimeout(closeAdsgramStartupTask, 1500);
+    });
+
+    // Reveal the popup only when (1) the task card has really rendered (no empty card flash)
+    // AND (2) the loading screen is finished, i.e. the user has reached the home page.
+    var waited = 0;
+    var rendered = false;
+    poll = setInterval(function() {
+      if (settled) { clearInterval(poll); return; }
+      waited += 150;
+      if (!rendered) {
+        if (taskEl.getBoundingClientRect().height > 24) {
+          rendered = true;
+        } else if (waited >= 7000) {
+          abortShow("task card did not render in time");
+          return;
+        }
+      }
+      if (rendered && adsgramLoadingFinished()) {
+        settled = true;
+        clearInterval(poll);
+        if (adsgramStartupTaskOverlay === ov) ov.classList.add("agst-show");
+      }
+    }, 150);
+  }
+
+  function initAdsgramStartupTask() {
+    if (adsgramStartupTaskStarted) return;
+    adsgramStartupTaskStarted = true;
+
+    var sdkWaitMs = 0;
+    (function waitForSdk() {
+      if (window.customElements && window.customElements.get("adsgram-task")) {
+        showAdsgramStartupTask();
+      } else if (sdkWaitMs < 10000) {
+        sdkWaitMs += 500;
+        setTimeout(waitForSdk, 500);
+      } else {
+        console.warn("[AdsgramTask] SDK component not available, skipping startup popup");
+      }
+    })();
+  }
+
+  // Start right now (app open) - not after login/verification/terms
+  initAdsgramStartupTask();
 
   // ========================================================
   // REAL ADSGRAM INTEGRATION
@@ -12732,7 +12823,6 @@
   }
 
   function onAppReady() {
-    initAdexiumWidget();
     var currentUid = (user && user.telegramId) || (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) || "me";
     if (user.isIdentityVerified === true || isUserLocallyVerified()) {
       if (idVerifyModal) idVerifyModal.style.display = "none";
