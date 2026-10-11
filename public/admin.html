@@ -1,1321 +1,2344 @@
-const { getDb } = require("../lib/mongodb");
-const { ObjectId } = require("mongodb");
-const { validateInitData } = require("../lib/telegramAuth");
-const { dispatchTonPayout } = require("../lib/tonAutoPay");
-const { purgeExpiredBannedUsers } = require("../lib/userHelper");
-
-const crypto = require("crypto");
-
-const ADMIN_SECRET = process.env.ADMIN_SECRET_KEY || "hoocooh_admin_2026";
-
-async function getAdminTelegramIds(db) {
-  const ids = new Set();
-  if (process.env.ADMIN_TELEGRAM_ID) {
-    process.env.ADMIN_TELEGRAM_ID.split(",").forEach(id => {
-      const trimmed = id.trim();
-      if (trimmed) ids.add(trimmed);
-    });
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HOOCOOH Miner — Admin Control Center</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #090f15;
+    --card: #121c24;
+    --card-border: rgba(255, 255, 255, 0.08);
+    --text: #f1f5f9;
+    --text-dim: #8ba2b5;
+    --accent: #20b8a3;
+    --accent-glow: rgba(32, 184, 163, 0.25);
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --success: #10b981;
   }
-  try {
-    if (db) {
-      const setting = await db.collection("settings").findOne({ key: "bot_settings" });
-      if (setting && setting.adminTelegramId) {
-        String(setting.adminTelegramId).split(",").forEach(id => {
-          const trimmed = id.trim();
-          if (trimmed) ids.add(trimmed);
-        });
-      }
-      const adminDocs = await db.collection("admins").find({}).toArray();
-      adminDocs.forEach(doc => {
-        if (doc.telegramId) ids.add(String(doc.telegramId).trim());
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Outfit', 'Plus Jakarta Sans', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 60px;
+  }
+  .admin-wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 16px;
+  }
+
+  /* Header */
+  .admin-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 18px;
+    margin-bottom: 20px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .brand img {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+  }
+  .brand-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text);
+  }
+  .brand-sub {
+    font-size: 11px;
+    color: var(--accent);
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .btn-icon-head {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--card-border);
+    color: var(--text-dim);
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-icon-head:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+  }
+
+  /* Stats Grid */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .stat-card .lbl {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-dim);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .stat-card .val {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--text);
+  }
+  .stat-card .val.accent { color: var(--accent); }
+  .stat-card .val.warning { color: var(--warning); }
+  .stat-card .val.danger { color: var(--danger); }
+
+  /* Navigation Tabs */
+  .nav-tabs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--card-border);
+  }
+  .tab-btn {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 14.5px;
+    font-weight: 700;
+    padding: 10px 18px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+  }
+  .tab-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.04); }
+  .tab-btn.active {
+    color: #fff;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  }
+  .tab-btn .badge {
+    background: var(--accent);
+    color: #062420;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 100px;
+  }
+
+  /* View Panels */
+  .view-panel { display: none; }
+  .view-panel.active { display: block; animation: fadeIn 0.25s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Common Cards & Inputs */
+  .panel-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .panel-title {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .form-group {
+    margin-bottom: 16px;
+  }
+  .form-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .form-input, .form-textarea, .form-select {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    color: #fff;
+    font-family: inherit;
+    font-size: 14px;
+    padding: 12px 14px;
+    outline: none;
+    transition: border 0.2s;
+  }
+  .form-input:focus, .form-textarea:focus, .form-select:focus {
+    border-color: var(--accent);
+  }
+  .form-textarea { resize: vertical; min-height: 100px; }
+
+  /* Buttons */
+  .btn-primary {
+    background: var(--accent);
+    color: #062420;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 800;
+    padding: 12px 22px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .btn-danger {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 8px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-danger:hover { background: #ef4444; color: #fff; }
+  .btn-success {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 8px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-success:hover { background: #10b981; color: #fff; }
+  .btn-secondary {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text);
+    border: 1px solid var(--card-border);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 8px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-secondary:hover { background: rgba(255, 255, 255, 0.15); }
+
+  /* Filters Row */
+  .filter-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .pill-filter {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--card-border);
+    color: var(--text-dim);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 100px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .pill-filter.active {
+    background: var(--accent);
+    color: #062420;
+    border-color: var(--accent);
+  }
+
+  /* Table / Card List */
+  .item-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+  }
+  .item-table th {
+    text-align: left;
+    padding: 12px 14px;
+    color: var(--text-dim);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--card-border);
+  }
+  .item-table td {
+    padding: 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    vertical-align: middle;
+  }
+  .item-table tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+  /* Badges */
+  .status-tag {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .status-tag.pending { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); }
+  .status-tag.approved { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+  .status-tag.rejected { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+  .status-tag.banned { background: #ef4444; color: #fff; }
+  .status-tag.suspicious { background: #f59e0b; color: #000; font-weight: 800; border: 1px solid #d97706; }
+  .status-tag.high-risk { background: #dc2626; color: #fff; font-weight: 800; border: 1px solid #b91c1c; }
+
+  .btn-copy-tag {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: var(--text-dim);
+    border-radius: 5px;
+    padding: 2px 7px;
+    font-size: 10.5px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    line-height: 1.2;
+    vertical-align: middle;
+  }
+  .btn-copy-tag:hover {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+  }
+
+  /* User Result Card */
+  .user-card {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 14px;
+  }
+  .user-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .u-info { display: flex; align-items: center; gap: 12px; }
+  .u-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(32, 184, 163, 0.2);
+    border: 1.5px solid var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--accent);
+    overflow: hidden;
+  }
+  .u-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .u-name { font-size: 16px; font-weight: 800; }
+  .u-uid { font-size: 12px; color: var(--text-dim); }
+  .u-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 12px;
+    border-radius: 12px;
+  }
+  .u-stat-box .s-lbl { font-size: 10px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; }
+  .u-stat-box .s-val { font-size: 16px; font-weight: 800; color: #fff; }
+
+  /* Login Modal */
+  .auth-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(9, 15, 21, 0.95);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+    padding: 20px;
+  }
+  .auth-box {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 24px;
+    padding: 32px 28px;
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+  }
+  .auth-icon { font-size: 42px; margin-bottom: 12px; }
+  .auth-title { font-size: 20px; font-weight: 800; margin-bottom: 6px; }
+  .auth-sub { font-size: 13px; color: var(--text-dim); margin-bottom: 22px; }
+
+  /* Toast Notification */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #182834;
+    border: 1px solid var(--accent);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-size: 13.5px;
+    font-weight: 700;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 100000;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* Responsive Mobile Tweaks */
+  @media (max-width: 640px) {
+    .item-table, .item-table tbody, .item-table tr, .item-table td {
+      display: block;
+      width: 100%;
+    }
+    .item-table thead { display: none; }
+    .item-table tr {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      margin-bottom: 12px;
+      padding: 12px;
+    }
+    .item-table td {
+      padding: 6px 0;
+      border: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .item-table td::before {
+      content: attr(data-label);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- Access Denied Overlay for Unauthorized Users -->
+<div id="accessDeniedOverlay" style="display: none; position: fixed; inset: 0; z-index: 999999; background: #090f15; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px;">
+  <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); border: 2px solid rgba(239, 68, 68, 0.4); display: flex; align-items: center; justify-content: center; font-size: 38px; margin-bottom: 20px;">⛔</div>
+  <h2 style="color: #ef4444; font-size: 24px; font-weight: 800; margin-bottom: 10px;">Access Denied</h2>
+  <p style="color: #8ba2b5; font-size: 14.5px; max-width: 360px; line-height: 1.6;" id="accessDeniedMsg">
+    Your Telegram account is not authorized to access the Admin Control Center.
+  </p>
+</div>
+
+<!-- Secret Key Auth Modal -->
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-box">
+    <div class="auth-icon">🛡️</div>
+    <div class="auth-title">Admin Access</div>
+    <div class="auth-sub">Enter your secret key to access the control panel</div>
+    <div class="form-group">
+      <input type="password" id="adminKeyInput" class="form-input" placeholder="Enter Admin Secret Key..." autofocus>
+    </div>
+    <button class="btn-primary" id="loginBtn" style="width: 100%; justify-content: center;">
+      <span>Unlock Dashboard</span>
+    </button>
+  </div>
+</div>
+
+<div class="admin-wrap" id="adminWrap">
+
+  <!-- Top Header -->
+  <header class="admin-header">
+    <div class="brand">
+      <img src="assets/logo.webp" alt="Logo">
+      <div>
+        <div class="brand-title">HOOCOOH Miner</div>
+        <div class="brand-sub" id="adminVerifiedSub">Admin Master Center</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn-icon-head" id="refreshStatsBtn">🔄 Refresh</button>
+      <button class="btn-icon-head" id="logoutBtn">🔒 Logout</button>
+    </div>
+  </header>
+
+  <!-- Live Stats Row -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="lbl">Total Miners</div>
+      <div class="val accent" id="statTotalUsers">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="lbl">Pending Requests</div>
+      <div class="val warning" id="statPendingW">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="lbl">Pending Amount (USDT / TON)</div>
+      <div class="val warning" id="statPendingUsdt" style="color: #f59e0b;">$0.00</div>
+    </div>
+    <div class="stat-card">
+      <div class="lbl">Total Paid (USDT / TON)</div>
+      <div class="val" id="statPaidUsdt">$0.00</div>
+    </div>
+    <div class="stat-card">
+      <div class="lbl">Coins in Circulation</div>
+      <div class="val" id="statTotalCoins">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="lbl">Suspended Users</div>
+      <div class="val danger" id="statBannedUsers">0</div>
+    </div>
+  </div>
+
+  <!-- Navigation Tabs -->
+  <nav class="nav-tabs">
+    <button class="tab-btn active" data-tab="tabWithdrawals">
+      💸 Withdrawals <span class="badge" id="pendingCountBadge" style="display: none;">0</span>
+    </button>
+    <button class="tab-btn" data-tab="tabBroadcast">📢 Broadcast</button>
+    <button class="tab-btn" data-tab="tabFunds">💰 Funds (+/- Coins)</button>
+    <button class="tab-btn" data-tab="tabUsers">👥 Users & Anti-Cheat</button>
+    <button class="tab-btn" data-tab="tabTasks">📋 Tasks & Economy</button>
+    <button class="tab-btn" data-tab="tabBot">🤖 Bot & Webhook</button>
+  </nav>
+
+  <!-- ========================================== -->
+  <!-- TAB 1: WITHDRAWALS (Approve / Reject / Ban) -->
+  <!-- ========================================== -->
+  <section class="view-panel active" id="tabWithdrawals">
+    <div class="panel-card">
+      <div class="panel-title">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <span>Withdrawal Requests Review</span>
+          <span id="pendingUsdtHeaderBadge" style="font-size: 12px; background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.35); padding: 3px 10px; border-radius: 8px; font-weight: 700;">
+            Pending: $0.00 USDT
+          </span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button class="btn-success" id="bulkApproveBtn" style="font-size: 12px; padding: 6px 14px; font-weight: 800;">⚡ Approve All Pending</button>
+          <button class="btn-danger" id="stopAutoPayBtn" style="display: none; font-size: 12px; padding: 6px 14px; font-weight: 800;">⏹️ Turn OFF Auto-Pay</button>
+        </div>
+      </div>
+
+      <!-- Auto Pay Live Progress Banner -->
+      <div id="autoPayProgressBox" style="display: none; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 12px; padding: 12px 16px; margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #10b981;"></span>
+            <strong id="autoPayStatusText" style="color: #10b981; font-size: 13px;">Auto-Pay is running...</strong>
+          </div>
+          <span id="autoPayCounterBadge" style="font-size: 11px; background: rgba(255,255,255,0.1); padding: 3px 8px; border-radius: 6px; font-weight: 700;">
+            0 / 0 Completed
+          </span>
+        </div>
+        <div id="autoPayCurrentDetail" style="font-size: 12px; color: var(--text-dim); margin-bottom: 8px;">
+          Preparing queue...
+        </div>
+        <div style="background: rgba(255, 255, 255, 0.08); height: 6px; border-radius: 3px; overflow: hidden;">
+          <div id="autoPayProgressBar" style="width: 0%; height: 100%; background: #10b981; transition: width 0.3s ease;"></div>
+        </div>
+      </div>
+
+      <div class="filter-row">
+        <button class="pill-filter active" data-filter="PENDING">Pending Only</button>
+        <button class="pill-filter" data-filter="APPROVED">Approved</button>
+        <button class="pill-filter" data-filter="REJECTED">Rejected</button>
+        <button class="pill-filter" data-filter="ALL">All Records</button>
+      </div>
+
+      <div style="overflow-x: auto;">
+        <table class="item-table" id="withdrawalsTable">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Coins</th>
+              <th>USDT Value</th>
+              <th style="color: #00b4d8;">💎 TON Payable</th>
+              <th>TON Address</th>
+              <th>Date</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="withdrawalsList">
+            <tr><td colspan="8" style="text-align: center; color: var(--text-dim);">Loading requests...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- TAB 2: BROADCAST (Direct Telegram Message) -->
+  <!-- ========================================== -->
+  <section class="view-panel" id="tabBroadcast">
+    <div class="panel-card">
+      <div class="panel-title">
+        <span>Send Broadcast Notification to All Users</span>
+      </div>
+      <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 20px;">
+        This sends a direct notification from the HOOCOOH Telegram Bot to all registered users. Supports HTML formatting.
+      </p>
+
+      <div class="form-group">
+        <label class="form-label">Broadcast Message (HTML Supported)</label>
+        <textarea id="broadcastMsg" class="form-textarea" placeholder="⚡ Big Update! HOOCOOH Miner Season 1 is now live..."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Optional Photo URL (Leave blank for text only)</label>
+        <input type="url" id="broadcastPhoto" class="form-input" placeholder="https://example.com/banner.jpg">
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="form-group">
+          <label class="form-label">Optional Button Text</label>
+          <input type="text" id="broadcastBtnText" class="form-input" placeholder="Open Miner App 🚀">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Optional Button URL</label>
+          <input type="url" id="broadcastBtnUrl" class="form-input" placeholder="https://t.me/hoocoohmine_bot/mine">
+        </div>
+      </div>
+
+      <button class="btn-primary" id="sendBroadcastBtn">
+        <span>📢 Send Broadcast to All Users</span>
+      </button>
+
+      <div id="broadcastStatusBox" style="display: none; margin-top: 18px; padding: 14px; background: rgba(0,0,0,0.3); border-radius: 12px; font-size: 13.5px;">
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- TAB 3: FUNDS (Add or Deduct User Balance)   -->
+  <!-- ========================================== -->
+  <section class="view-panel" id="tabFunds">
+    <div class="panel-card">
+      <div class="panel-title">
+        <span>Adjust User Funds (+/- HOOCOOH Coins)</span>
+      </div>
+      <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 20px;">
+        Search any user by UID or Username to view their balance and instantly credit or debit coins.
+      </p>
+
+      <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+        <input type="text" id="fundsSearchInput" class="form-input" placeholder="Enter Telegram UID (e.g. 123456789) or @username...">
+        <button class="btn-secondary" id="fundsSearchBtn" style="white-space: nowrap;">🔍 Search</button>
+      </div>
+
+      <div id="fundsUserResult" style="display: none;">
+        <div class="user-card">
+          <div class="user-card-top">
+            <div class="u-info">
+              <div class="u-avatar" id="fundsAvatarTxt">M</div>
+              <div>
+                <div class="u-name" id="fundsNameTxt">Miner</div>
+                <div class="u-uid" id="fundsUidTxt">UID: ---</div>
+              </div>
+            </div>
+            <div id="fundsBannedBadge"></div>
+          </div>
+
+          <div class="u-stats">
+            <div class="u-stat-box">
+              <div class="s-lbl">Current Balance</div>
+              <div class="s-val accent" id="fundsBalTxt">0 Coins</div>
+            </div>
+            <div class="u-stat-box">
+              <div class="s-lbl">Miner Level</div>
+              <div class="s-val" id="fundsLvlTxt">Lv.1</div>
+            </div>
+            <div class="u-stat-box">
+              <div class="s-lbl">Invited Friends</div>
+              <div class="s-val" id="fundsRecruitsTxt">0</div>
+            </div>
+          </div>
+
+          <div style="background: rgba(0,0,0,0.25); padding: 16px; border-radius: 14px; margin-top: 6px;">
+            <label class="form-label">Amount of HOOCOOH Coins to Change</label>
+            <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+              <input type="number" id="fundsAmountInput" class="form-input" placeholder="e.g. 500" min="1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Reason / Admin Note (Optional)</label>
+              <input type="text" id="fundsNoteInput" class="form-input" placeholder="e.g. Compensation bonus, contest reward, or penalty">
+            </div>
+            <div style="display: flex; gap: 10px;">
+              <button class="btn-success" id="fundsAddBtn">➕ Add Coins (+)</button>
+              <button class="btn-danger" id="fundsDeductBtn">➖ Deduct Coins (-)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- TAB 4: USERS (Search, Ban & Unban)         -->
+  <!-- ========================================== -->
+  <!-- ========================================== -->
+  <!-- TAB 4: USERS (Search, Ban & Unban)         -->
+  <!-- ========================================== -->
+  <section class="view-panel" id="tabUsers">
+    <!-- High Fraud Risk (80% - 100%) Management Card -->
+    <div class="panel-card" style="border: 1.5px solid rgba(239, 68, 68, 0.45); background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(15, 23, 42, 0.6)); margin-bottom: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 12px;">
+        <div style="flex: 1; min-width: 280px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 24px;">🚨</span>
+            <span style="font-size: 18px; font-weight: 800; color: #ef4444;">High Fraud Risk Management (80% – 100%)</span>
+            <span id="highRiskUnbannedBadge" style="background: #ef4444; color: #fff; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 10px;">0 Detected</span>
+          </div>
+          <p style="font-size: 13px; color: var(--text-dim); margin-top: 6px; margin-bottom: 0; line-height: 1.5;">
+            Detects automated tamper scripts, bot bypassers, video ad skippers (&lt;9s), and multi-account violators scored from 0% to 100%. One-click action strictly bans miners with <strong>80%–100%</strong> score. All clean miners (&lt;80%) remain 100% protected.
+          </p>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+          <button class="btn-secondary" id="loadHighRiskUsersBtn" style="font-size: 13px; padding: 10px 16px; font-weight: 700;">
+            🔍 View 80%–100% Users
+          </button>
+          <button class="btn-danger" id="bulkBanHighRiskBtn" style="font-size: 13px; padding: 10px 18px; font-weight: 800; background: #ef4444; color: #fff; box-shadow: 0 4px 16px rgba(239, 68, 68, 0.35);">
+            🚨 Ban All High Risk (80%–100%)
+          </button>
+        </div>
+      </div>
+      <div id="highRiskStatsSub" style="font-size: 12.5px; color: #fca5a5; display: flex; gap: 20px; flex-wrap: wrap; border-top: 1px solid rgba(239, 68, 68, 0.2); padding-top: 10px;">
+        <span>⚠️ Active Unbanned High-Risk: <strong id="highRiskCountTxt" style="color: #fff;">0</strong> miners</span>
+        <span>🛡️ Clean &amp; Low-Risk Miners (&lt;80%): <strong style="color: #10b981;">Protected &amp; Untouched</strong></span>
+      </div>
+    </div>
+
+    <div class="panel-card">
+      <div class="panel-title">
+        <span>Search Users, Inspect & Ban / Unban</span>
+      </div>
+
+      <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+        <input type="text" id="usersSearchInput" class="form-input" placeholder="Search by Telegram UID, Username or Name...">
+        <button class="btn-primary" id="usersSearchBtn">🔍 Search Users</button>
+      </div>
+
+      <div id="usersSearchResults">
+        <p style="text-align: center; color: var(--text-dim); padding: 30px;">Type a username or UID above or click "View 80%–100% Users" to inspect records.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- TAB 5: TASKS & ECONOMY                     -->
+  <!-- ========================================== -->
+  <section class="view-panel" id="tabTasks">
+    <!-- HOOCOOH Coin Price ($ USD Rate) Setting -->
+    <div class="panel-card" style="margin-bottom: 24px; border-left: 4px solid #10b981;">
+      <div class="panel-title">
+        <span>🪙 HOOCOOH Coin Price ($ USD Rate) Setting</span>
+      </div>
+      <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 16px; line-height: 1.5;">
+        Configure the exchange price for 1 HOOCOOH Coin in USD/USDT. When updated, users' balance values, wallet vault estimates, and on-chain withdrawal calculations will dynamically adapt to this rate in real-time.
+      </p>
+      <div style="display: flex; gap: 12px; align-items: flex-end; max-width: 520px; flex-wrap: wrap;">
+        <div class="form-group" style="flex: 1; min-width: 220px; margin-bottom: 0;">
+          <label class="form-label">Price Per 1 Coin ($ USD)</label>
+          <input type="number" id="coinPriceInput" class="form-input" step="0.000001" min="0.000001" max="1000" placeholder="e.g. 0.000030">
+        </div>
+        <button class="btn-success" id="saveCoinPriceBtn" style="white-space: nowrap; height: 42px;">
+          <span>💾 Save Coin Price</span>
+        </button>
+      </div>
+      <div style="display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; align-items: center;">
+        <div id="currentCoinPriceText" style="font-size: 12.5px; color: #10b981; font-weight: 700;">
+          Current Price: Loading...
+        </div>
+        <div id="coinPricePreviewText" style="font-size: 12px; color: var(--text-dim);">
+          (1,000 Coins = $0.030 USDT | 100,000 Coins = $3.00 USDT)
+        </div>
+      </div>
+    </div>
+
+    <!-- Watch Ad & Earn Reward Setting -->
+    <div class="panel-card" style="margin-bottom: 24px; border-left: 4px solid var(--accent);">
+      <div class="panel-title">
+        <span>🎬 Watch Ad & Earn Reward Setting</span>
+      </div>
+      <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 16px; line-height: 1.5;">
+        Configure how many HOOCOOH Coins users receive for watching an ad in the Earn section (Max 10 ads per day). When updated, users will receive <strong>exactly</strong> this amount.
+      </p>
+      <div style="display: flex; gap: 12px; align-items: flex-end; max-width: 480px; flex-wrap: wrap;">
+        <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+          <label class="form-label">Coins Per Watched Ad</label>
+          <input type="number" id="watchAdRewardInput" class="form-input" min="1" max="100000" placeholder="e.g. 10">
+        </div>
+        <button class="btn-primary" id="saveWatchAdRewardBtn" style="white-space: nowrap; height: 42px;">
+          <span>💾 Save Reward</span>
+        </button>
+      </div>
+      <div id="currentWatchAdRewardText" style="font-size: 12.5px; color: var(--accent); margin-top: 10px; font-weight: 700;">
+        Current Reward: Loading...
+      </div>
+    </div>
+
+    <div class="panel-card">
+      <div class="panel-title">
+        <span>Post New Task (Free for Admin)</span>
+      </div>
+      <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 20px;">
+        Post custom sponsored community tasks. Cost for Admin is <strong>0 TON / Free</strong>. Reward for each completing user is strictly locked at <strong>10 HOOCOOH Coins</strong>.
+      </p>
+
+      <div class="form-group">
+        <label class="form-label">Task Title</label>
+        <input type="text" id="taskTitleInput" class="form-input" placeholder="e.g. Join HOOCOOH Official Announcement Channel">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Channel / Group Link or URL</label>
+        <input type="text" id="taskLinkInput" class="form-input" placeholder="https://t.me/hoocooh_miner or @hoocooh_miner">
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="form-group">
+          <label class="form-label">Task Type</label>
+          <select id="taskTypeSelect" class="form-select">
+            <option value="verified">Verified (Must join Telegram Channel/Group)</option>
+            <option value="normal">Normal (Open link / website / bot)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">User Target Limit</label>
+          <input type="number" id="taskTargetCountInput" class="form-input" placeholder="e.g. 5000 users" value="5000">
+        </div>
+      </div>
+
+      <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
+        <input type="checkbox" id="taskUnlimitedCheck" style="width: 18px; height: 18px; cursor: pointer;">
+        <label for="taskUnlimitedCheck" style="font-size: 13.5px; font-weight: 700; cursor: pointer;">
+          Set as Unlimited Users (No expiration on total joins)
+        </label>
+      </div>
+
+      <div style="background: rgba(32, 184, 163, 0.08); border: 1px solid rgba(32, 184, 163, 0.25); border-radius: 12px; padding: 12px 16px; margin-bottom: 18px; font-size: 13px; color: var(--accent);">
+        💎 <strong>Reward:</strong> Fixed at 10 HOOCOOH Coins per user · <strong>Admin Cost:</strong> FREE (0 Coins / 0 TON)
+      </div>
+
+      <button class="btn-primary" id="createTaskBtn">
+        <span>➕ Post Task to App Now</span>
+      </button>
+    </div>
+
+    <!-- Active Tasks List -->
+    <div class="panel-card">
+      <div class="panel-title">
+        <span>Active Custom Tasks</span>
+        <button class="btn-secondary" id="refreshTasksBtn" style="font-size: 12px; padding: 4px 10px;">🔄 Refresh Tasks</button>
+      </div>
+      <div id="tasksListContainer">
+        <p style="text-align: center; color: var(--text-dim); padding: 20px;">Loading tasks...</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- TAB 6: BOT & WEBHOOK (Telegram Integration)-->
+  <!-- ========================================== -->
+  <section class="view-panel" id="tabBot">
+    <div class="panel-card">
+      <div class="panel-title">
+        <span>Telegram Bot & Webhook Integration</span>
+        <button class="btn-secondary" id="refreshBotSettingsBtn" style="font-size: 12px; padding: 4px 10px;">🔄 Refresh Status</button>
+      </div>
+      <p style="font-size: 13.5px; color: var(--text-dim); margin-bottom: 20px; line-height: 1.5;">
+        Configure your Telegram Admin ID and hook up the <code>/admin</code> bot command. When you send <code>/admin</code> from your Telegram account, the bot sends an inline button that opens this panel directly. All other users who try <code>/admin</code> receive <strong>zero response</strong>.
+      </p>
+
+      <!-- Bot Status Grid -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 24px;">
+        <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--card-border); border-radius: 12px; padding: 14px;">
+          <div style="font-size: 11px; color: var(--text-dim); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Bot Token Status</div>
+          <div style="font-size: 15px; font-weight: 800;" id="botTokenStatusText">Checking...</div>
+        </div>
+        <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--card-border); border-radius: 12px; padding: 14px;">
+          <div style="font-size: 11px; color: var(--text-dim); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Active Admin Telegram ID</div>
+          <div style="font-size: 15px; font-weight: 800; color: var(--accent);" id="currentAdminIdText">Checking...</div>
+        </div>
+        <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--card-border); border-radius: 12px; padding: 14px;">
+          <div style="font-size: 11px; color: var(--text-dim); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Webhook Status</div>
+          <div style="font-size: 15px; font-weight: 800;" id="webhookStatusText">Checking...</div>
+        </div>
+      </div>
+
+      <!-- Set Admin Telegram ID Form -->
+      <div style="background: rgba(32, 184, 163, 0.05); border: 1px solid rgba(32, 184, 163, 0.2); border-radius: 14px; padding: 18px; margin-bottom: 22px;">
+        <h4 style="font-size: 15px; font-weight: 800; color: #fff; margin-bottom: 8px;">🆔 Register Your Admin Telegram ID</h4>
+        <p style="font-size: 12.5px; color: var(--text-dim); margin-bottom: 14px;">
+          Enter your numeric Telegram ID (find via <code>@userinfobot</code> in Telegram). Once saved, sending <code>/admin</code> to your bot will trigger the Admin Panel exclusively for you.
+        </p>
+        <div style="display: flex; gap: 10px; max-width: 500px;">
+          <input type="text" id="adminTelegramIdInput" class="form-input" placeholder="e.g. 1234567890">
+          <button class="btn-primary" id="saveAdminIdBtn" style="white-space: nowrap;">💾 Save ID</button>
+        </div>
+      </div>
+
+      <!-- Webhook Connection Action -->
+      <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--card-border); border-radius: 14px; padding: 18px; margin-bottom: 20px;">
+        <h4 style="font-size: 15px; font-weight: 800; color: #fff; margin-bottom: 8px;">⚡ Telegram Webhook Setup</h4>
+        <p style="font-size: 12.5px; color: var(--text-dim); margin-bottom: 12px;">
+          Your Webhook URL: <code id="webhookUrlDisplay" style="color: var(--accent); background: rgba(255,255,255,0.06); padding: 3px 8px; border-radius: 6px;">Loading...</code>
+        </p>
+        <button class="btn-success" id="connectWebhookBtn">
+          <span>⚡ Register / Connect Webhook with Telegram</span>
+        </button>
+      </div>
+
+      <!-- Storage & TTL Optimization Policy -->
+      <div style="background: rgba(32, 184, 163, 0.05); border: 1px solid rgba(32, 184, 163, 0.2); border-radius: 14px; padding: 18px; margin-bottom: 22px;">
+        <h4 style="font-size: 15px; font-weight: 800; color: #fff; margin-bottom: 8px;">⚡ Database Storage & TTL Policy (100k+ Scale)</h4>
+        <div style="font-size: 13px; color: var(--text-dim); line-height: 1.6;">
+          • <strong>7-Day Ban Auto-Purge Policy:</strong> When a user is banned, admin has a 7-day grace period to unban. If not unbanned within 7 days, all user progression, coins, tasks, and records are permanently erased from the database while suspension remains permanent.<br>
+          • <strong>2-Month Inactivity Auto-Reset:</strong> Accounts inactive for 60 consecutive days are automatically purged. If they return after 2 months, a fresh account is opened.<br>
+          • <strong>Active User Balances Protected:</strong> All active users retain 100% of their balance; every login or claim resets the 60-day safety timer.<br>
+          • <strong>Ephemeral Token Purge:</strong> Captcha tokens and challenge nonces expire automatically after 10 minutes to guarantee MongoDB stays far below 512MB even with 100,000+ players.
+        </div>
+      </div>
+
+      <!-- Guide / Security Info -->
+      <div style="background: rgba(245, 158, 11, 0.06); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 12px; padding: 14px 18px; font-size: 13px; color: #f59e0b; line-height: 1.6;">
+        🛡️ <strong>Stealth / Anti-Detection Mode:</strong>
+        <br>
+        Only requests from your exact Telegram ID will trigger the Admin Panel. If any other player sends <code>/admin</code>, the bot will remain completely silent and send no message back.
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="adminToast">Action completed</div>
+
+<script>
+(function(){
+  var currentAdminKey = sessionStorage.getItem("hoocooh_admin_key") || "";
+  var currentFilter = "PENDING";
+  var selectedFundsUser = null;
+
+  var authOverlay = document.getElementById("authOverlay");
+  var adminKeyInput = document.getElementById("adminKeyInput");
+  var loginBtn = document.getElementById("loginBtn");
+  var toastEl = document.getElementById("adminToast");
+
+  function showToast(msg) {
+    if (!toastEl) return;
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    setTimeout(function(){ toastEl.classList.remove("show"); }, 3000);
+  }
+
+  window.copyToClipboard = function(text, successMsg) {
+    if (!text || text === "N/A") {
+      showToast("Nothing to copy");
+      return;
+    }
+    var clean = String(text).replace(/^@/, "").trim();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(clean).then(function(){
+        showToast(successMsg || "📋 Copied: " + clean);
+      }).catch(function(){
+        fallbackCopyText(clean, successMsg);
       });
-    }
-  } catch (e) {
-    console.error("Error reading admin IDs from DB:", e);
-  }
-  return ids;
-}
-
-function escapeHtml(str) {
-  if (!str) return "";
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
-function checkAdminAuth(req) {
-  const headerKey = req.headers["x-admin-key"];
-  const bodyKey = req.body && req.body.adminKey;
-  const queryKey = req.query && req.query.adminKey;
-  const key = headerKey || bodyKey || queryKey;
-  if (!key) return false;
-
-  const provided = Buffer.from(String(key).trim());
-  const expected = Buffer.from(String(ADMIN_SECRET).trim());
-  if (provided.length !== expected.length) return false;
-  return crypto.timingSafeEqual(provided, expected);
-}
-
-async function sendTelegramMsg(botToken, chatId, text, options = {}) {
-  if (!botToken || !chatId) return false;
-  try {
-    const payload = {
-      chat_id: String(chatId),
-      parse_mode: "HTML",
-      disable_web_page_preview: false
-    };
-
-    let url = `https://api.telegram.org/bot${botToken}/sendMessage`;
-
-    if (options.photoUrl) {
-      url = `https://api.telegram.org/bot${botToken}/sendPhoto`;
-      payload.photo = options.photoUrl;
-      payload.caption = text;
     } else {
-      payload.text = text;
+      fallbackCopyText(clean, successMsg);
+    }
+  };
+
+  function fallbackCopyText(text, successMsg) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand("copy");
+      showToast(successMsg || "📋 Copied: " + text);
+    } catch(e) {
+      showToast("Could not copy");
+    }
+    document.body.removeChild(ta);
+  }
+
+  // Telegram WebApp Auto-Authentication
+  var tg = window.Telegram && window.Telegram.WebApp;
+  if (tg) {
+    try { tg.ready(); tg.expand(); } catch(e){}
+  }
+
+  async function checkTelegramAuth() {
+    if (tg && tg.initData) {
+      // Auto-authenticating via Telegram WebApp initData
+      authOverlay.style.display = "flex";
+      var titleEl = document.querySelector(".auth-title");
+      var subEl = document.querySelector(".auth-sub");
+      var inputGroup = document.querySelector(".auth-box .form-group");
+      if (titleEl) titleEl.textContent = "Verifying Telegram Access...";
+      if (subEl) subEl.textContent = "Checking your administrator permissions...";
+      if (inputGroup) inputGroup.style.display = "none";
+      if (loginBtn) loginBtn.style.display = "none";
+
+      try {
+        var res = await fetch("/api/admin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "auth_init_data",
+            initData: tg.initData
+          })
+        });
+        var data = await res.json();
+        if (data.ok && data.authorized) {
+          currentAdminKey = data.adminKey;
+          sessionStorage.setItem("hoocooh_admin_key", data.adminKey);
+          authOverlay.style.display = "none";
+          var vSub = document.getElementById("adminVerifiedSub");
+          if (vSub && data.user) {
+            vSub.textContent = "🛡️ Verified: " + (data.user.firstName || "Admin") + " (UID: " + data.user.id + ")";
+          }
+          loadAll();
+          return;
+        } else {
+          // Strictly unauthorized: hide admin UI completely, show access denied
+          authOverlay.style.display = "none";
+          var adminWrap = document.getElementById("adminWrap");
+          if (adminWrap) adminWrap.style.display = "none";
+          var denied = document.getElementById("accessDeniedOverlay");
+          if (denied) {
+            denied.style.display = "flex";
+            var msg = document.getElementById("accessDeniedMsg");
+            if (msg) msg.textContent = data.message || "Your Telegram account is not authorized as an administrator.";
+          }
+          return;
+        }
+      } catch(e) {
+        console.error("Auth check failed:", e);
+      }
     }
 
-    if (options.reply_markup) {
-      payload.reply_markup = options.reply_markup;
-    } else if (options.buttonText && options.buttonUrl) {
-      payload.reply_markup = {
-        inline_keyboard: [
-          [{ text: options.buttonText, url: options.buttonUrl }]
-        ]
-      };
+    // Fallback for regular web browsers
+    if (currentAdminKey) {
+      authOverlay.style.display = "none";
+      loadAll();
+    } else {
+      authOverlay.style.display = "flex";
+      var titleEl = document.querySelector(".auth-title");
+      var subEl = document.querySelector(".auth-sub");
+      var inputGroup = document.querySelector(".auth-box .form-group");
+      if (titleEl) titleEl.textContent = "Admin Access";
+      if (subEl) subEl.textContent = "Enter your secret key to access the control panel";
+      if (inputGroup) inputGroup.style.display = "block";
+      if (loginBtn) loginBtn.style.display = "block";
     }
+  }
 
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+  checkTelegramAuth();
+
+  loginBtn.addEventListener("click", function(){
+    var key = (adminKeyInput.value || "").trim();
+    if (!key) { alert("Please enter secret key"); return; }
+    currentAdminKey = key;
+    sessionStorage.setItem("hoocooh_admin_key", key);
+    authOverlay.style.display = "none";
+    loadAll();
+  });
+
+  document.getElementById("logoutBtn").addEventListener("click", function(){
+    sessionStorage.removeItem("hoocooh_admin_key");
+    location.reload();
+  });
+
+  // API Helper
+  async function apiAdmin(method, params, body) {
+    var url = "/api/admin";
+    if (params) {
+      var q = new URLSearchParams(params);
+      q.set("adminKey", currentAdminKey);
+      url += "?" + q.toString();
+    }
+    var opts = {
+      method: method,
+      headers: {
+        "Content-Type": "application/json",
+        "x-admin-key": currentAdminKey
+      }
+    };
+    if (body) {
+      body.adminKey = currentAdminKey;
+      opts.body = JSON.stringify(body);
+    }
+    var res = await fetch(url, opts);
+    var data = await res.json();
+    if (res.status === 401) {
+      sessionStorage.removeItem("hoocooh_admin_key");
+      alert("Invalid Admin Secret Key. Please re-enter.");
+      location.reload();
+      throw new Error("Unauthorized");
+    }
+    return data;
+  }
+
+  // Tab Switching
+  var tabBtns = document.querySelectorAll(".tab-btn");
+  var viewPanels = document.querySelectorAll(".view-panel");
+  tabBtns.forEach(function(b){
+    b.addEventListener("click", function(){
+      var target = b.getAttribute("data-tab");
+      tabBtns.forEach(function(btn){ btn.classList.remove("active"); });
+      viewPanels.forEach(function(p){ p.classList.remove("active"); });
+      b.classList.add("active");
+      var panel = document.getElementById(target);
+      if (panel) panel.classList.add("active");
+
+      if (target === "tabWithdrawals") loadWithdrawals();
+      if (target === "tabTasks") loadTasks();
+      if (target === "tabBot") loadBotSettings();
+      if (target === "tabUsers") checkHighRiskStats();
     });
-    const data = await res.json();
-    return data.ok;
-  } catch (e) {
-    return false;
-  }
-}
+  });
 
-function calculateFraudRiskScore(u) {
-  if (!u) return 0;
-  if (u.isBanned) return 100;
-
-  let score = 0;
-
-  // 1. Critical hacker / automated script tampering (Instantly high risk)
-  if (u.isHighRiskHacker) {
-    score += 85;
+  function loadAll() {
+    loadStats();
+    loadWithdrawals();
   }
 
-  // 2. Severe security flag (e.g. ad skip exploit or headless tamper)
-  const secFlag = String(u.securityFlag || "");
-  if (secFlag.includes("RED_FLAG") || secFlag.includes("HIGH RISK") || secFlag.includes("EXPLOIT")) {
-    score += 45;
-  }
+  // 1. Stats
+  async function loadStats() {
+    try {
+      var data = await apiAdmin("GET", { action: "stats" });
+      if (data.ok) {
+        var active60d = (data.activeUsers60d !== undefined ? data.activeUsers60d : (data.totalUsers || 0));
+        document.getElementById("statTotalUsers").innerHTML = `${(data.totalUsers || 0).toLocaleString()} <span style="font-size: 11px; color: var(--text-dim); display: block; margin-top: 2px;">Active (60d): <strong style="color: var(--accent);">${active60d.toLocaleString()}</strong></span>`;
+        document.getElementById("statPendingW").textContent = (data.pendingWithdrawals || 0).toLocaleString();
+        
+        var pendingUsdtStr = "$" + (data.totalPendingUsdt || 0).toFixed(2);
+        var pendingTonStr = (data.totalPendingTon !== undefined ? Number(data.totalPendingTon).toFixed(4) : "0.0000") + " TON";
+        var pendingUsdtEl = document.getElementById("statPendingUsdt");
+        if (pendingUsdtEl) pendingUsdtEl.innerHTML = `${pendingUsdtStr} <span style="font-size: 13px; color: #00b4d8; display: block; margin-top: 3px;">💎 ${pendingTonStr}</span>`;
 
-  // 3. Negative coin balance penalty (penalized exploit attempt)
-  if (Number(u.balance || 0) < 0) {
-    score += 50;
-  }
+        var headerBadge = document.getElementById("pendingUsdtHeaderBadge");
+        if (headerBadge) headerBadge.textContent = "Pending: " + pendingUsdtStr + " / " + pendingTonStr;
 
-  // 4. Multi-account detection
-  if (u.isSuspendedMultipleAccount) {
-    score += 45;
-  }
-  const devStrikes = Number(u.deviceViolationsCount || 0);
-  if (devStrikes >= 2) {
-    score += 40;
-  } else if (devStrikes === 1) {
-    score += 20;
-  }
+        var paidTonStr = (data.totalPaidTon !== undefined ? Number(data.totalPaidTon).toFixed(4) : "0.0000") + " TON";
+        document.getElementById("statPaidUsdt").innerHTML = `$${(data.totalPaidUsdt || 0).toFixed(2)} <span style="font-size: 13px; color: #00b4d8; display: block; margin-top: 3px;">💎 ${paidTonStr}</span>`;
+        var bTotal = data.bannedUsers || 0;
+        var bPurged = data.bannedUsersPurged || 0;
+        var bGrace = data.bannedUsersGrace || 0;
+        var bannedEl = document.getElementById("statBannedUsers");
+        if (bannedEl) {
+          bannedEl.innerHTML = `${bTotal.toLocaleString()} <span style="font-size: 11px; color: var(--text-dim); display: block; margin-top: 2px;">Purged (>7d): <strong style="color: #ef4444;">${bPurged.toLocaleString()}</strong> · Grace: <strong style="color: #f59e0b;">${bGrace.toLocaleString()}</strong></span>`;
+        }
 
-  // 5. Ad skip exploit strikes (< 9s video skip attempts)
-  const adSkipStrikes = Number(u.adSkipUnder9sStrikes || 0);
-  if (adSkipStrikes >= 2) {
-    score += 35;
-  } else if (adSkipStrikes === 1) {
-    score += 20;
+        if (data.highRiskUnbannedCount !== undefined) {
+          var hrBadge = document.getElementById("highRiskUnbannedBadge");
+          if (hrBadge) hrBadge.textContent = data.highRiskUnbannedCount + " Detected";
+          var hrTxt = document.getElementById("highRiskCountTxt");
+          if (hrTxt) hrTxt.textContent = data.highRiskUnbannedCount;
+        }
+
+        var badge = document.getElementById("pendingCountBadge");
+        if (data.pendingWithdrawals > 0) {
+          badge.textContent = data.pendingWithdrawals;
+          badge.style.display = "inline-block";
+        } else {
+          badge.style.display = "none";
+        }
+      }
+    } catch(e){}
   }
+  document.getElementById("refreshStatsBtn").addEventListener("click", loadAll);
 
-  // 6. Rapid spin under 5s strikes
-  const spinStrikes = Number(u.spinUnder5sStrikes || 0);
-  if (spinStrikes >= 5) {
-    score += 30;
-  } else if (spinStrikes >= 3) {
-    score += 15;
-  }
+  // 2. Withdrawals
+  var withdrawalsList = document.getElementById("withdrawalsList");
+  var filterBtns = document.querySelectorAll(".pill-filter");
+  filterBtns.forEach(function(fb){
+    fb.addEventListener("click", function(){
+      filterBtns.forEach(function(b){ b.classList.remove("active"); });
+      fb.classList.add("active");
+      currentFilter = fb.getAttribute("data-filter");
+      loadWithdrawals();
+    });
+  });
 
-  // 7. General suspicious flag or reason
-  if (u.isSuspicious) {
-    score += 25;
-  }
-  const susReason = String(u.suspiciousReason || "").toLowerCase();
-  if (susReason.includes("tamper") || susReason.includes("bot") || susReason.includes("hack") || susReason.includes("exploit") || susReason.includes("script")) {
-    score += 30;
-  }
+  async function loadWithdrawals() {
+    withdrawalsList.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-dim);">Loading requests...</td></tr>';
+    try {
+      var data = await apiAdmin("GET", { action: "withdrawals", status: currentFilter });
+      if (data.ok) {
+        if (!data.withdrawals || data.withdrawals.length === 0) {
+          withdrawalsList.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-dim); padding: 24px;">No withdrawal requests found for this filter.</td></tr>';
+          return;
+        }
 
-  return Math.min(100, Math.max(0, score));
-}
+        withdrawalsList.innerHTML = data.withdrawals.map(function(w){
+          var isPending = w.status === "PENDING";
+          var statusClass = w.status === "APPROVED" ? "approved" : (w.status === "REJECTED" ? "rejected" : "pending");
+          var dateStr = new Date(w.createdAt).toLocaleString();
+          var isBannedTag = w.isBanned ? '<span class="status-tag banned" style="margin-left: 4px;">BANNED</span>' : '';
+          var tonValStr = (w.tonAmount !== undefined ? Number(w.tonAmount).toFixed(4) : "0.0000");
 
-module.exports = async (req, res) => {
-  // CORS / Options preflight
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type,x-admin-key");
-  if (req.method === "OPTIONS") {
-    res.status(200).end();
-    return;
-  }
+          var securityBadge = '';
+          if (w.isHighRiskHacker) {
+            securityBadge = `<div style="margin-top: 4px;"><span class="status-tag high-risk" style="font-size: 10px; padding: 2px 7px;">🚨 HIGH RISK (HACKER)</span> ${w.suspiciousReason ? `<div style="font-size: 10px; color: #ef4444; margin-top: 2px;">${w.suspiciousReason}</div>` : ''}</div>`;
+          } else if (w.isSuspicious) {
+            securityBadge = `<div style="margin-top: 4px;"><span class="status-tag suspicious" style="font-size: 10px; padding: 2px 7px;">⚠️ SUSPICIOUS</span> ${w.suspiciousReason ? `<div style="font-size: 10px; color: #f59e0b; margin-top: 2px;">${w.suspiciousReason}</div>` : ''}</div>`;
+          } else if (w.isSuspendedMultipleAccount) {
+            securityBadge = `<div style="margin-top: 4px;"><span class="status-tag banned" style="font-size: 10px; padding: 2px 7px;">🚫 MULTI-ACCOUNT</span></div>`;
+          }
+          if (w.deviceViolationsCount > 0) {
+            securityBadge += `<div style="font-size: 10px; color: #ef4444; margin-top: 2px;">⚠️ Multi-Acc Strikes: ${w.deviceViolationsCount}</div>`;
+          }
 
-  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+          var actions = '';
+          if (isPending) {
+            actions = `
+              <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                <button class="btn-success" onclick="approveWithdrawal('${w.id}', '${tonValStr}', '${w.walletAddress}')">Approve</button>
+                <button class="btn-secondary" onclick="rejectWithdrawal('${w.id}')">Reject</button>
+                <button class="btn-danger" onclick="banUserFromW('${w.telegramId}', '${w.id}')">Ban</button>
+              </div>
+            `;
+          } else {
+            actions = `<span style="font-size: 11px; color: var(--text-dim);">${w.reason || w.txHash ? (w.reason || 'Tx: ' + w.txHash.slice(0, 10) + '...') : 'Processed'}</span>`;
+          }
 
-  // ========================================================
-  // Telegram WebApp Auto-Authentication (Via initData)
-  // Allows the owner to open /admin.html inside Telegram without entering password!
-  // Strictly rejects unauthorized Telegram users!
-  // ========================================================
-  if (req.method === "POST" && req.body && req.body.action === "auth_init_data") {
-    const { initData } = req.body;
-    if (!initData) {
-      res.status(400).json({ ok: false, error: "Missing Telegram initData" });
-      return;
+          return `
+            <tr>
+              <td data-label="User">
+                <div>
+                  <strong>${w.name}</strong> ${isBannedTag}<br>
+                  <div style="font-size: 11px; color: var(--text-dim); display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-top: 3px;">
+                    <span>${w.username}</span>
+                    ${w.username && w.username !== "N/A" ? `<button type="button" class="btn-copy-tag" onclick="copyToClipboard('${w.username}', 'Username copied!')" title="Copy Username">📋 Copy</button>` : ''}
+                    <span>· UID: <code>${w.telegramId}</code></span>
+                    <button type="button" class="btn-copy-tag" onclick="copyToClipboard('${w.telegramId}', 'UID copied!')" title="Copy UID">📋 Copy</button>
+                  </div>
+                  ${securityBadge}
+                </div>
+              </td>
+              <td data-label="Coins"><strong>${Number(w.amount).toLocaleString()}</strong></td>
+              <td data-label="USDT"><span style="color: var(--accent); font-weight: 800;">$${Number(w.usdtAmount).toFixed(2)}</span></td>
+              <td data-label="TON Payable">
+                <span style="display: inline-flex; align-items: center; gap: 4px; background: rgba(0, 180, 216, 0.15); color: #00b4d8; border: 1px solid rgba(0, 180, 216, 0.35); padding: 4px 8px; border-radius: 8px; font-weight: 800; font-size: 12.5px;">
+                  💎 ${tonValStr} TON
+                </span>
+              </td>
+              <td data-label="TON Address">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <code style="font-size: 11.5px; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 6px;" title="${w.walletAddress}">
+                    ${w.walletAddress.slice(0, 6)}...${w.walletAddress.slice(-6)}
+                  </code>
+                  <button class="btn-secondary" style="padding: 2px 7px; font-size: 11px; cursor: pointer;" onclick="copyToClipboard('${w.walletAddress}', 'Address copied!')" title="Copy full address">📋 Copy</button>
+                </div>
+              </td>
+              <td data-label="Date" style="font-size: 11.5px; color: var(--text-dim);">${dateStr}</td>
+              <td data-label="Status"><span class="status-tag ${statusClass}">${w.status}</span></td>
+              <td data-label="Actions">${actions}</td>
+            </tr>
+          `;
+        }).join("");
+      }
+    } catch(e) {
+      withdrawalsList.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--danger);">Failed to load withdrawals.</td></tr>';
     }
-    if (!botToken) {
-      res.status(500).json({ ok: false, error: "TELEGRAM_BOT_TOKEN is not configured in Vercel" });
-      return;
-    }
+  }
 
-    const tgUser = validateInitData(initData, botToken);
-    if (!tgUser || !tgUser.id) {
-      res.status(401).json({ ok: false, error: "Invalid or expired Telegram authentication signature." });
-      return;
+  // Withdrawal Actions attached to window
+  var isActionProcessing = false;
+
+  window.approveWithdrawal = async function(id, tonAmount, walletAddr) {
+    if (isActionProcessing) return;
+    var confirmMsg = `⚡ Confirm Auto-Payout & Approval?\n\n💎 Amount: ${tonAmount ? tonAmount + ' TON' : ''}\n📍 Destination: ${walletAddr || ''}\n\nClick OK to automatically pay & confirm on-chain!`;
+    if (!confirm(confirmMsg)) return;
+
+    isActionProcessing = true;
+    showToast("⏳ Processing Auto-Pay...");
+    try {
+      var res = await apiAdmin("POST", null, { action: "approve_withdrawal", withdrawalId: id });
+      if (res.ok) {
+        if (res.autoPaySuccess) {
+          showToast(`💎 Sent ${res.tonAmount} TON on-chain! Approved.`);
+        } else {
+          showToast(`✅ Approved! ${res.tonAmount ? '(' + res.tonAmount + ' TON)' : ''}`);
+        }
+        loadWithdrawals();
+        loadStats();
+      } else {
+        alert("⚠️ " + (res.error || "Approval failed"));
+      }
+    } catch(e) {
+      alert("❌ " + (e.message || e));
+    } finally {
+      isActionProcessing = false;
     }
+  };
+
+  window.rejectWithdrawal = async function(id) {
+    if (isActionProcessing) return;
+    var reason = prompt("Enter rejection reason (User will receive this & coins will be refunded):", "Suspicious multi-account or bot activity");
+    if (!reason) return;
+
+    isActionProcessing = true;
+    try {
+      var res = await apiAdmin("POST", null, { action: "reject_withdrawal", withdrawalId: id, reason: reason });
+      if (res.ok) {
+        showToast("⚠️ Withdrawal rejected and coins refunded.");
+        loadWithdrawals();
+        loadStats();
+      } else {
+        alert("⚠️ " + (res.error || "Rejection failed"));
+      }
+    } catch(e){
+      alert("❌ " + (e.message || e));
+    } finally {
+      isActionProcessing = false;
+    }
+  };
+
+  window.banUserFromW = async function(uid, wId) {
+    if (isActionProcessing) return;
+    var reason = prompt(`Permanently suspend user UID ${uid}? User will never be able to open or use the miner:`, "Cheating / Termux / Multi-Account violation");
+    if (!reason) return;
+
+    isActionProcessing = true;
+    try {
+      var res = await apiAdmin("POST", null, { action: "ban_user", telegramId: uid, reason: reason, withdrawalId: wId });
+      if (res.ok) {
+        showToast(`⛔ User ${uid} has been suspended!`);
+        loadWithdrawals();
+        loadStats();
+      } else {
+        alert("⚠️ " + (res.error || "Ban action failed"));
+      }
+    } catch(e){
+      alert("❌ " + (e.message || e));
+    } finally {
+      isActionProcessing = false;
+    }
+  };
+
+  // Bulk Auto-Pay Queue State
+  var isAutoPayRunning = false;
+  var stopAutoPayRequested = false;
+
+  var bulkApproveBtn = document.getElementById("bulkApproveBtn");
+  var stopAutoPayBtn = document.getElementById("stopAutoPayBtn");
+  var autoPayProgressBox = document.getElementById("autoPayProgressBox");
+  var autoPayStatusText = document.getElementById("autoPayStatusText");
+  var autoPayCounterBadge = document.getElementById("autoPayCounterBadge");
+  var autoPayCurrentDetail = document.getElementById("autoPayCurrentDetail");
+  var autoPayProgressBar = document.getElementById("autoPayProgressBar");
+
+  // Handler for Stop / Turn OFF Auto-Pay
+  if (stopAutoPayBtn) {
+    stopAutoPayBtn.addEventListener("click", function(){
+      if (!isAutoPayRunning) return;
+      stopAutoPayRequested = true;
+      stopAutoPayBtn.disabled = true;
+      stopAutoPayBtn.innerHTML = "<span>⏳ Stopping after current...</span>";
+      if (autoPayStatusText) {
+        autoPayStatusText.innerHTML = "⚠️ Stop requested! Finishing current transaction...";
+        autoPayStatusText.style.color = "#f59e0b";
+      }
+      showToast("⚠️ Stopping Auto-Pay... finishing current transaction first.");
+    });
+  }
+
+  // Handler for Start / Approve All
+  if (bulkApproveBtn) {
+    bulkApproveBtn.addEventListener("click", async function(){
+      if (isAutoPayRunning) return;
+
+      var data;
+      try {
+        data = await apiAdmin("GET", { action: "withdrawals", status: "PENDING" });
+      } catch(err) {
+        alert("Failed to fetch pending withdrawals: " + (err.message || err));
+        return;
+      }
+
+      if (!data.ok || !data.withdrawals || data.withdrawals.length === 0) {
+        alert("No pending withdrawals to approve!");
+        return;
+      }
+
+      var list = data.withdrawals;
+      var totalCount = list.length;
+      var totalTonEst = list.reduce(function(sum, w){ return sum + (parseFloat(w.tonAmount) || 0); }, 0);
+
+      var confirmMsg = `⚡ Start Automated Payout for ALL Pending Requests?\n\n` +
+        `📋 Total Queue: ${totalCount} request(s)\n` +
+        `💎 Total TON: ~${totalTonEst.toFixed(4)} TON\n\n` +
+        `Each payout will be sent on-chain one by one.\n` +
+        `You can click 'Turn OFF Auto-Pay' at ANY time to safely stop after the current transaction finishes.\n\n` +
+        `Start Auto-Pay now?`;
+
+      if (!confirm(confirmMsg)) return;
+
+      // Enter running state
+      isAutoPayRunning = true;
+      stopAutoPayRequested = false;
+
+      bulkApproveBtn.style.display = "none";
+      stopAutoPayBtn.style.display = "inline-block";
+      stopAutoPayBtn.disabled = false;
+      stopAutoPayBtn.innerHTML = "<span>⏹️ Turn OFF Auto-Pay</span>";
+
+      autoPayProgressBox.style.display = "block";
+      autoPayStatusText.innerHTML = "🟢 Auto-Paying in progress...";
+      autoPayStatusText.style.color = "#10b981";
+      autoPayCounterBadge.textContent = `0 / ${totalCount} Completed`;
+      autoPayProgressBar.style.width = "0%";
+
+      var successCount = 0;
+      var failCount = 0;
+
+      for (var i = 0; i < totalCount; i++) {
+        // If stop requested before beginning this item, exit queue immediately
+        if (stopAutoPayRequested) {
+          break;
+        }
+
+        var w = list[i];
+        var userLabel = w.username ? ('@' + w.username) : (w.userFirstName || ('UID: ' + w.userId));
+        var tonAmtStr = w.tonAmount ? (w.tonAmount + ' TON') : '';
+
+        autoPayCurrentDetail.innerHTML = `Paying <strong>${i + 1} of ${totalCount}</strong>: ${userLabel} (<code>${tonAmtStr}</code>) &rarr; <span style="font-family: monospace; font-size: 11px;">${w.walletAddress ? (w.walletAddress.slice(0, 8) + '...' + w.walletAddress.slice(-6)) : ''}</span>`;
+        autoPayStatusText.innerHTML = `🟢 Processing ${i + 1} of ${totalCount}...`;
+
+        try {
+          var res = await apiAdmin("POST", null, { action: "approve_withdrawal", withdrawalId: w.id });
+          if (res.ok) {
+            successCount++;
+          } else {
+            failCount++;
+            if (res.error && res.error.includes("INSUFFICIENT_HOT_WALLET_BALANCE")) {
+              alert("⚠️ Auto-pay halted: Hot wallet balance is insufficient!\n" + res.error);
+              break;
+            }
+          }
+        } catch(e) {
+          failCount++;
+          console.error("Auto-pay error on item " + w.id, e);
+        }
+
+        var completedSoFar = i + 1;
+        autoPayCounterBadge.textContent = `${completedSoFar} / ${totalCount} Completed`;
+        var pct = Math.round((completedSoFar / totalCount) * 100);
+        autoPayProgressBar.style.width = pct + "%";
+
+        // Refresh table and stats in real time so admin sees approved items live
+        loadWithdrawals();
+        loadStats();
+
+        // If stop was requested while this transaction was executing, exit now!
+        if (stopAutoPayRequested) {
+          break;
+        }
+
+        // Polite pause between on-chain transactions to respect RPC limits
+        if (i < totalCount - 1) {
+          await new Promise(function(resolve){ setTimeout(resolve, 2500); });
+        }
+      }
+
+      // Finalize
+      var wasStoppedEarly = stopAutoPayRequested && (successCount + failCount < totalCount);
+
+      isAutoPayRunning = false;
+      stopAutoPayRequested = false;
+
+      bulkApproveBtn.style.display = "inline-block";
+      stopAutoPayBtn.style.display = "none";
+
+      if (wasStoppedEarly) {
+        autoPayStatusText.innerHTML = `⏹️ Auto-Pay Stopped!`;
+        autoPayStatusText.style.color = "#f59e0b";
+        autoPayCurrentDetail.innerHTML = `Stopped by admin. Completed: <strong>${successCount}</strong>, Failed: <strong>${failCount}</strong>, Remaining: <strong>${totalCount - (successCount + failCount)}</strong>.`;
+        showToast(`⏹️ Auto-Pay stopped! Processed ${successCount + failCount} of ${totalCount}.`);
+      } else {
+        autoPayStatusText.innerHTML = `✅ Auto-Pay Finished!`;
+        autoPayStatusText.style.color = "#10b981";
+        autoPayCurrentDetail.innerHTML = `Queue complete. Successfully approved: <strong>${successCount}</strong>, Failed: <strong>${failCount}</strong>.`;
+        showToast(`⚡ Finished! ${successCount} approved.`);
+      }
+
+      // Hide progress box after 8s
+      setTimeout(function(){
+        if (!isAutoPayRunning && autoPayProgressBox) {
+          autoPayProgressBox.style.display = "none";
+        }
+      }, 8000);
+
+      loadWithdrawals();
+      loadStats();
+    });
+  }
+
+  // 3. Broadcast
+  var sendBroadcastBtn = document.getElementById("sendBroadcastBtn");
+  var broadcastStatusBox = document.getElementById("broadcastStatusBox");
+  sendBroadcastBtn.addEventListener("click", async function(){
+    var msg = (document.getElementById("broadcastMsg").value || "").trim();
+    var photo = (document.getElementById("broadcastPhoto").value || "").trim();
+    var bText = (document.getElementById("broadcastBtnText").value || "").trim();
+    var bUrl = (document.getElementById("broadcastBtnUrl").value || "").trim();
+
+    if (!msg) { alert("Please type a broadcast message."); return; }
+    if (!confirm("Start broadcast to ALL registered users? This might take a minute depending on user count.")) return;
+
+    sendBroadcastBtn.disabled = true;
+    sendBroadcastBtn.innerHTML = "<span>⏳ Sending Broadcast in Background...</span>";
+    broadcastStatusBox.style.display = "block";
+    broadcastStatusBox.innerHTML = "Broadcasting messages to Telegram users via bot...";
 
     try {
-      const db = await getDb();
-      const adminIds = await getAdminTelegramIds(db);
-      const senderId = String(tgUser.id);
-
-      if (!adminIds.has(senderId)) {
-        res.status(403).json({
-          ok: false,
-          error: "ACCESS_DENIED_NOT_ADMIN",
-          message: `Telegram ID ${senderId} is not registered as an Administrator.`
-        });
-        return;
-      }
-
-      // Verified Admin! Return temporary adminKey for frontend API sessions
-      res.status(200).json({
-        ok: true,
-        authorized: true,
-        adminKey: ADMIN_SECRET,
-        user: {
-          id: tgUser.id,
-          username: tgUser.username || "",
-          firstName: tgUser.first_name || ""
-        }
+      var res = await apiAdmin("POST", null, {
+        action: "broadcast",
+        message: msg,
+        photoUrl: photo,
+        buttonText: bText,
+        buttonUrl: bUrl
       });
-      return;
-    } catch (err) {
-      res.status(500).json({ ok: false, error: err.message });
-      return;
+
+      if (res.ok) {
+        broadcastStatusBox.innerHTML = `
+          <div style="color: var(--success); font-weight: 800; margin-bottom: 6px;">🎉 Broadcast Complete!</div>
+          <div>Total Users: <strong>${res.totalUsers}</strong></div>
+          <div>Successfully Sent: <strong style="color: var(--accent);">${res.sentCount}</strong></div>
+          <div>Failed / Blocked by User: <strong style="color: var(--danger);">${res.failCount}</strong></div>
+          <div>Already Received (skipped, no duplicate): <strong>${res.skippedCount || 0}</strong></div>
+        `;
+        showToast("📢 Broadcast completed!");
+      }
+    } catch(e) {
+      broadcastStatusBox.innerHTML = `<span style="color: var(--danger);">Broadcast error: ${e.message}</span>`;
+    } finally {
+      sendBroadcastBtn.disabled = false;
+      sendBroadcastBtn.innerHTML = "<span>📢 Send Broadcast to All Users</span>";
+    }
+  });
+
+  // 4. Funds Tab
+  document.getElementById("fundsSearchBtn").addEventListener("click", searchFundsUser);
+  document.getElementById("fundsSearchInput").addEventListener("keypress", function(e){
+    if (e.key === "Enter") searchFundsUser();
+  });
+
+  async function searchFundsUser() {
+    var q = (document.getElementById("fundsSearchInput").value || "").trim();
+    if (!q) { alert("Enter a UID or username to search"); return; }
+    try {
+      var data = await apiAdmin("GET", { action: "search_user", q: q });
+      if (data.ok && data.users && data.users.length > 0) {
+        selectedFundsUser = data.users[0];
+        renderFundsUser(selectedFundsUser);
+      } else {
+        alert("No user found with: " + q);
+        document.getElementById("fundsUserResult").style.display = "none";
+      }
+    } catch(e){ alert(e.message); }
+  }
+
+  function renderFundsUser(u) {
+    document.getElementById("fundsUserResult").style.display = "block";
+    document.getElementById("fundsNameTxt").textContent = u.name + (u.username !== "N/A" ? " (" + u.username + ")" : "");
+    document.getElementById("fundsUidTxt").textContent = "UID: " + u.telegramId;
+    document.getElementById("fundsBalTxt").textContent = Number(u.balance).toLocaleString() + " Coins";
+    document.getElementById("fundsLvlTxt").textContent = "Lv." + u.minerLevel;
+    document.getElementById("fundsRecruitsTxt").textContent = u.recruitsCount;
+
+    var avatarBox = document.getElementById("fundsAvatarTxt");
+    if (u.photoUrl) {
+      avatarBox.innerHTML = `<img src="${u.photoUrl}">`;
+    } else {
+      avatarBox.textContent = (u.name.charAt(0) || "M").toUpperCase();
+    }
+
+    var badge = document.getElementById("fundsBannedBadge");
+    if (u.isBanned) {
+      badge.innerHTML = '<span class="status-tag banned">⛔ SUSPENDED</span>';
+    } else {
+      badge.innerHTML = '<span class="status-tag approved">ACTIVE</span>';
     }
   }
 
-  if (!checkAdminAuth(req)) {
-    res.status(401).json({ error: "Unauthorized: Invalid Admin Secret Key" });
-    return;
+  document.getElementById("fundsAddBtn").addEventListener("click", function(){ adjustFunds(1); });
+  document.getElementById("fundsDeductBtn").addEventListener("click", function(){ adjustFunds(-1); });
+
+  async function adjustFunds(multiplier) {
+    if (!selectedFundsUser) return;
+    var rawAmt = parseInt(document.getElementById("fundsAmountInput").value, 10);
+    if (isNaN(rawAmt) || rawAmt <= 0) { alert("Enter a valid positive number of coins"); return; }
+    var delta = rawAmt * multiplier;
+    var note = (document.getElementById("fundsNoteInput").value || "").trim();
+
+    var sign = delta > 0 ? "+" : "";
+    if (!confirm(`Confirm adjusting ${selectedFundsUser.name}'s balance by ${sign}${delta.toLocaleString()} Coins?`)) return;
+
+    try {
+      var res = await apiAdmin("POST", null, {
+        action: "update_funds",
+        telegramId: selectedFundsUser.telegramId,
+        delta: delta,
+        note: note
+      });
+      if (res.ok) {
+        showToast(`💰 Balance updated to ${res.newBalance.toLocaleString()} Coins`);
+        selectedFundsUser.balance = res.newBalance;
+        document.getElementById("fundsBalTxt").textContent = res.newBalance.toLocaleString() + " Coins";
+        document.getElementById("fundsAmountInput").value = "";
+        loadStats();
+      }
+    } catch(e){ alert(e.message); }
   }
 
-  try {
-    const db = await getDb();
-    const usersCol = db.collection("users");
-    const withdrawalsCol = db.collection("withdrawals");
-    const tasksCol = db.collection("tasks");
+  // 5. Users Search & Anti-Cheat Ban/Unban & High Fraud Risk (80%-100%) Management
+  document.getElementById("usersSearchBtn").addEventListener("click", searchUsersList);
+  document.getElementById("usersSearchInput").addEventListener("keypress", function(e){
+    if (e.key === "Enter") searchUsersList();
+  });
 
-    // ==========================================
-    // GET Requests: Stats, Withdrawals, Users, Tasks
-    // ==========================================
-    if (req.method === "GET") {
-      const action = req.query.action || "stats";
+  function buildUserCardHtml(u) {
+    var isBanned = !!u.isBanned;
+    var isPurged = !!u.dataPurged;
+    var banTime = u.bannedAt ? Number(u.bannedAt) : Date.now();
+    var msPassed = Date.now() - banTime;
+    var daysPassed = msPassed / (86400000);
+    var daysRemaining = Math.max(0, Math.ceil(7 - daysPassed));
 
-      // 1. Stats
-      if (action === "stats") {
-        await purgeExpiredBannedUsers(db).catch(() => {});
-        const totalUsers = await usersCol.countDocuments({});
-        const bannedUsers = await usersCol.countDocuments({ isBanned: true });
-        const bannedPurged = await usersCol.countDocuments({ isBanned: true, dataPurged: true });
-        const bannedGrace = await usersCol.countDocuments({ isBanned: true, dataPurged: { $ne: true } });
-        const pendingW = await withdrawalsCol.countDocuments({ status: "PENDING" });
-        const approvedW = await withdrawalsCol.countDocuments({ status: "APPROVED" });
-
-        const balAgg = await usersCol.aggregate([
-          { $group: { _id: null, totalCoins: { $sum: "$balance" } } }
-        ]).toArray();
-        const totalCoins = balAgg[0] ? balAgg[0].totalCoins : 0;
-
-        const TON_PER_USD = 0.019 / 0.03; // 3 cents = 0.019 TON
-
-        const paidAgg = await withdrawalsCol.aggregate([
-          { $match: { status: "APPROVED" } },
-          { $group: { _id: null, totalUsdt: { $sum: "$usdtAmount" }, totalTon: { $sum: { $ifNull: ["$tonAmount", { $multiply: ["$usdtAmount", TON_PER_USD] }] } } } }
-        ]).toArray();
-        const totalPaidUsdt = paidAgg[0] ? paidAgg[0].totalUsdt : 0;
-        const totalPaidTon = paidAgg[0] ? paidAgg[0].totalTon : (totalPaidUsdt * TON_PER_USD);
-
-        const pendingUsdtAgg = await withdrawalsCol.aggregate([
-          { $match: { status: "PENDING" } },
-          { $group: { _id: null, totalUsdt: { $sum: "$usdtAmount" }, totalTon: { $sum: { $ifNull: ["$tonAmount", { $multiply: ["$usdtAmount", TON_PER_USD] }] } } } }
-        ]).toArray();
-        const totalPendingUsdt = pendingUsdtAgg[0] ? pendingUsdtAgg[0].totalUsdt : 0;
-        const totalPendingTon = pendingUsdtAgg[0] ? pendingUsdtAgg[0].totalTon : (totalPendingUsdt * TON_PER_USD);
-
-        const activeUsers60d = await usersCol.countDocuments({
-          lastActiveAt: { $gte: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000) }
-        });
-
-        // Count unbanned users matching High Fraud Risk criteria (80% - 100%)
-        const highRiskUnbannedCount = await usersCol.countDocuments({
-          isBanned: { $ne: true },
-          $or: [
-            { isHighRiskHacker: true },
-            { balance: { $lt: 0 } },
-            { isSuspendedMultipleAccount: true },
-            { securityFlag: { $regex: "RED_FLAG|HIGH RISK|EXPLOIT", $options: "i" } },
-            { deviceViolationsCount: { $gte: 2 } },
-            { adSkipUnder9sStrikes: { $gte: 2 } }
-          ]
-        });
-
-        res.status(200).json({
-          ok: true,
-          totalUsers,
-          activeUsers60d,
-          ttlDays: 60,
-          bannedUsers,
-          bannedPurged,
-          bannedGrace,
-          highRiskUnbannedCount,
-          pendingWithdrawals: pendingW,
-          totalPendingUsdt: Number(totalPendingUsdt.toFixed(2)),
-          totalPendingTon: Number(totalPendingTon.toFixed(4)),
-          approvedWithdrawals: approvedW,
-          totalCoinsInCirculation: Math.round(totalCoins),
-          totalPaidUsdt: Number(totalPaidUsdt.toFixed(2)),
-          totalPaidTon: Number(totalPaidTon.toFixed(4))
-        });
-        return;
+    var banBadge = '';
+    if (isBanned) {
+      if (isPurged) {
+        banBadge = '<span class="status-tag banned" style="background: #dc2626; color: #fff; margin-left: 6px;">🗑️ DATA PURGED (>7d)</span>';
+      } else {
+        banBadge = `<span class="status-tag banned" style="margin-left: 6px;">SUSPENDED (${daysRemaining}d grace)</span>`;
       }
-
-      // 2. Withdrawals List
-      if (action === "withdrawals") {
-        const filter = {};
-        if (req.query.status && req.query.status !== "ALL") {
-          filter.status = req.query.status.toUpperCase();
-        }
-
-        const rawList = await withdrawalsCol
-          .find(filter)
-          .sort({ createdAt: -1 })
-          .limit(100)
-          .toArray();
-
-        // Attach user info
-        const userIds = [...new Set(rawList.map(w => String(w.telegramId)))];
-        const usersMap = {};
-        if (userIds.length > 0) {
-          const foundUsers = await usersCol.find({
-            $or: [
-              { telegramId: { $in: userIds } },
-              { telegramId: { $in: userIds.map(Number).filter(Boolean) } }
-            ]
-          }).toArray();
-          foundUsers.forEach(u => {
-            usersMap[String(u.telegramId)] = u;
-          });
-        }
-
-        const list = rawList.map(w => {
-          const u = usersMap[String(w.telegramId)] || {};
-          return {
-            id: String(w._id),
-            telegramId: w.telegramId,
-            username: u.username ? ("@" + u.username) : "N/A",
-            name: (u.firstName || "") + (u.lastName ? " " + u.lastName : "") || "Miner",
-            currentBalance: Number(u.balance || 0),
-            recruitsCount: Number(u.recruitsCount || 0),
-            isBanned: !!u.isBanned,
-            isSuspicious: !!u.isSuspicious,
-            suspiciousReason: u.suspiciousReason || "",
-            isHighRiskHacker: !!u.isHighRiskHacker,
-            securityFlag: u.securityFlag || "",
-            isSuspendedMultipleAccount: !!u.isSuspendedMultipleAccount,
-            deviceViolationsCount: Number(u.deviceViolationsCount || 0),
-            registeredIp: u.registeredIp || u.lastIp || "",
-            amount: w.amount,
-            usdtAmount: w.usdtAmount,
-            tonAmount: w.tonAmount !== undefined ? Number(w.tonAmount) : Number(((w.usdtAmount || 0) * (0.019 / 0.03)).toFixed(4)),
-            walletAddress: w.walletAddress,
-            network: w.network || "TON",
-            status: w.status || "PENDING",
-            txHash: w.txHash || "",
-            createdAt: w.createdAt,
-            approvedAt: w.approvedAt,
-            rejectedAt: w.rejectedAt,
-            reason: w.reason || ""
-          };
-        });
-
-        res.status(200).json({ ok: true, withdrawals: list });
-        return;
-      }
-
-      // 3. Search User (UID or Username)
-      if (action === "search_user") {
-        const q = String(req.query.q || "").trim();
-        if (!q) {
-          res.status(400).json({ error: "Search query required" });
-          return;
-        }
-
-        const cleanUsername = q.replace(/^@/, "");
-        const numId = Number(q);
-        const escapedQ = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const escapedUsername = cleanUsername.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-        const query = {
-          $or: [
-            { telegramId: q },
-            ...(numId ? [{ telegramId: numId }] : []),
-            { username: { $regex: escapedUsername, $options: "i" } },
-            { firstName: { $regex: escapedQ, $options: "i" } }
-          ]
-        };
-
-        const found = await usersCol.find(query).limit(20).toArray();
-        const mapped = found.map(u => ({
-          id: String(u._id),
-          telegramId: String(u.telegramId),
-          name: (u.firstName || "") + (u.lastName ? " " + u.lastName : "") || "Miner",
-          username: u.username ? ("@" + u.username) : "N/A",
-          photoUrl: u.photoUrl || "",
-          balance: Number(u.balance || 0),
-          minerLevel: u.minerLevel || 1,
-          recruitsCount: Number(u.recruitsCount || 0),
-          refEarnings: Number(u.refEarnings || 0),
-          totalAdsWatched: Number(u.totalAdsWatched || 0),
-          spinTickets: Number(u.spinTickets || 0),
-          spinUnder5sStrikes: Number(u.spinUnder5sStrikes || 0),
-          adSkipUnder9sStrikes: Number(u.adSkipUnder9sStrikes || 0),
-          fraudRiskScore: calculateFraudRiskScore(u),
-          isBanned: !!u.isBanned,
-          banReason: u.banReason || "",
-          isSuspicious: !!u.isSuspicious,
-          suspiciousReason: u.suspiciousReason || "",
-          isHighRiskHacker: !!u.isHighRiskHacker,
-          securityFlag: u.securityFlag || "",
-          isSuspendedMultipleAccount: !!u.isSuspendedMultipleAccount,
-          deviceViolationsCount: Number(u.deviceViolationsCount || 0),
-          penaltyNotice: u.penaltyNotice || "",
-          registeredIp: u.registeredIp || u.lastIp || "N/A",
-          boundWalletAddress: u.boundWalletAddress || null,
-          bannedAt: u.bannedAt || null,
-          dataPurged: !!u.dataPurged,
-          purgedAt: u.purgedAt || null,
-          createdAt: u.createdAt || null
-        }));
-
-        res.status(200).json({ ok: true, users: mapped });
-        return;
-      }
-
-      // 3a. Get Referrals of a Specific User
-      if (action === "user_referrals") {
-        const uid = String(req.query.userId || req.query.uid || req.query.telegramId || "").trim();
-        if (!uid) {
-          res.status(400).json({ error: "User ID required" });
-          return;
-        }
-
-        const numId = Number(uid);
-        const parentUser = await usersCol.findOne({
-          $or: [{ telegramId: uid }, ...(numId ? [{ telegramId: numId }] : [])]
-        });
-
-        const referrals = await usersCol.find({
-          $or: [
-            { referredBy: uid },
-            ...(numId ? [{ referredBy: String(numId) }, { referredBy: numId }] : [])
-          ]
-        }).sort({ createdAt: -1 }).toArray();
-
-        const mappedRefs = referrals.map(u => ({
-          id: String(u._id),
-          telegramId: String(u.telegramId),
-          name: (u.firstName || "") + (u.lastName ? " " + u.lastName : "") || "Miner",
-          username: u.username ? ("@" + u.username) : "N/A",
-          photoUrl: u.photoUrl || "",
-          balance: Number(u.balance || 0),
-          minerLevel: u.minerLevel || 1,
-          totalAdsWatched: Number(u.totalAdsWatched || 0),
-          isBanned: !!u.isBanned,
-          isIdentityVerified: !!u.isIdentityVerified,
-          referralRewarded: !!u.referralRewarded,
-          createdAt: u.createdAt || null
-        }));
-
-        res.status(200).json({
-          ok: true,
-          user: parentUser ? {
-            telegramId: String(parentUser.telegramId),
-            name: (parentUser.firstName || "") + (parentUser.lastName ? " " + parentUser.lastName : "") || "Miner",
-            username: parentUser.username ? ("@" + parentUser.username) : "N/A",
-            recruitsCount: Number(parentUser.recruitsCount || 0),
-            refEarnings: Number(parentUser.refEarnings || 0)
-          } : null,
-          totalReferrals: mappedRefs.length,
-          referrals: mappedRefs
-        });
-        return;
-      }
-
-      // 3b. High Risk Users List (Fraud Risk Score 80% - 100%)
-      if (action === "high_risk_users") {
-        const candidates = await usersCol.find({
-          $or: [
-            { isHighRiskHacker: true },
-            { balance: { $lt: 0 } },
-            { isSuspendedMultipleAccount: true },
-            { isSuspicious: true },
-            { deviceViolationsCount: { $gt: 0 } },
-            { adSkipUnder9sStrikes: { $gt: 0 } },
-            { spinUnder5sStrikes: { $gte: 3 } },
-            { securityFlag: { $exists: true, $ne: "" } },
-            { suspiciousReason: { $regex: "tamper|bot|hack|exploit|script", $options: "i" } }
-          ]
-        }).sort({ balance: 1 }).limit(200).toArray();
-
-        const mapped = candidates.map(u => ({
-          id: String(u._id),
-          telegramId: String(u.telegramId),
-          name: (u.firstName || "") + (u.lastName ? " " + u.lastName : "") || "Miner",
-          username: u.username ? ("@" + u.username) : "N/A",
-          photoUrl: u.photoUrl || "",
-          balance: Number(u.balance || 0),
-          minerLevel: u.minerLevel || 1,
-          recruitsCount: Number(u.recruitsCount || 0),
-          refEarnings: Number(u.refEarnings || 0),
-          totalAdsWatched: Number(u.totalAdsWatched || 0),
-          spinTickets: Number(u.spinTickets || 0),
-          spinUnder5sStrikes: Number(u.spinUnder5sStrikes || 0),
-          adSkipUnder9sStrikes: Number(u.adSkipUnder9sStrikes || 0),
-          fraudRiskScore: calculateFraudRiskScore(u),
-          isBanned: !!u.isBanned,
-          banReason: u.banReason || "",
-          isSuspicious: !!u.isSuspicious,
-          suspiciousReason: u.suspiciousReason || "",
-          isHighRiskHacker: !!u.isHighRiskHacker,
-          securityFlag: u.securityFlag || "",
-          isSuspendedMultipleAccount: !!u.isSuspendedMultipleAccount,
-          deviceViolationsCount: Number(u.deviceViolationsCount || 0),
-          penaltyNotice: u.penaltyNotice || "",
-          registeredIp: u.registeredIp || u.lastIp || "N/A",
-          boundWalletAddress: u.boundWalletAddress || null,
-          bannedAt: u.bannedAt || null,
-          dataPurged: !!u.dataPurged,
-          purgedAt: u.purgedAt || null,
-          createdAt: u.createdAt || null
-        })).filter(u => u.fraudRiskScore >= 80 && u.fraudRiskScore <= 100);
-
-        const unbannedCount = mapped.filter(u => !u.isBanned).length;
-        const bannedCount = mapped.filter(u => u.isBanned).length;
-
-        res.status(200).json({
-          ok: true,
-          users: mapped,
-          totalHighRisk: mapped.length,
-          unbannedCount,
-          bannedCount
-        });
-        return;
-      }
-
-      // 4. Tasks List (Strictly show active/paid tasks - exclude unpaid, cancelled, or pending payment tasks)
-      if (action === "tasks") {
-        // Auto-cleanup any abandoned unpaid/cancelled task drafts created by non-admins
-        tasksCol.deleteMany({
-          paid: { $ne: true },
-          creatorId: { $ne: "admin" },
-          status: { $in: ["pending_payment", "declined", "cancelled"] }
-        }).catch(() => {});
-
-        const customTasks = await tasksCol
-          .find({
-            status: { $nin: ["pending_payment", "declined", "cancelled"] },
-            $or: [
-              { creatorId: "admin" },
-              { paid: true }
-            ]
-          })
-          .sort({ createdAt: -1 })
-          .toArray();
-        const mapped = customTasks.map(t => ({
-          id: String(t._id),
-          title: t.title,
-          link: t.link,
-          type: t.type || "normal",
-          reward: 10,
-          targetCount: t.targetCount === 99999999 || !t.targetCount ? "Unlimited" : t.targetCount,
-          completedCount: (t.completedBy || []).length,
-          status: t.status || "active",
-          creatorId: t.creatorId,
-          createdAt: t.createdAt
-        }));
-
-        const appSetting = await db.collection("settings").findOne({ key: "app_settings" });
-        const watchAdReward = (appSetting && typeof appSetting.watchAdReward === "number" && appSetting.watchAdReward > 0) ? appSetting.watchAdReward : 10;
-        const coinPriceUsd = (appSetting && typeof appSetting.coinPriceUsd === "number" && appSetting.coinPriceUsd > 0) ? appSetting.coinPriceUsd : 0.00003;
-
-        res.status(200).json({ ok: true, tasks: mapped, watchAdReward, coinPriceUsd });
-        return;
-      }
-
-      // 5. App & Ad Reward Settings
-      if (action === "app_settings" || action === "ad_settings") {
-        const appSetting = await db.collection("settings").findOne({ key: "app_settings" });
-        const watchAdReward = (appSetting && typeof appSetting.watchAdReward === "number" && appSetting.watchAdReward > 0) ? appSetting.watchAdReward : 10;
-        const coinPriceUsd = (appSetting && typeof appSetting.coinPriceUsd === "number" && appSetting.coinPriceUsd > 0) ? appSetting.coinPriceUsd : 0.00003;
-        res.status(200).json({ ok: true, watchAdReward, coinPriceUsd });
-        return;
-      }
-
-      // 5. Bot & Webhook Settings
-      if (action === "bot_settings") {
-        const host = req.headers["x-forwarded-host"] || req.headers.host;
-        const protocol = req.headers["x-forwarded-proto"] || "https";
-        const webhookUrl = `${protocol}://${host}/api/webhook`;
-        const setting = await db.collection("settings").findOne({ key: "bot_settings" });
-        const adminIds = await getAdminTelegramIds(db);
-
-        let webhookInfo = null;
-        if (botToken) {
-          try {
-            const whRes = await fetch(`https://api.telegram.org/bot${botToken}/getWebhookInfo`);
-            webhookInfo = await whRes.json();
-          } catch(e){}
-        }
-
-        res.status(200).json({
-          ok: true,
-          hasBotToken: !!botToken,
-          webhookUrl,
-          webhookInfo,
-          envAdminId: process.env.ADMIN_TELEGRAM_ID || null,
-          dbAdminId: setting ? setting.adminTelegramId : null,
-          registeredAdmins: Array.from(adminIds)
-        });
-        return;
-      }
-
-      res.status(400).json({ error: "Unknown GET action" });
-      return;
     }
 
-    // ==========================================
-    // POST Requests: Actions (Approve, Reject, Ban, Unban, Funds, Broadcast, Tasks)
-    // ==========================================
-    if (req.method === "POST") {
-      const { action } = req.body || {};
+    var banBtn = isBanned
+      ? `<button class="btn-success" onclick="unbanUserAction('${u.telegramId}')">✅ Unban / Restore User</button>`
+      : `<button class="btn-danger" onclick="banUserAction('${u.telegramId}')">⛔ Suspend / Ban User</button>`;
 
-      // 1. Approve Withdrawal
-      if (action === "approve_withdrawal") {
-        const { withdrawalId, txHash } = req.body || {};
-        if (!withdrawalId) {
-          res.status(400).json({ error: "withdrawalId required" });
-          return;
-        }
+    var clearSusBtn = (!isBanned && (u.isSuspicious || u.isHighRiskHacker || (u.fraudRiskScore || 0) > 0))
+      ? `<button class="btn-secondary" style="margin-top: 4px; font-size: 11px; padding: 4px 8px; width: 100%; display: block;" onclick="clearSuspiciousAction('${u.telegramId}')">🛡️ Clear Security Flag</button>`
+      : '';
 
-        let objId;
-        try { objId = new ObjectId(withdrawalId); } catch(e){ objId = null; }
-        const wQuery = objId ? { _id: objId } : { _id: withdrawalId };
+    var avatarHtml = u.photoUrl
+      ? `<img src="${u.photoUrl}" style="width:100%;height:100%;object-fit:cover;">`
+      : (u.name.charAt(0) || "M").toUpperCase();
 
-        const w = await withdrawalsCol.findOne(wQuery);
-        if (!w) {
-          res.status(404).json({ error: "Withdrawal not found" });
-          return;
-        }
+    var riskScore = typeof u.fraudRiskScore === "number" ? u.fraudRiskScore : (isBanned ? 100 : (u.isHighRiskHacker ? 85 : 0));
+    var riskBadge = '';
+    if (riskScore >= 80) {
+      riskBadge = `<span class="status-tag" style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.5); font-weight: 800; margin-left: 6px;">🚨 ${riskScore}% FRAUD RISK</span>`;
+    } else if (riskScore >= 40) {
+      riskBadge = `<span class="status-tag" style="background: rgba(245, 158, 11, 0.18); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); font-weight: 700; margin-left: 6px;">⚠️ ${riskScore}% MED RISK</span>`;
+    } else {
+      riskBadge = `<span class="status-tag" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.35); font-weight: 700; margin-left: 6px;">✅ ${riskScore}% SAFE</span>`;
+    }
 
-        if (w.status !== "PENDING") {
-          res.status(400).json({ error: `Withdrawal has already been processed (Current status: ${w.status}). Cannot approve again.` });
-          return;
-        }
+    var secBadge = '';
+    if (u.isHighRiskHacker) {
+      secBadge = `<span class="status-tag high-risk" style="margin-left: 6px;">🚨 HIGH RISK: HACKER</span>`;
+    } else if (u.isSuspicious) {
+      secBadge = `<span class="status-tag suspicious" style="margin-left: 6px;">⚠️ SUSPICIOUS</span>`;
+    } else if (u.isSuspendedMultipleAccount) {
+      secBadge = `<span class="status-tag banned" style="margin-left: 6px;">🚫 MULTI-ACCOUNT</span>`;
+    } else {
+      secBadge = `<span class="status-tag approved" style="margin-left: 6px;">✅ CLEAN</span>`;
+    }
 
-        const now = Date.now();
-        const tonVal = w.tonAmount !== undefined ? Number(w.tonAmount) : Number(((w.usdtAmount || 0) * (0.019 / 0.03)).toFixed(4));
-        let finalTx = txHash ? txHash.trim() : "";
-        let autoPaySuccess = false;
-        let autoPayMsg = "";
+    var cardBorder = riskScore >= 80 ? '#ef4444' : (u.isSuspicious ? '#f59e0b' : 'var(--card-border)');
+    var joinedDateStr = u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A';
 
-        // If no manual TxHash provided, try automated TON payout dispatcher
-        if (!finalTx) {
-          const autoPayRes = await dispatchTonPayout(w.walletAddress, tonVal, `HOOCOOH Payout UID ${w.telegramId}`);
-          if (autoPayRes.isConfigured) {
-            if (!autoPayRes.success) {
-              res.status(400).json({
-                error: `Auto-pay halted: ${autoPayRes.message || autoPayRes.error}`
-              });
-              return;
+    var profileUrl = u.username && u.username !== "N/A" 
+      ? `https://t.me/${u.username.replace(/^@/, '')}` 
+      : `tg://user?id=${u.telegramId}`;
+    var nameLinkHtml = `<a href="${profileUrl}" target="_blank" style="color: inherit; text-decoration: none;" title="Open Telegram Profile"><strong>${u.name}</strong> 🔗</a>`;
+
+    return `
+      <div class="user-card" style="border: 1.5px solid ${cardBorder};">
+        <div class="user-card-top">
+          <div class="u-info">
+            <div class="u-avatar">${avatarHtml}</div>
+            <div>
+              <div class="u-name">
+                ${nameLinkHtml}
+                ${banBadge}
+                ${riskBadge}
+                ${secBadge}
+              </div>
+              <div class="u-uid" style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-top: 3px;">
+                <span>${u.username}</span>
+                ${u.username && u.username !== "N/A" ? `<button type="button" class="btn-copy-tag" onclick="copyToClipboard('${u.username}', 'Username copied!')" title="Copy Username">📋 Copy</button>` : ''}
+                <span>· UID: <code>${u.telegramId}</code></span>
+                <button type="button" class="btn-copy-tag" onclick="copyToClipboard('${u.telegramId}', 'UID copied!')" title="Copy UID">📋 Copy</button>
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: flex-end;">${banBtn}${clearSusBtn}</div>
+        </div>
+
+        ${isBanned ? `
+          <div style="font-size: 12px; color: ${isPurged ? '#ef4444' : '#f59e0b'}; background: ${isPurged ? 'rgba(239, 68, 68, 0.12)' : 'rgba(245, 158, 11, 0.12)'}; padding: 10px 14px; border-radius: 8px; border: 1px solid ${isPurged ? 'rgba(239, 68, 68, 0.35)' : 'rgba(245, 158, 11, 0.35)'}; margin-bottom: 8px;">
+            ${isPurged 
+              ? `<b>🗑️ Permanent Data Purge Executed:</b> This account was suspended for more than 7 days without being unbanned. All balances, mined coins, tasks, and referral progression were permanently wiped from the database. Account suspension remains active permanently.`
+              : `<b>⏳ 7-Day Auto-Purge Policy:</b> Banned for ${Math.floor(daysPassed)} day(s). <b>${daysRemaining} day(s) remaining</b> to unban. If not unbanned within 7 days, all user coins and progression data will be permanently wiped from the database while suspension remains permanent.`
             }
-            finalTx = autoPayRes.txHash;
-            autoPaySuccess = true;
-            autoPayMsg = autoPayRes.message || "On-chain transfer dispatched";
+            ${u.purgedAt ? `<div style="margin-top: 4px; color: var(--text-dim); font-size: 11px;">Purged on: ${new Date(u.purgedAt).toLocaleString()}</div>` : ''}
+          </div>
+        ` : ''}
+
+        ${(u.isHighRiskHacker || u.isSuspicious) && u.suspiciousReason ? `
+          <div style="font-size: 12px; color: ${u.isHighRiskHacker ? '#ef4444' : '#f59e0b'}; background: ${u.isHighRiskHacker ? 'rgba(239, 68, 68, 0.12)' : 'rgba(245, 158, 11, 0.12)'}; padding: 8px 12px; border-radius: 8px; border: 1px solid ${u.isHighRiskHacker ? 'rgba(239, 68, 68, 0.3)' : 'rgba(245, 158, 11, 0.3)'}; margin-bottom: 8px;">
+            <b>⚠️ Security Flag Reason:</b> ${u.suspiciousReason}
+          </div>
+        ` : ''}
+
+        ${u.penaltyNotice ? `
+          <div style="font-size: 12px; color: #ef4444; background: rgba(239, 68, 68, 0.12); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.3); margin-bottom: 8px;">
+            <b>⚠️ Device Penalty Applied:</b> ${u.penaltyNotice}
+          </div>
+        ` : ''}
+
+        <div class="u-stats" style="grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));">
+          <div class="u-stat-box" style="border: 1.5px solid ${riskScore >= 80 ? 'rgba(239, 68, 68, 0.5)' : (riskScore >= 40 ? 'rgba(245, 158, 11, 0.3)' : 'rgba(16, 185, 129, 0.3)')};">
+            <div class="s-lbl">Fraud Risk Score</div>
+            <div class="s-val" style="color: ${riskScore >= 80 ? '#ef4444' : (riskScore >= 40 ? '#f59e0b' : '#10b981')}; font-weight: 800;">${riskScore}%</div>
+          </div>
+          <div class="u-stat-box">
+            <div class="s-lbl">Balance</div>
+            <div class="s-val accent" style="color: ${u.balance < 0 ? '#ef4444' : 'inherit'};">${Number(u.balance).toLocaleString()} Coins</div>
+          </div>
+          <div class="u-stat-box">
+            <div class="s-lbl">Miner Level</div>
+            <div class="s-val">Lv.${u.minerLevel}</div>
+          </div>
+          <div class="u-stat-box">
+            <div class="s-lbl">Total Ads Watched</div>
+            <div class="s-val">${u.totalAdsWatched || 0}</div>
+          </div>
+          <div class="u-stat-box">
+            <div class="s-lbl">Ad Skip Strikes</div>
+            <div class="s-val" style="color: ${(u.adSkipUnder9sStrikes || 0) > 0 ? '#ef4444' : 'inherit'};">${u.adSkipUnder9sStrikes || 0}</div>
+          </div>
+          <div class="u-stat-box">
+            <div class="s-lbl">Spin Tickets</div>
+            <div class="s-val">${u.spinTickets || 0}</div>
+          </div>
+          <div class="u-stat-box">
+            <div class="s-lbl">Sub-5s Strikes</div>
+            <div class="s-val" style="color: ${u.spinUnder5sStrikes >= 5 ? '#f59e0b' : 'inherit'};">${u.spinUnder5sStrikes || 0} / 5</div>
+          </div>
+          <div class="u-stat-box">
+            <div class="s-lbl">Multi-Acc Strikes</div>
+            <div class="s-val" style="color: ${u.deviceViolationsCount > 0 ? '#ef4444' : 'inherit'};">${u.deviceViolationsCount || 0}</div>
+          </div>
+          <div class="u-stat-box" style="cursor: pointer; border: 1px solid var(--accent); background: rgba(0,255,200,0.06);" onclick="viewUserReferralsModal('${u.telegramId}', '${escapeHtml(u.name)}')" title="Click to view all invited friends">
+            <div class="s-lbl" style="color: var(--accent);">Invited Friends 👥</div>
+            <div class="s-val accent" style="display: flex; align-items: center; justify-content: space-between;">
+              <span>${u.recruitsCount}</span>
+              <span style="font-size: 11px; text-decoration: underline;">View ➔</span>
+            </div>
+          </div>
+          <div class="u-stat-box">
+            <div class="s-lbl">Ref Earnings</div>
+            <div class="s-val">${Number(u.refEarnings).toLocaleString()}</div>
+          </div>
+          <div class="u-stat-box">
+            <div class="s-lbl">Registered IP</div>
+            <div class="s-val" style="font-size: 11px;">${u.registeredIp || 'N/A'}</div>
+          </div>
+          <div class="u-stat-box">
+            <div class="s-lbl">Joined Date</div>
+            <div class="s-val" style="font-size: 12px;">${joinedDateStr}</div>
+          </div>
+          <div class="u-stat-box" style="grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+            <div>
+              <div class="s-lbl">🔒 Locked TON Wallet</div>
+              <div class="s-val" style="font-size: 12px; font-family: monospace; color: var(--accent);">${u.boundWalletAddress || 'None (Not locked yet)'}</div>
+            </div>
+            ${u.boundWalletAddress ? `<button type="button" class="btn-copy-tag" onclick="copyToClipboard('${u.boundWalletAddress}', 'Locked wallet address copied!')" title="Copy Wallet">📋 Copy</button>` : ''}
+          </div>
+        </div>
+        ${isBanned && u.banReason ? `<div style="font-size: 12px; color: var(--danger); background: rgba(239, 68, 68, 0.1); padding: 8px 12px; border-radius: 8px;"><b>Suspension Reason:</b> ${u.banReason}</div>` : ''}
+      </div>
+    `;
+  }
+
+  async function checkHighRiskStats() {
+    try {
+      var data = await apiAdmin("GET", { action: "high_risk_users" });
+      if (data.ok) {
+        var unbanned = data.unbannedCount || 0;
+        var badge = document.getElementById("highRiskUnbannedBadge");
+        if (badge) badge.textContent = unbanned + " Detected";
+        var txt = document.getElementById("highRiskCountTxt");
+        if (txt) txt.textContent = unbanned;
+      }
+    } catch(e){}
+  }
+
+  async function loadHighRiskUsers() {
+    var resultsBox = document.getElementById("usersSearchResults");
+    resultsBox.innerHTML = '<p style="text-align: center; color: var(--text-dim); padding: 20px;">Scanning database for 80%–100% High Fraud Risk miners...</p>';
+    try {
+      var data = await apiAdmin("GET", { action: "high_risk_users" });
+      if (data.ok && data.users) {
+        var unbanned = data.unbannedCount || 0;
+        var badge = document.getElementById("highRiskUnbannedBadge");
+        if (badge) badge.textContent = unbanned + " Detected";
+        var txt = document.getElementById("highRiskCountTxt");
+        if (txt) txt.textContent = unbanned;
+
+        if (data.users.length === 0) {
+          resultsBox.innerHTML = `
+            <div style="text-align: center; padding: 36px; background: rgba(16, 185, 129, 0.08); border-radius: 14px; border: 1px solid rgba(16, 185, 129, 0.3);">
+              <span style="font-size: 32px;">🛡️</span>
+              <h4 style="color: #10b981; margin: 10px 0 6px;">Zero High Fraud Risk Detected!</h4>
+              <p style="color: var(--text-dim); font-size: 13px; margin: 0;">No active users with Fraud Risk Score between 80% and 100% currently exist. All miners are safe.</p>
+            </div>
+          `;
+          return;
+        }
+
+        resultsBox.innerHTML = `
+          <div style="margin-bottom: 14px; padding: 10px 14px; background: rgba(239, 68, 68, 0.12); border-radius: 10px; border: 1px solid rgba(239, 68, 68, 0.3); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <span style="color: #ef4444; font-weight: 700; font-size: 13px;">🚨 Showing ${data.users.length} High Fraud Risk (80%–100%) Accounts (${unbanned} unbanned, ${data.bannedCount || 0} already suspended)</span>
+          </div>
+          ` + data.users.map(buildUserCardHtml).join("");
+      } else {
+        resultsBox.innerHTML = `<p style="text-align: center; color: var(--danger); padding: 20px;">Failed to load: ${data.error || "Unknown error"}</p>`;
+      }
+    } catch(err) {
+      resultsBox.innerHTML = `<p style="text-align: center; color: var(--danger); padding: 20px;">Error: ${err.message}</p>`;
+    }
+  }
+
+  var loadHighRiskUsersBtn = document.getElementById("loadHighRiskUsersBtn");
+  if (loadHighRiskUsersBtn) {
+    loadHighRiskUsersBtn.addEventListener("click", loadHighRiskUsers);
+  }
+
+  var bulkBanHighRiskBtn = document.getElementById("bulkBanHighRiskBtn");
+  if (bulkBanHighRiskBtn) {
+    bulkBanHighRiskBtn.addEventListener("click", async function(){
+      var promptMsg = "🚨 WARNING: PERMANENT BULK BAN (80% - 100% FRAUD RISK ONLY)\n\n" +
+        "Are you sure you want to ban ALL accounts with a High Fraud Risk score between 80% and 100%?\n\n" +
+        "• Strictly targets bot bypassers, headless tamper scripts, rapid sub-9s ad skippers, and multi-account violators.\n" +
+        "• All clean miners and users with <80% risk score are completely SAFE and will NOT be touched.\n\n" +
+        "Proceed with 1-click bulk ban?";
+
+      if (!confirm(promptMsg)) return;
+
+      bulkBanHighRiskBtn.disabled = true;
+      bulkBanHighRiskBtn.innerHTML = "<span>⏳ Executing Bulk Ban...</span>";
+
+      try {
+        var res = await apiAdmin("POST", null, { action: "bulk_ban_high_risk" });
+        if (res.ok) {
+          alert(res.message || `Successfully banned ${res.bannedCount} high risk user(s)!`);
+          showToast(`🚨 Banned ${res.bannedCount} high fraud risk users!`);
+          loadHighRiskUsers();
+          loadStats();
+        } else {
+          alert("Bulk ban failed: " + (res.error || "Unknown error"));
+        }
+      } catch(err) {
+        alert("Error executing bulk ban: " + (err.message || err));
+      } finally {
+        bulkBanHighRiskBtn.disabled = false;
+        bulkBanHighRiskBtn.innerHTML = "<span>🚨 Ban All High Risk (80%–100%)</span>";
+      }
+    });
+  }
+
+  async function searchUsersList() {
+    var q = (document.getElementById("usersSearchInput").value || "").trim();
+    if (!q) { alert("Type a search query"); return; }
+    var resultsBox = document.getElementById("usersSearchResults");
+    resultsBox.innerHTML = '<p style="text-align: center; color: var(--text-dim); padding: 20px;">Searching...</p>';
+
+    try {
+      var data = await apiAdmin("GET", { action: "search_user", q: q });
+      if (data.ok && data.users && data.users.length > 0) {
+        resultsBox.innerHTML = data.users.map(buildUserCardHtml).join("");
+      } else {
+        resultsBox.innerHTML = `<p style="text-align: center; color: var(--text-dim); padding: 30px;">No users found matching "${q}".</p>`;
+      }
+    } catch(e) {
+      resultsBox.innerHTML = `<p style="text-align: center; color: var(--danger); padding: 20px;">Search error: ${e.message}</p>`;
+    }
+  }
+
+  window.banUserAction = async function(uid) {
+    var reason = prompt(`Suspend UID ${uid}? User will immediately see the "Your account has been suspended" screen:`, "Cheating / Violation of terms");
+    if (!reason) return;
+    try {
+      var res = await apiAdmin("POST", null, { action: "ban_user", telegramId: uid, reason: reason });
+      if (res.ok) {
+        showToast(`⛔ User ${uid} suspended.`);
+        searchUsersList();
+        loadStats();
+      }
+    } catch(e){ alert(e.message); }
+  };
+
+  window.unbanUserAction = async function(uid) {
+    if (!confirm(`Unban and restore access for UID ${uid}?`)) return;
+    try {
+      var res = await apiAdmin("POST", null, { action: "unban_user", telegramId: uid });
+      if (res.ok) {
+        showToast(`✅ User ${uid} restored successfully!`);
+        searchUsersList();
+        loadStats();
+      }
+    } catch(e){ alert(e.message); }
+  };
+
+  window.clearSuspiciousAction = async function(uid) {
+    if (!confirm(`Clear security/suspicious flag for UID ${uid}? User will return to CLEAN status.`)) return;
+    try {
+      var res = await apiAdmin("POST", null, { action: "clear_suspicious", telegramId: uid });
+      if (res.ok) {
+        showToast(`🛡️ Security flag cleared for UID ${uid}.`);
+        searchUsersList();
+      }
+    } catch(e){ alert(e.message); }
+  };
+
+  // View Referrals Modal Handler
+  window.viewUserReferralsModal = async function(uid, userName) {
+    var modal = document.getElementById("referralsModal");
+    if (!modal) {
+      modal = document.createElement("div");
+      modal.id = "referralsModal";
+      modal.style.cssText = "position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 99999; display: flex; align-items: center; justify-content: center; padding: 16px;";
+      modal.innerHTML = `
+        <div style="background: var(--card); border: 1px solid var(--card-border); border-radius: 20px; width: 100%; max-width: 650px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+          <div style="padding: 18px 24px; border-bottom: 1px solid var(--card-border); display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02);">
+            <div>
+              <h3 style="margin: 0; font-size: 17px; font-weight: 800; color: #fff;" id="refModalTitle">Referrals of Miner</h3>
+              <div style="font-size: 12px; color: var(--text-dim); margin-top: 3px;" id="refModalSub">Loading...</div>
+            </div>
+            <button onclick="document.getElementById('referralsModal').style.display='none'" style="background: rgba(255,255,255,0.1); border: none; color: #fff; width: 32px; height: 32px; border-radius: 50%; font-size: 16px; cursor: pointer;">✕</button>
+          </div>
+          <div id="refModalContent" style="padding: 20px 24px; overflow-y: auto; flex: 1;">
+            <p style="text-align: center; color: var(--text-dim); padding: 30px;">Loading invited referral accounts...</p>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
+
+    modal.style.display = "flex";
+    document.getElementById("refModalTitle").textContent = `👥 Referrals of ${userName || 'Miner'}`;
+    document.getElementById("refModalSub").textContent = `UID: ${uid}`;
+    var contentBox = document.getElementById("refModalContent");
+    contentBox.innerHTML = '<p style="text-align: center; color: var(--text-dim); padding: 30px;">Loading invited accounts...</p>';
+
+    try {
+      var data = await apiAdmin("GET", { action: "user_referrals", userId: uid });
+      if (data.ok && data.referrals) {
+        document.getElementById("refModalSub").textContent = `UID: ${uid} • Total Invited: ${data.totalReferrals} miners`;
+        if (data.referrals.length === 0) {
+          contentBox.innerHTML = `
+            <div style="text-align: center; padding: 40px 20px; color: var(--text-dim);">
+              <div style="font-size: 36px; margin-bottom: 10px;">👥</div>
+              <p>This user has not invited any friends yet.</p>
+            </div>
+          `;
+          return;
+        }
+
+        var html = '<div style="display: flex; flex-direction: column; gap: 10px;">';
+        data.referrals.forEach(function(ref, idx) {
+          var pUrl = ref.username && ref.username !== "N/A" 
+            ? `https://t.me/${ref.username.replace(/^@/, '')}` 
+            : `tg://user?id=${ref.telegramId}`;
+          var joinedStr = ref.createdAt ? new Date(ref.createdAt).toLocaleDateString() : 'N/A';
+          var vBadge = ref.isIdentityVerified 
+            ? '<span style="font-size: 11px; color: #10b981; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); padding: 2px 7px; border-radius: 6px; font-weight: 700;">✅ Verified</span>'
+            : '<span style="font-size: 11px; color: #f59e0b; background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); padding: 2px 7px; border-radius: 6px; font-weight: 700;">⏳ Unverified</span>';
+
+          html += `
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 38px; height: 38px; border-radius: 50%; background: rgba(0,255,200,0.1); border: 1px solid var(--accent); color: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; overflow: hidden;">
+                  ${ref.photoUrl ? `<img src="${ref.photoUrl}" style="width:100%;height:100%;object-fit:cover;">` : (ref.name.charAt(0) || 'M').toUpperCase()}
+                </div>
+                <div>
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <a href="${pUrl}" target="_blank" style="color: #fff; font-weight: 700; font-size: 14px; text-decoration: none;" title="Open Telegram Profile">
+                      ${ref.name} 🔗
+                    </a>
+                    ${vBadge}
+                  </div>
+                  <div style="font-size: 12px; color: var(--text-dim); margin-top: 2px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                    <span>ID: <a href="${pUrl}" target="_blank" style="color: var(--accent); font-family: monospace;">${ref.telegramId}</a></span>
+                    ${ref.username && ref.username !== 'N/A' ? `<span>${ref.username}</span>` : ''}
+                    <span>· Joined: ${joinedStr}</span>
+                  </div>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="text-align: right;">
+                  <div style="font-size: 13px; font-weight: 800; color: #fff;">${ref.balance.toLocaleString()} Coins</div>
+                  <div style="font-size: 11px; color: var(--text-dim);">${ref.totalAdsWatched} ads watched</div>
+                </div>
+                <a href="${pUrl}" target="_blank" style="background: rgba(0,255,200,0.15); color: var(--accent); border: 1px solid var(--accent); padding: 7px 12px; border-radius: 10px; font-size: 12px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                  <span>👤 Open Profile</span>
+                </a>
+              </div>
+            </div>
+          `;
+        });
+        html += '</div>';
+        contentBox.innerHTML = html;
+      } else {
+        contentBox.innerHTML = `<p style="text-align: center; color: var(--danger); padding: 20px;">${data.error || 'Failed to load referrals'}</p>`;
+      }
+    } catch(err) {
+      contentBox.innerHTML = `<p style="text-align: center; color: var(--danger); padding: 20px;">Error: ${err.message}</p>`;
+    }
+  };
+
+  // 6. Tasks (Free Post & Limit)
+  document.getElementById("taskUnlimitedCheck").addEventListener("change", function(e){
+    var targetInput = document.getElementById("taskTargetCountInput");
+    if (e.target.checked) {
+      targetInput.disabled = true;
+      targetInput.value = "Unlimited";
+    } else {
+      targetInput.disabled = false;
+      targetInput.value = "5000";
+    }
+  });
+
+  document.getElementById("createTaskBtn").addEventListener("click", async function(){
+    var title = (document.getElementById("taskTitleInput").value || "").trim();
+    var link = (document.getElementById("taskLinkInput").value || "").trim();
+    var type = document.getElementById("taskTypeSelect").value;
+    var isUnlimited = document.getElementById("taskUnlimitedCheck").checked;
+    var targetCount = isUnlimited ? null : parseInt(document.getElementById("taskTargetCountInput").value, 10);
+
+    if (!title) { alert("Enter task title"); return; }
+    if (!link) { alert("Enter channel/group link"); return; }
+
+    try {
+      var res = await apiAdmin("POST", null, {
+        action: "create_task",
+        title: title,
+        link: link,
+        type: type,
+        isUnlimited: isUnlimited,
+        targetUsers: targetCount
+      });
+      if (res.ok) {
+        showToast("🎉 Task posted successfully (Free)!");
+        document.getElementById("taskTitleInput").value = "";
+        document.getElementById("taskLinkInput").value = "";
+        loadTasks();
+      }
+    } catch(e){ alert(e.message); }
+  });
+
+  async function loadTasks() {
+    var box = document.getElementById("tasksListContainer");
+    box.innerHTML = '<p style="text-align: center; color: var(--text-dim); padding: 16px;">Loading tasks...</p>';
+    try {
+      var data = await apiAdmin("GET", { action: "tasks" });
+      if (data.ok) {
+        if (typeof data.watchAdReward === "number") {
+          var rewardInput = document.getElementById("watchAdRewardInput");
+          var rewardText = document.getElementById("currentWatchAdRewardText");
+          if (rewardInput && !rewardInput.value) rewardInput.value = data.watchAdReward;
+          if (rewardText) rewardText.textContent = "Current Reward: " + data.watchAdReward + " HOOCOOH Coins per ad";
+        }
+
+        if (typeof data.coinPriceUsd === "number") {
+          var priceInput = document.getElementById("coinPriceInput");
+          var priceText = document.getElementById("currentCoinPriceText");
+          var previewText = document.getElementById("coinPricePreviewText");
+          if (priceInput && !priceInput.value) priceInput.value = data.coinPriceUsd;
+          if (priceText) priceText.textContent = "Current Price: $" + Number(data.coinPriceUsd).toFixed(6) + " USD per coin";
+          if (previewText) {
+            previewText.textContent = "(1,000 Coins = $" + (1000 * data.coinPriceUsd).toFixed(3) + " USDT | 100,000 Coins = $" + (100000 * data.coinPriceUsd).toFixed(2) + " USDT)";
+          }
+        }
+
+        if (!data.tasks || data.tasks.length === 0) {
+          box.innerHTML = '<p style="text-align: center; color: var(--text-dim); padding: 20px;">No custom tasks posted yet.</p>';
+          return;
+        }
+
+        box.innerHTML = `
+          <table class="item-table">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Type</th>
+                <th>Link</th>
+                <th>Limit</th>
+                <th>Completed</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.tasks.map(function(t){
+                return `
+                  <tr>
+                    <td data-label="Title"><strong>${t.title}</strong></td>
+                    <td data-label="Type"><span class="status-tag ${t.type === 'verified' ? 'approved' : 'pending'}">${t.type}</span></td>
+                    <td data-label="Link"><a href="${t.link}" target="_blank" style="color: var(--accent); text-decoration: none; font-size: 12px;">${t.link.slice(0, 24)}...</a></td>
+                    <td data-label="Limit"><strong>${t.targetCount}</strong></td>
+                    <td data-label="Completed">${t.completedCount} users</td>
+                    <td data-label="Actions">
+                      <button class="btn-danger" style="font-size: 11px; padding: 4px 10px;" onclick="deleteTaskAction('${t.id}')">Delete</button>
+                    </td>
+                  </tr>
+                `;
+              }).join("")}
+            </tbody>
+          </table>
+        `;
+      }
+    } catch(e) {
+      box.innerHTML = '<p style="text-align: center; color: var(--danger); padding: 16px;">Failed to load tasks.</p>';
+    }
+  }
+  document.getElementById("refreshTasksBtn").addEventListener("click", loadTasks);
+
+  // Live preview for Coin Price input
+  var coinPriceInputEl = document.getElementById("coinPriceInput");
+  if (coinPriceInputEl) {
+    coinPriceInputEl.addEventListener("input", function() {
+      var val = parseFloat(coinPriceInputEl.value);
+      var previewText = document.getElementById("coinPricePreviewText");
+      if (previewText) {
+        if (!isNaN(val) && val > 0) {
+          previewText.textContent = "(1,000 Coins = $" + (1000 * val).toFixed(3) + " USDT | 100,000 Coins = $" + (100000 * val).toFixed(2) + " USDT)";
+        } else {
+          previewText.textContent = "(Enter a valid price above to preview)";
+        }
+      }
+    });
+  }
+
+  // Save Coin Price
+  var saveCoinPriceBtn = document.getElementById("saveCoinPriceBtn");
+  if (saveCoinPriceBtn) {
+    saveCoinPriceBtn.addEventListener("click", async function() {
+      var input = document.getElementById("coinPriceInput");
+      var val = parseFloat(input.value);
+      if (isNaN(val) || val <= 0 || val > 1000) {
+        alert("Please enter a valid positive coin price (e.g. 0.000030)");
+        return;
+      }
+      saveCoinPriceBtn.disabled = true;
+      try {
+        var res = await apiAdmin("POST", null, { action: "update_coin_price", coinPrice: val });
+        if (res.ok) {
+          showToast("🎉 Coin price saved: $" + val.toFixed(6) + " USD!");
+          var priceText = document.getElementById("currentCoinPriceText");
+          if (priceText) priceText.textContent = "Current Price: $" + val.toFixed(6) + " USD per coin";
+        }
+      } catch(e) {
+        alert(e.message);
+      } finally {
+        saveCoinPriceBtn.disabled = false;
+      }
+    });
+  }
+
+  var saveWatchAdRewardBtn = document.getElementById("saveWatchAdRewardBtn");
+  if (saveWatchAdRewardBtn) {
+    saveWatchAdRewardBtn.addEventListener("click", async function(){
+      var input = document.getElementById("watchAdRewardInput");
+      var val = parseInt(input.value, 10);
+      if (isNaN(val) || val < 1 || val > 100000) {
+        alert("Please enter a valid reward amount between 1 and 100,000");
+        return;
+      }
+      saveWatchAdRewardBtn.disabled = true;
+      try {
+        var res = await apiAdmin("POST", null, { action: "update_ad_reward", reward: val });
+        if (res.ok) {
+          showToast("🎉 Watch Ad reward saved: " + val + " Coins!");
+          var rewardText = document.getElementById("currentWatchAdRewardText");
+          if (rewardText) rewardText.textContent = "Current Reward: " + val + " HOOCOOH Coins per ad";
+        }
+      } catch(e) {
+        alert(e.message);
+      } finally {
+        saveWatchAdRewardBtn.disabled = false;
+      }
+    });
+  }
+
+  window.deleteTaskAction = async function(id) {
+    if (!confirm("Are you sure you want to delete this task?")) return;
+    try {
+      var res = await apiAdmin("POST", null, { action: "delete_task", taskId: id });
+      if (res.ok) {
+        showToast("Task deleted.");
+        loadTasks();
+      }
+    } catch(e){ alert(e.message); }
+  };
+
+  // 7. Bot & Webhook Settings
+  async function loadBotSettings() {
+    var botTokenStatus = document.getElementById("botTokenStatusText");
+    var currentAdminIdText = document.getElementById("currentAdminIdText");
+    var webhookStatusText = document.getElementById("webhookStatusText");
+    var webhookUrlDisplay = document.getElementById("webhookUrlDisplay");
+    var adminTelegramIdInput = document.getElementById("adminTelegramIdInput");
+
+    if (botTokenStatus) botTokenStatus.textContent = "Checking...";
+    if (currentAdminIdText) currentAdminIdText.textContent = "Checking...";
+    if (webhookStatusText) webhookStatusText.textContent = "Checking...";
+
+    try {
+      var data = await apiAdmin("GET", { action: "bot_settings" });
+      if (data.ok) {
+        if (botTokenStatus) {
+          botTokenStatus.innerHTML = data.hasBotToken ? '<span style="color:var(--success)">✅ Connected</span>' : '<span style="color:var(--danger)">❌ Missing Token</span>';
+        }
+        
+        var activeAdmins = data.registeredAdmins && data.registeredAdmins.length > 0 
+          ? data.registeredAdmins.join(", ") 
+          : "Not set yet";
+        if (currentAdminIdText) currentAdminIdText.textContent = activeAdmins;
+
+        if (adminTelegramIdInput && (data.dbAdminId || data.envAdminId)) {
+          adminTelegramIdInput.value = data.dbAdminId || data.envAdminId;
+        }
+
+        if (webhookUrlDisplay) webhookUrlDisplay.textContent = data.webhookUrl;
+
+        if (webhookStatusText) {
+          if (data.webhookInfo && data.webhookInfo.result && data.webhookInfo.result.url) {
+            var wh = data.webhookInfo.result;
+            webhookStatusText.innerHTML = `<span style="color:var(--success)">✅ Active</span> (${wh.pending_update_count || 0} queued)`;
           } else {
-            finalTx = "0x" + Math.random().toString(16).slice(2) + Math.random().toString(16).slice(2);
-            autoPayMsg = "Auto-pay env variables (TON_AUTO_PAY / TON_WALLET_MNEMONIC) not active. Approved manually.";
+            webhookStatusText.innerHTML = '<span style="color:var(--warning)">⚠️ Not Connected</span>';
           }
         }
-
-        // Atomically update withdrawal ONLY if it is still PENDING
-        const approveUpdateRes = await withdrawalsCol.updateOne(
-          { ...wQuery, status: "PENDING" },
-          {
-            $set: {
-              status: "APPROVED",
-              tonAmount: tonVal,
-              txHash: finalTx,
-              approvedAt: now
-            }
-          }
-        );
-
-        if (approveUpdateRes.matchedCount === 0 || approveUpdateRes.modifiedCount === 0) {
-          res.status(400).json({ error: "Withdrawal has already been processed or is no longer pending." });
-          return;
-        }
-
-        // Notify Payout Channel (@hoocoohpaylogs) and User via Telegram Bot
-        if (botToken) {
-          try {
-            const userDoc = await usersCol.findOne({
-              $or: [
-                { telegramId: String(w.telegramId) },
-                { telegramId: Number(w.telegramId) }
-              ]
-            });
-
-            const rawName = userDoc?.username 
-              ? `@${userDoc.username}` 
-              : (userDoc?.firstName ? `${userDoc.firstName}${userDoc.lastName ? ' ' + userDoc.lastName : ''}` : `Miner_${String(w.telegramId).slice(-4)}`);
-            const displayName = escapeHtml(rawName);
-
-            const txUrl = `https://tonviewer.com/transaction/${encodeURIComponent(finalTx)}`;
-            const txLinkHtml = `<a href="${txUrl}">View Transaction</a>`;
-
-            // 1. Post to Payout Logs Channel (with BOT ---> @hoocoohmine_bot appended)
-            const channelId = process.env.PAYOUT_CHANNEL_ID || "@hoocoohpaylogs";
-            const channelMsg = 
-`🎉 <b>New payout paid</b> 🎉\n\n` +
-`👤 <b>User:</b> ${displayName}\n` +
-`🔘 <b>Amount:</b> ${Number(w.amount).toLocaleString()} HOOCOOH (${Number(w.usdtAmount).toFixed(2)} USDT)\n` +
-`💳 <b>Wallet address:</b>\n` +
-`<code>${w.walletAddress}</code>\n` +
-`🔗 <b>Transaction id:</b> ${txLinkHtml}\n\n` +
-`BOT ---> @hoocoohmine_bot`;
-
-            await sendTelegramMsg(botToken, channelId, channelMsg);
-
-            // 2. Send 1:1 exact notification to the withdrawing user (matching media_1791525638939.png)
-            if (w.telegramId) {
-              const userMsg = 
-`✅ <b>Withdrawal Approved!</b>\n\n` +
-`🪙 <b>${Number(w.amount).toLocaleString()} HOOCOOH Coins ($${Number(w.usdtAmount).toFixed(2)} USDT) sent!</b>\n` +
-`🔗 <a href="${txUrl}">View Transaction</a>`;
-
-              await sendTelegramMsg(botToken, w.telegramId, userMsg, {
-                buttonText: "🔗 View Transaction",
-                buttonUrl: txUrl
-              });
-            }
-          } catch (notifErr) {
-            console.error("Payout notification error:", notifErr);
-          }
-        }
-
-        res.status(200).json({ 
-          ok: true, 
-          message: `Withdrawal of ${tonVal} TON approved successfully!`, 
-          tonAmount: tonVal, 
-          txHash: finalTx,
-          autoPaySuccess,
-          autoPayMsg
-        });
-        return;
       }
-
-      // 2. Reject Withdrawal (Refunds coins back to user balance exactly once!)
-      if (action === "reject_withdrawal") {
-        const { withdrawalId, reason } = req.body || {};
-        if (!withdrawalId) {
-          res.status(400).json({ error: "withdrawalId required" });
-          return;
-        }
-
-        let objId;
-        try { objId = new ObjectId(withdrawalId); } catch(e){ objId = null; }
-        const wQuery = objId ? { _id: objId } : { _id: withdrawalId };
-
-        const w = await withdrawalsCol.findOne(wQuery);
-        if (!w) {
-          res.status(404).json({ error: "Withdrawal not found" });
-          return;
-        }
-
-        if (w.status !== "PENDING") {
-          res.status(400).json({ error: `Withdrawal has already been processed (Current status: ${w.status}). Cannot refund again.` });
-          return;
-        }
-
-        const now = Date.now();
-        const refundAmt = Number(w.amount || 0);
-        const rejReason = (reason || "Review failed / suspicious activity").trim();
-
-        // Atomically update withdrawal ONLY if it is still PENDING
-        const rejectUpdateRes = await withdrawalsCol.updateOne(
-          { ...wQuery, status: "PENDING" },
-          {
-            $set: {
-              status: "REJECTED",
-              reason: rejReason,
-              rejectedAt: now
-            }
-          }
-        );
-
-        // If another concurrent request already processed this withdrawal, abort refund
-        if (rejectUpdateRes.matchedCount === 0 || rejectUpdateRes.modifiedCount === 0) {
-          res.status(400).json({ error: "Withdrawal has already been processed or is no longer pending." });
-          return;
-        }
-
-        // Refund coins to user EXACTLY ONCE
-        const tid = String(w.telegramId);
-        const numId = Number(w.telegramId);
-        await usersCol.updateOne(
-          { $or: [{ telegramId: tid }, ...(numId ? [{ telegramId: numId }] : [])] },
-          { $inc: { balance: refundAmt } }
-        );
-
-        // Notify user via Telegram Bot
-        if (botToken && w.telegramId) {
-          const msg = `⚠️ <b>Withdrawal Rejected & Refunded</b>\n\nYour request for <b>${refundAmt.toLocaleString()} Coins</b> was rejected.\n<b>Reason:</b> ${rejReason}\n\nYour <b>${refundAmt.toLocaleString()} HOOCOOH Coins</b> have been returned to your miner balance.`;
-          sendTelegramMsg(botToken, w.telegramId, msg);
-        }
-
-        res.status(200).json({ ok: true, message: `Withdrawal rejected and ${refundAmt.toLocaleString()} coins refunded to user.` });
-        return;
-      }
-
-      // 3. Ban User (and optionally reject pending withdrawal)
-      if (action === "ban_user") {
-        const { telegramId, reason, withdrawalId } = req.body || {};
-        if (!telegramId) {
-          res.status(400).json({ error: "telegramId required" });
-          return;
-        }
-
-        const tid = String(telegramId);
-        const numId = Number(telegramId);
-        const banReason = (reason || "Violation of HOOCOOH Miner rules & anti-cheat policies").trim();
-
-        await usersCol.updateMany(
-          { $or: [{ telegramId: tid }, ...(numId ? [{ telegramId: numId }] : [])] },
-          {
-            $set: {
-              isBanned: true,
-              banReason: banReason,
-              bannedAt: Date.now(),
-              bannedAtDate: new Date(),
-              dataPurged: false
-            },
-            $unset: { lastActiveAt: "" }
-          }
-        );
-
-        // If from withdrawal, reject it only if still PENDING
-        if (withdrawalId) {
-          let objId;
-          try { objId = new ObjectId(withdrawalId); } catch(e){ objId = null; }
-          const targetWQuery = objId ? { _id: objId } : { _id: withdrawalId };
-          await withdrawalsCol.updateOne(
-            { ...targetWQuery, status: "PENDING" },
-            { $set: { status: "REJECTED", reason: "User Banned: " + banReason, rejectedAt: Date.now() } }
-          );
-        }
-
-        // Notify banned user
-        if (botToken) {
-          const msg = `⛔ <b>Account Suspended</b>\n\nYour HOOCOOH Miner account has been suspended.\n<b>Reason:</b> ${banReason}\n\n<i>⚠️ Notice: If this suspension is not lifted within 7 days, all your account progress, coins, and referrals will be permanently deleted while account remains suspended.</i>`;
-          sendTelegramMsg(botToken, tid, msg);
-        }
-
-        res.status(200).json({ ok: true, message: `User ${tid} has been permanently banned.` });
-        return;
-      }
-
-      // 3b. Bulk Ban High Fraud Risk (80% - 100%) Users
-      if (action === "bulk_ban_high_risk") {
-        const candidates = await usersCol.find({
-          isBanned: { $ne: true },
-          $or: [
-            { isHighRiskHacker: true },
-            { balance: { $lt: 0 } },
-            { isSuspendedMultipleAccount: true },
-            { isSuspicious: true },
-            { deviceViolationsCount: { $gt: 0 } },
-            { adSkipUnder9sStrikes: { $gt: 0 } },
-            { spinUnder5sStrikes: { $gte: 3 } },
-            { securityFlag: { $exists: true, $ne: "" } },
-            { suspiciousReason: { $regex: "tamper|bot|hack|exploit|script", $options: "i" } }
-          ]
-        }).toArray();
-
-        // Strictly target users whose fraud risk score is between 80% and 100%
-        const highRiskUsers = candidates.filter(u => {
-          const score = calculateFraudRiskScore(u);
-          return score >= 80 && score <= 100;
-        });
-
-        if (highRiskUsers.length === 0) {
-          res.status(200).json({
-            ok: true,
-            bannedCount: 0,
-            message: "No active users found with High Fraud Risk (80%-100%). All clean users are protected!"
-          });
-          return;
-        }
-
-        const targetIds = highRiskUsers.map(u => u._id);
-        const banTimestamp = Date.now();
-        const banDate = new Date();
-        const banReason = "Permanent ban: High Fraud Risk Score (80%-100%) detected (automated bot/tampering/multi-account exploit)";
-
-        const banResult = await usersCol.updateMany(
-          { _id: { $in: targetIds }, isBanned: { $ne: true } },
-          {
-            $set: {
-              isBanned: true,
-              banReason: banReason,
-              bannedAt: banTimestamp,
-              bannedAtDate: banDate,
-              dataPurged: false
-            },
-            $unset: { lastActiveAt: "" }
-          }
-        );
-
-        // Reject any pending withdrawals from these high-risk users
-        const tgIds = highRiskUsers.map(u => String(u.telegramId)).filter(Boolean);
-        if (tgIds.length > 0) {
-          await withdrawalsCol.updateMany(
-            {
-              status: "PENDING",
-              $or: [
-                { telegramId: { $in: tgIds } },
-                { telegramId: { $in: tgIds.map(Number).filter(Boolean) } }
-              ]
-            },
-            {
-              $set: {
-                status: "REJECTED",
-                reason: "User Banned: " + banReason,
-                rejectedAt: banTimestamp
-              }
-            }
-          ).catch(() => {});
-        }
-
-        res.status(200).json({
-          ok: true,
-          bannedCount: banResult.modifiedCount,
-          totalEligible: highRiskUsers.length,
-          message: `Successfully banned ${banResult.modifiedCount} high fraud risk user(s) (Score 80%-100%). Clean users were not affected.`
-        });
-        return;
-      }
-
-      // 4. Unban User
-      if (action === "unban_user") {
-        const { telegramId } = req.body || {};
-        if (!telegramId) {
-          res.status(400).json({ error: "telegramId required" });
-          return;
-        }
-
-        const tid = String(telegramId);
-        const numId = Number(telegramId);
-
-        await usersCol.updateMany(
-          { $or: [{ telegramId: tid }, ...(numId ? [{ telegramId: numId }] : [])] },
-          {
-            $set: {
-              isBanned: false,
-              banReason: null,
-              unbannedAt: Date.now(),
-              bannedAt: null,
-              bannedAtDate: null,
-              dataPurged: false,
-              lastActiveAt: new Date()
-            }
-          }
-        );
-
-        // Notify user
-        if (botToken) {
-          const msg = `✅ <b>Account Restored!</b>\n\nYour suspension has been lifted. You can now reopen and continue mining on HOOCOOH Miner.`;
-          sendTelegramMsg(botToken, tid, msg);
-        }
-
-        res.status(200).json({ ok: true, message: `User ${tid} has been unbanned successfully.` });
-        return;
-      }
-
-      // 4b. Clear Security / Suspicious Flag
-      if (action === "clear_suspicious") {
-        const { telegramId } = req.body || {};
-        if (!telegramId) {
-          res.status(400).json({ error: "telegramId required" });
-          return;
-        }
-
-        const tid = String(telegramId);
-        const numId = Number(telegramId);
-
-        await usersCol.updateMany(
-          { $or: [{ telegramId: tid }, ...(numId ? [{ telegramId: numId }] : [])] },
-          {
-            $unset: {
-              isSuspicious: "",
-              suspiciousReason: "",
-              isHighRiskHacker: "",
-              securityFlag: "",
-              lastSuspiciousAt: "",
-              spinUnder5sStrikes: ""
-            }
-          }
-        );
-
-        res.status(200).json({ ok: true, message: `Security/Suspicious flag cleared for user ${tid}.` });
-        return;
-      }
-
-      // 5. Update Funds (Add or Deduct coins)
-      if (action === "update_funds") {
-        const { telegramId, delta, note } = req.body || {};
-        if (!telegramId || delta === undefined) {
-          res.status(400).json({ error: "telegramId and delta required" });
-          return;
-        }
-
-        const numDelta = parseInt(delta, 10);
-        if (isNaN(numDelta) || numDelta === 0) {
-          res.status(400).json({ error: "Delta must be a non-zero integer" });
-          return;
-        }
-
-        const tid = String(telegramId);
-        const numId = Number(telegramId);
-
-        const targetUser = await usersCol.findOne({
-          $or: [{ telegramId: tid }, ...(numId ? [{ telegramId: numId }] : [])]
-        });
-
-        if (!targetUser) {
-          res.status(404).json({ error: "User not found" });
-          return;
-        }
-
-        const currentBal = Number(targetUser.balance || 0);
-        const newBal = Math.max(0, currentBal + numDelta);
-
-        await usersCol.updateOne(
-          { _id: targetUser._id },
-          { $set: { balance: newBal } }
-        );
-
-        // Notify user if added/deducted
-        if (botToken) {
-          const sign = numDelta > 0 ? "+" : "";
-          const msg = `💰 <b>Balance Adjustment by Admin</b>\n\nYour balance was adjusted by: <b>${sign}${numDelta.toLocaleString()} HOOCOOH Coins</b>\n<b>New Balance:</b> ${newBal.toLocaleString()} Coins\n${note ? ("<b>Note:</b> " + note) : ""}`;
-          sendTelegramMsg(botToken, tid, msg);
-        }
-
-        res.status(200).json({
-          ok: true,
-          previousBalance: currentBal,
-          newBalance: newBal,
-          delta: numDelta,
-          message: `Balance updated: ${currentBal.toLocaleString()} -> ${newBal.toLocaleString()} Coins.`
-        });
-        return;
-      }
-
-      // 6. Broadcast to All Users
-      if (action === "broadcast") {
-        const { message, photoUrl, buttonText, buttonUrl } = req.body || {};
-        if (!message || !message.trim()) {
-          res.status(400).json({ error: "Message is required" });
-          return;
-        }
-
-        if (!botToken) {
-          res.status(500).json({ error: "TELEGRAM_BOT_TOKEN is not set" });
-          return;
-        }
-
-        const allUsers = await usersCol.find({}, { projection: { telegramId: 1 } }).toArray();
-
-        // 1) DEDUPE recipients: the same Telegram person can exist as several user documents
-        //    (string vs number telegramId, merged/duplicate accounts). Send to each person ONCE.
-        const recipientSet = new Set();
-        for (const u of allUsers) {
-          const tid = u && u.telegramId != null ? String(u.telegramId).trim() : "";
-          if (tid) recipientSet.add(tid);
-        }
-        const recipients = Array.from(recipientSet);
-        const total = recipients.length;
-
-        // 2) PER-RECIPIENT DELIVERY LOG: a broadcast id is derived from the exact content. Before sending to
-        //    a person we atomically claim (broadcastId + telegramId) with a unique index. If the admin clicks
-        //    twice, the request is retried, or Vercel times out and the admin sends the same broadcast again,
-        //    people who already received it are skipped - nobody gets the same message twice.
-        //    Claims auto-expire after 6 hours (TTL), so the same text can be broadcast again later.
-        const cleanMsg = message.trim();
-        const cleanPhoto = (photoUrl || "").trim();
-        const cleanBtnText = (buttonText || "").trim();
-        const cleanBtnUrl = (buttonUrl || "").trim();
-        const broadcastId = crypto
-          .createHash("sha1")
-          .update([cleanMsg, cleanPhoto, cleanBtnText, cleanBtnUrl].join("\u0001"))
-          .digest("hex");
-
-        const deliveriesCol = db.collection("broadcast_deliveries");
-        try {
-          await deliveriesCol.createIndex({ broadcastId: 1, telegramId: 1 }, { unique: true });
-          await deliveriesCol.createIndex({ createdAt: 1 }, { expireAfterSeconds: 6 * 60 * 60 });
-        } catch (idxErr) {
-          console.warn("broadcast_deliveries index warning:", idxErr.message);
-        }
-
-        let sentCount = 0;
-        let failCount = 0;
-        let skippedCount = 0;
-
-        for (const tid of recipients) {
-          let claimed = false;
-          try {
-            await deliveriesCol.insertOne({ broadcastId, telegramId: tid, createdAt: new Date() });
-            claimed = true;
-          } catch (claimErr) {
-            if (claimErr && claimErr.code === 11000) {
-              skippedCount++; // already sent (or being sent) for this exact broadcast
-              continue;
-            }
-            // Any other DB error: do not risk a duplicate, skip this person
-            failCount++;
-            continue;
-          }
-
-          const ok = await sendTelegramMsg(botToken, tid, cleanMsg, {
-            photoUrl: cleanPhoto || null,
-            buttonText: cleanBtnText || null,
-            buttonUrl: cleanBtnUrl || null
-          });
-
-          if (ok) {
-            sentCount++;
-          } else {
-            failCount++;
-            // Release the claim so a re-run can retry this person (e.g. temporary network error)
-            if (claimed) {
-              try { await deliveriesCol.deleteOne({ broadcastId, telegramId: tid }); } catch (e) {}
-            }
-          }
-
-          // Respect Telegram 30 msgs/sec limits: 35ms pause
-          await new Promise(r => setTimeout(r, 35));
-        }
-
-        res.status(200).json({
-          ok: true,
-          message: `Broadcast finished: ${sentCount} sent, ${failCount} failed, ${skippedCount} skipped (already received).`,
-          sentCount,
-          failCount,
-          skippedCount,
-          totalUsers: total
-        });
-        return;
-      }
-
-      // 7. Create Task (Admin can post for free, set limit or unlimited, reward fixed at 10)
-      if (action === "create_task") {
-        const { title, link, type, targetUsers, isUnlimited } = req.body || {};
-        if (!title || !title.trim()) {
-          res.status(400).json({ error: "Task title is required" });
-          return;
-        }
-        if (!link || !link.trim()) {
-          res.status(400).json({ error: "Link is required" });
-          return;
-        }
-
-        let cleanLink = link.trim();
-        if (!cleanLink.startsWith("http") && !cleanLink.startsWith("t.me")) {
-          cleanLink = "https://t.me/" + cleanLink.replace(/^@/, "");
-        } else if (cleanLink.startsWith("t.me")) {
-          cleanLink = "https://" + cleanLink;
-        }
-
-        const taskType = type === "verified" ? "verified" : "normal";
-        const finalCount = isUnlimited ? 99999999 : (Math.max(1, parseInt(targetUsers, 10) || 100));
-
-        const newTask = {
-          creatorId: "admin",
-          type: taskType,
-          title: title.trim(),
-          link: cleanLink,
-          reward: 10, // Strictly fixed at 10 HOOCOOH Coins as required!
-          targetCount: finalCount,
-          isUnlimited: !!isUnlimited,
-          completedBy: [],
-          status: "active",
-          createdAt: Date.now()
-        };
-
-        const insRes = await tasksCol.insertOne(newTask);
-
-        res.status(200).json({
-          ok: true,
-          task: { id: String(insRes.insertedId), ...newTask },
-          message: `Task successfully created! Target: ${isUnlimited ? 'Unlimited' : finalCount} users, Reward: 10 HOOCOOH Coins.`
-        });
-        return;
-      }
-
-      // 8. Delete / Disable Task
-      if (action === "delete_task") {
-        const { taskId } = req.body || {};
-        if (!taskId) {
-          res.status(400).json({ error: "taskId is required" });
-          return;
-        }
-
-        let objId;
-        try { objId = new ObjectId(taskId); } catch(e){ objId = null; }
-        const tQuery = objId ? { _id: objId } : { _id: taskId };
-
-        await tasksCol.deleteOne(tQuery);
-
-        res.status(200).json({ ok: true, message: "Task deleted successfully." });
-        return;
-      }
-
-      // 9. Set Admin Telegram ID
-      if (action === "set_admin_telegram_id") {
-        const { adminTelegramId } = req.body || {};
-        if (!adminTelegramId || !String(adminTelegramId).trim()) {
-          res.status(400).json({ error: "adminTelegramId is required" });
-          return;
-        }
-        await db.collection("settings").updateOne(
-          { key: "bot_settings" },
-          { $set: { adminTelegramId: String(adminTelegramId).trim(), updatedAt: Date.now() } },
-          { upsert: true }
-        );
-        res.status(200).json({
-          ok: true,
-          message: `Admin Telegram ID successfully set to: ${String(adminTelegramId).trim()}`
-        });
-        return;
-      }
-
-      // 10. Register Webhook with Telegram API
-      if (action === "set_webhook") {
-        if (!botToken) {
-          res.status(500).json({ error: "TELEGRAM_BOT_TOKEN is not configured in environment variables" });
-          return;
-        }
-        const host = req.headers["x-forwarded-host"] || req.headers.host;
-        const protocol = req.headers["x-forwarded-proto"] || "https";
-        const webhookUrl = `${protocol}://${host}/api/webhook`;
-
-        const tgRes = await fetch(
-          `https://api.telegram.org/bot${botToken}/setWebhook?url=${encodeURIComponent(webhookUrl)}&drop_pending_updates=true`
-        );
-        const tgData = await tgRes.json();
-        res.status(200).json({
-          ok: true,
-          webhookUrl,
-          telegramResponse: tgData
-        });
-        return;
-      }
-
-      // 11. Update Watch Ad Reward
-      if (action === "update_ad_reward") {
-        const { reward } = req.body || {};
-        const parsedReward = parseInt(reward, 10);
-        if (isNaN(parsedReward) || parsedReward < 1 || parsedReward > 100000) {
-          res.status(400).json({ error: "Reward must be a positive number between 1 and 100,000" });
-          return;
-        }
-
-        await db.collection("settings").updateOne(
-          { key: "app_settings" },
-          { $set: { watchAdReward: parsedReward, updatedAt: Date.now() } },
-          { upsert: true }
-        );
-
-        res.status(200).json({
-          ok: true,
-          watchAdReward: parsedReward,
-          message: `Watch Ad reward successfully set to ${parsedReward} HOOCOOH Coins!`
-        });
-        return;
-      }
-
-      // 12. Update HOOCOOH Coin Price ($ USD Rate)
-      if (action === "update_coin_price") {
-        const { coinPrice } = req.body || {};
-        const parsedPrice = parseFloat(coinPrice);
-        if (isNaN(parsedPrice) || parsedPrice <= 0 || parsedPrice > 1000) {
-          res.status(400).json({ error: "Coin price must be a valid positive number (e.g. 0.00003)" });
-          return;
-        }
-
-        await db.collection("settings").updateOne(
-          { key: "app_settings" },
-          { $set: { coinPriceUsd: parsedPrice, updatedAt: Date.now() } },
-          { upsert: true }
-        );
-
-        res.status(200).json({
-          ok: true,
-          coinPriceUsd: parsedPrice,
-          message: `HOOCOOH Coin price successfully set to $${parsedPrice} USD per coin!`
-        });
-        return;
-      }
-
-      res.status(400).json({ error: "Unknown POST action" });
-      return;
+    } catch(e) {
+      if (botTokenStatus) botTokenStatus.textContent = "Error";
+      if (webhookStatusText) webhookStatusText.textContent = "Error";
     }
-
-    res.status(405).json({ error: "Method not allowed" });
-  } catch (err) {
-    console.error("admin.js error:", err);
-    res.status(500).json({ error: err.message || "Server error" });
   }
-};
+
+  var refreshBotBtn = document.getElementById("refreshBotSettingsBtn");
+  if (refreshBotBtn) refreshBotBtn.addEventListener("click", loadBotSettings);
+
+  var saveAdminBtn = document.getElementById("saveAdminIdBtn");
+  if (saveAdminBtn) {
+    saveAdminBtn.addEventListener("click", async function(){
+      var val = (document.getElementById("adminTelegramIdInput").value || "").trim();
+      if (!val) { alert("Please enter your Telegram numeric ID."); return; }
+      try {
+        var res = await apiAdmin("POST", null, { action: "set_admin_telegram_id", adminTelegramId: val });
+        if (res.ok) {
+          showToast("✅ Admin Telegram ID saved!");
+          loadBotSettings();
+        }
+      } catch(e){ alert(e.message); }
+    });
+  }
+
+  var connectWhBtn = document.getElementById("connectWebhookBtn");
+  if (connectWhBtn) {
+    connectWhBtn.addEventListener("click", async function(){
+      connectWhBtn.disabled = true;
+      connectWhBtn.textContent = "Connecting webhook...";
+      try {
+        var res = await apiAdmin("POST", null, { action: "set_webhook" });
+        if (res.ok) {
+          showToast("⚡ Telegram Webhook registered successfully!");
+          loadBotSettings();
+        } else {
+          alert(res.error || "Failed to set webhook");
+        }
+      } catch(e) {
+        alert(e.message);
+      } finally {
+        connectWhBtn.disabled = false;
+        connectWhBtn.innerHTML = "<span>⚡ Register / Connect Webhook with Telegram</span>";
+      }
+    });
+  }
+
+})();
+</script>
+</body>
+</html>
