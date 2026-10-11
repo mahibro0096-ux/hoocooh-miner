@@ -8836,20 +8836,28 @@
   }
 
   function getStartParam() {
+    var p = "";
     if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
-      return tg.initDataUnsafe.start_param;
+      p = String(tg.initDataUnsafe.start_param).trim();
+    }
+    if (!p) {
+      try {
+        var urlParams = new URLSearchParams(window.location.search);
+        p = urlParams.get("startapp") || urlParams.get("tgWebAppStartParam") || urlParams.get("start_param") || "";
+        if (!p && window.location.hash) {
+          var hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+          p = hashParams.get("tgWebAppStartParam") || hashParams.get("startapp") || "";
+        }
+      } catch(e) {}
+    }
+    if (p) {
+      try { localStorage.setItem("hoocooh_pending_ref", p); } catch(e){}
+      return p;
     }
     try {
-      var urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get("startapp")) return urlParams.get("startapp");
-      if (urlParams.get("tgWebAppStartParam")) return urlParams.get("tgWebAppStartParam");
-      if (urlParams.get("start_param")) return urlParams.get("start_param");
-      if (window.location.hash) {
-        var hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-        if (hashParams.get("tgWebAppStartParam")) return hashParams.get("tgWebAppStartParam");
-        if (hashParams.get("startapp")) return hashParams.get("startapp");
-      }
-    } catch(e) {}
+      var saved = localStorage.getItem("hoocooh_pending_ref");
+      if (saved) return saved;
+    } catch(e){}
     return "";
   }
 
@@ -12071,12 +12079,24 @@
   }
 
   function getReferralLink() {
-    var myId = user.telegramId || (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) || "0";
+    var myId = (user && user.telegramId) ||
+               (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) ||
+               "";
+    if (!myId) {
+      try { myId = localStorage.getItem("hoocooh_registered_uid") || ""; } catch(e){}
+    }
+    if (!myId || myId === "0") {
+      return "https://t.me/hoocoohmine_bot/mine";
+    }
     return "https://t.me/hoocoohmine_bot/mine?startapp=ref_" + myId;
   }
 
   function copyReferralLink() {
     var link = getReferralLink();
+    if (link === "https://t.me/hoocoohmine_bot/mine") {
+      showToast("⏳ Loading your account... Please wait a second.");
+      return;
+    }
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(link).then(function() {
         showToast("📋 Referral link copied to clipboard!");

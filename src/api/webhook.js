@@ -1664,6 +1664,22 @@ module.exports = async (req, res) => {
       const startParam = parts[1] || "";
       if (startParam) {
         appUrl += `&tgWebAppStartParam=${encodeURIComponent(startParam)}`;
+        try {
+          if (db) {
+            const inviterId = String(startParam).replace(/^ref_/, "").trim();
+            if (inviterId && /^\d+$/.test(inviterId) && String(inviterId) !== String(senderId)) {
+              const inviter = await db.collection("users").findOne({
+                $or: [{ telegramId: inviterId }, { telegramId: Number(inviterId) }]
+              });
+              if (inviter && String(inviter.telegramId) !== String(senderId)) {
+                await db.collection("users").updateOne(
+                  { telegramId: String(senderId), referredBy: { $in: [null, undefined] } },
+                  { $set: { referredBy: String(inviter.telegramId) } }
+                );
+              }
+            }
+          }
+        } catch(refErr){}
       }
 
       let welcomePhotoBuf = null;

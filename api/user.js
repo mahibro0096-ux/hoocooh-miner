@@ -82,8 +82,15 @@ module.exports = async (req, res) => {
     const db = await getDb();
     const users = db.collection("users");
 
+    const rawStartParam = String(
+      (req.query && req.query.start_param) ||
+      (req.body && req.body.start_param) ||
+      tgUser.start_param ||
+      ""
+    ).trim();
+
     // Unified user retrieval, multi-type ID lookup, and multi-account check
-    let user = await findOrCreateUser(users, tgUser, { clientIp, clientDeviceId, prevUid });
+    let user = await findOrCreateUser(users, tgUser, { clientIp, clientDeviceId, prevUid, startParam: rawStartParam });
 
     if (user && user.isBanned) {
       if (user.isSuspendedMultipleAccount || user.isMultipleAccountBlocked) {
@@ -423,13 +430,19 @@ module.exports = async (req, res) => {
     }
 
     // Process Referral if provided and not yet bound (DO NOT reward until verified!)
-    const rawParam = String(tgUser.start_param || (req.query && req.query.start_param) || "").trim();
+    const rawParam = String(tgUser.start_param || (req.query && req.query.start_param) || (req.body && req.body.start_param) || "").trim();
     if (rawParam && !user.referredBy) {
       const inviterId = rawParam.replace(/^ref_/, "").trim();
       if (inviterId && /^\d+$/.test(inviterId) && String(inviterId) !== telegramId) {
         const inviter = await findUserById(users, inviterId);
         if (inviter && String(inviter.telegramId) !== telegramId) {
           user.referredBy = String(inviter.telegramId);
+
+          // Permanently lock in referredBy in database right away so referral is never lost!
+          await users.updateOne(
+            { _id: user._id, $or: [{ referredBy: null }, { referredBy: { $exists: false } }] },
+            { $set: { referredBy: String(inviter.telegramId) } }
+          );
 
           const isVerifiedNow = Boolean(
             user.isIdentityVerified === true &&
