@@ -626,6 +626,74 @@ module.exports = async (req, res) => {
         return;
       }
 
+      if (action === "setup_indexes") {
+        const {
+          USER_INACTIVITY_TTL_SECONDS,
+          USER_BANNED_TTL_SECONDS,
+          WITHDRAWAL_REJECTED_TTL_SECONDS,
+          IP_REGISTRY_TTL_SECONDS,
+          IP_VELOCITY_TTL_SECONDS,
+          CAPTCHA_TTL_SECONDS,
+          VERIFICATION_CODES_TTL_SECONDS,
+          BROADCAST_DELIVERIES_TTL_SECONDS,
+          ADMIN_STATE_TTL_SECONDS
+        } = require("../lib/constants");
+
+        async function safeIndex(colName, spec, options = {}) {
+          const col = db.collection(colName);
+          try {
+            await col.createIndex(spec, options);
+            return { index: `${colName}.${JSON.stringify(spec)}`, ok: true };
+          } catch (err) {
+            if (err.codeName === "IndexOptionsConflict" || (err.message && err.message.includes("already exists with different options"))) {
+              try {
+                if (options.name) await col.dropIndex(options.name);
+                await col.createIndex(spec, options);
+                return { index: `${colName}.${JSON.stringify(spec)}`, ok: true, note: "Recreated after dropping conflict" };
+              } catch (dropErr) {
+                return { index: `${colName}.${JSON.stringify(spec)}`, ok: false, error: dropErr.message };
+              }
+            }
+            return { index: `${colName}.${JSON.stringify(spec)}`, ok: false, error: err.message };
+          }
+        }
+
+        const steps = [
+          ["users.telegramId", () => safeIndex("users", { telegramId: 1 })],
+          ["users.totalMinedCoins+minerLevel", () => safeIndex("users", { totalMinedCoins: -1, minerLevel: -1 })],
+          ["users.recruitsCount", () => safeIndex("users", { recruitsCount: -1 })],
+          ["users.referredBy", () => safeIndex("users", { referredBy: 1 })],
+          ["users.isBanned", () => safeIndex("users", { isBanned: 1 })],
+          ["users.lastActiveAt (TTL 90d dead-account cleanup)", () => safeIndex("users", { lastActiveAt: 1 }, { expireAfterSeconds: USER_INACTIVITY_TTL_SECONDS, name: "ttl_users_inactivity_90d" })],
+          ["users.bannedAtDate (partial TTL 60d, isBanned:true only)", () => safeIndex("users", { bannedAtDate: 1 }, { expireAfterSeconds: USER_BANNED_TTL_SECONDS, partialFilterExpression: { isBanned: true }, name: "ttl_users_banned_60d" })],
+          ["withdrawals.telegramId+status", () => safeIndex("withdrawals", { telegramId: 1, status: 1 })],
+          ["withdrawals.status+createdAt", () => safeIndex("withdrawals", { status: 1, createdAt: -1 })],
+          ["withdrawals.rejectedAtDate (partial TTL 90d, status:REJECTED only)", () => safeIndex("withdrawals", { rejectedAtDate: 1 }, { expireAfterSeconds: WITHDRAWAL_REJECTED_TTL_SECONDS, partialFilterExpression: { status: "REJECTED" }, name: "ttl_withdrawals_rejected_90d" })],
+          ["ipSignupVelocity.updatedAt (TTL 24h)", () => safeIndex("ipSignupVelocity", { updatedAt: 1 }, { expireAfterSeconds: IP_VELOCITY_TTL_SECONDS, name: "ttl_ip_signup_velocity_24h" })],
+          ["ipRegistry.lastSeenAt (TTL 120d)", () => safeIndex("ipRegistry", { lastSeenAt: 1 }, { expireAfterSeconds: IP_REGISTRY_TTL_SECONDS, name: "ttl_ip_registry_120d" })],
+          ["ipRegistry.userId", () => safeIndex("ipRegistry", { userId: 1 })],
+          ["captcha_tokens.createdAtDate (TTL 10m)", () => safeIndex("captcha_tokens", { createdAtDate: 1 }, { expireAfterSeconds: CAPTCHA_TTL_SECONDS, name: "ttl_captcha_tokens_10m" })],
+          ["captcha_challenges.createdAtDate (TTL 10m)", () => safeIndex("captcha_challenges", { createdAtDate: 1 }, { expireAfterSeconds: CAPTCHA_TTL_SECONDS, name: "ttl_captcha_challenges_10m" })],
+          ["user_verification_codes.createdAtDate (TTL 1h)", () => safeIndex("user_verification_codes", { createdAtDate: 1 }, { expireAfterSeconds: VERIFICATION_CODES_TTL_SECONDS, name: "ttl_verification_codes_1h" })],
+          ["broadcast_deliveries.createdAt (TTL 30d)", () => safeIndex("broadcast_deliveries", { createdAt: 1 }, { expireAfterSeconds: BROADCAST_DELIVERIES_TTL_SECONDS, name: "ttl_broadcast_30d" })],
+          ["adminState.updatedAt (TTL 1h)", () => safeIndex("adminState", { updatedAt: 1 }, { expireAfterSeconds: ADMIN_STATE_TTL_SECONDS, name: "ttl_admin_state_1h" })],
+          ["tasks.status+createdAt", () => safeIndex("tasks", { status: 1, createdAt: -1 })]
+        ];
+
+        const results = [];
+        for (const [name, fn] of steps) {
+          try {
+            const r = await fn();
+            results.push({ name, ...r });
+          } catch(e) {
+            results.push({ name, ok: false, error: e.message });
+          }
+        }
+        const failed = results.filter(r => !r.ok);
+        res.status(200).json({ ok: failed.length === 0, total: results.length, successCount: results.length - failed.length, failedCount: failed.length, results });
+        return;
+      }
+
       res.status(400).json({ error: "Unknown GET action" });
       return;
     }

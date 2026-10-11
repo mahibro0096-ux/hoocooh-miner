@@ -2359,13 +2359,9 @@
       buildIndexesBtn.disabled = true;
       buildIndexesBtn.textContent = "Building indexes...";
       try {
-        var keyToUse = currentAdminKey || sessionStorage.getItem("hoocooh_admin_key") || "";
-        var res = await fetch("/api/setup-indexes?secret=" + encodeURIComponent(keyToUse), {
-          headers: { "x-admin-key": keyToUse }
-        });
-        var data = await res.json();
+        var data = await apiAdmin("GET", { action: "setup_indexes" });
         if (data.ok) {
-          showToast("✅ All " + (data.total || 14) + " MongoDB TTL & Performance Indexes verified successfully!");
+          showToast("✅ All " + (data.total || 19) + " MongoDB TTL & Performance Indexes verified successfully!");
         } else {
           alert("Index setup response: " + (data.error || data.message || JSON.stringify(data)));
         }
