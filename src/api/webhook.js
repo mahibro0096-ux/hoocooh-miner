@@ -628,6 +628,122 @@ async function renderTasksPage(db, botToken, chatId, messageId, page = 0, baseUr
   }
 }
 
+async function renderReferralsPage(db, botToken, chatId, messageId, targetUid, page = 0, baseUrl) {
+  const usersCol = db.collection("users");
+  const cleanUid = String(targetUid).trim();
+  const numId = Number(cleanUid);
+
+  const parentUser = await usersCol.findOne({
+    $or: [{ telegramId: cleanUid }, ...(numId ? [{ telegramId: numId }] : [])]
+  });
+
+  if (!parentUser) {
+    const notFoundText = `❌ <b>User Not Found</b>\n\nNo miner found with UID or Telegram ID: <code>${escapeHtml(cleanUid)}</code>`;
+    const keyboard = [
+      [{ text: "🔍 Search Another User", callback_data: "adm_ref_prompt" }],
+      [{ text: "🔙 Back to Admin", callback_data: "adm_back_menu" }]
+    ];
+    if (messageId) {
+      await editTelegramMsg(botToken, chatId, messageId, notFoundText, { reply_markup: { inline_keyboard: keyboard } });
+    } else {
+      await sendTelegramMsg(botToken, chatId, notFoundText, { reply_markup: { inline_keyboard: keyboard } });
+    }
+    return;
+  }
+
+  const rawParentName = parentUser.username ? `@${parentUser.username}` : (parentUser.firstName ? parentUser.firstName : "Miner");
+  const parentName = escapeHtml(rawParentName);
+
+  const referrals = await usersCol.find({
+    $or: [
+      { referredBy: cleanUid },
+      ...(numId ? [{ referredBy: String(numId) }, { referredBy: numId }] : [])
+    ]
+  }).sort({ createdAt: -1 }).toArray();
+
+  const totalCount = referrals.length;
+  const PAGE_SIZE = 5;
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const currPage = Math.max(0, Math.min(page, totalPages - 1));
+  const items = referrals.slice(currPage * PAGE_SIZE, (currPage + 1) * PAGE_SIZE);
+
+  let msgText = `👥 <b>Referral Crew of ${parentName}</b>\n`;
+  msgText += `UID: <code>${cleanUid}</code> • Total Referred: <b>${totalCount} miners</b>\n`;
+  msgText += `<i>Page ${currPage + 1} of ${totalPages} (Showing 5 per page)</i>\n`;
+  msgText += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+  if (totalCount === 0) {
+    msgText += `<i>This user has not invited any friends yet.</i>\n\n`;
+  } else {
+    items.forEach((ref, idx) => {
+      const itemNum = currPage * PAGE_SIZE + idx + 1;
+      const refUid = String(ref.telegramId);
+      const rawRefName = ref.firstName ? (ref.firstName + (ref.lastName ? " " + ref.lastName : "")) : (ref.username ? `@${ref.username}` : `Miner_${refUid.slice(-4)}`);
+      const refName = escapeHtml(rawRefName);
+      const isVerified = !!ref.isIdentityVerified;
+      const verifiedBadge = isVerified ? "✅ Verified" : "⏳ Unverified";
+      const adsCount = Number(ref.totalAdsWatched || 0);
+      const bal = Number(ref.balance || 0).toLocaleString();
+
+      // Telegram profile link (Direct username or tg://user?id=)
+      const profileLink = ref.username 
+        ? `https://t.me/${ref.username.replace(/^@/, '')}` 
+        : `tg://user?id=${refUid}`;
+
+      msgText += `<b>#${itemNum} | <a href="${profileLink}">${refName}</a></b>\n`;
+      msgText += `🆔 ID: <a href="${profileLink}"><code>${refUid}</code></a> ${ref.username ? `(@${escapeHtml(ref.username)})` : ''}\n`;
+      msgText += `💰 Balance: <b>${bal}</b> | 🎬 Ads: <b>${adsCount}</b>\n`;
+      msgText += `🛡️ Status: <b>${verifiedBadge}</b>\n\n`;
+    });
+  }
+
+  msgText += `<i>👉 Click on any user name or ID link to view their Telegram account!</i>`;
+
+  const inlineKeyboard = [];
+
+  // Individual profile quick buttons for current page items
+  items.forEach((ref, idx) => {
+    const itemNum = currPage * PAGE_SIZE + idx + 1;
+    const refUid = String(ref.telegramId);
+    const profileUrl = ref.username 
+      ? `https://t.me/${ref.username.replace(/^@/, '')}` 
+      : `tg://user?id=${refUid}`;
+    inlineKeyboard.push([
+      { text: `👤 Open Telegram #${itemNum}`, url: profileUrl }
+    ]);
+  });
+
+  // Navigation row
+  const navRow = [];
+  if (currPage > 0) {
+    navRow.push({ text: "⬅️ Prev", callback_data: `adm_ref_p_${cleanUid}_${currPage - 1}` });
+  }
+  navRow.push({ text: `📄 ${currPage + 1}/${totalPages}`, callback_data: `adm_ref_p_${cleanUid}_${currPage}` });
+  if (currPage < totalPages - 1) {
+    navRow.push({ text: "Next ➡️", callback_data: `adm_ref_p_${cleanUid}_${currPage + 1}` });
+  }
+  if (navRow.length > 0) inlineKeyboard.push(navRow);
+
+  // Bottom action buttons
+  inlineKeyboard.push([
+    { text: "🔍 Check Another User", callback_data: "adm_ref_prompt" },
+    { text: "🔄 Refresh", callback_data: `adm_ref_p_${cleanUid}_${currPage}` }
+  ]);
+  inlineKeyboard.push([
+    { text: "🔙 Back to Admin", callback_data: "adm_back_menu" },
+    { text: "🛡️ Admin Panel", web_app: { url: `${baseUrl}/admin.html` } }
+  ]);
+
+  if (messageId) {
+    const editRes = await editTelegramMsg(botToken, chatId, messageId, msgText, { reply_markup: { inline_keyboard: inlineKeyboard } });
+    if (!editRes || !editRes.ok) {
+      await sendTelegramMsg(botToken, chatId, msgText, { reply_markup: { inline_keyboard: inlineKeyboard } });
+    }
+  } else {
+    await sendTelegramMsg(botToken, chatId, msgText, { reply_markup: { inline_keyboard: inlineKeyboard } });
+  }
+}
+
 module.exports = async (req, res) => {
   // CORS / Preflight
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -1032,6 +1148,106 @@ module.exports = async (req, res) => {
         return;
       }
 
+      // Check User Referrals - Prompt Input
+      if (cbData === "adm_ref_prompt") {
+        const adminIds = await getAdminTelegramIds(db);
+        if (!adminIds.has(cbSenderId)) {
+          await answerCallbackQuery(botToken, cb.id, "Unauthorized: Admin only", true);
+          res.status(200).json({ ok: true });
+          return;
+        }
+
+        if (db) {
+          await db.collection("settings").updateOne(
+            { key: "admin_state_" + cbSenderId },
+            { $set: { state: "awaiting_ref_uid", updatedAt: Date.now() } },
+            { upsert: true }
+          );
+        }
+
+        const promptText = 
+          `👥 <b>Check User Referrals</b>\n\n` +
+          `Please send the <b>Telegram UID or Username</b> of the user whose invited referral accounts you want to inspect:\n\n` +
+          `<b>Examples:</b>\n` +
+          `• <code>123456789</code>\n` +
+          `• <code>@username</code>\n\n` +
+          `<i>Once sent, all recruited accounts will be listed with clickable Telegram profiles!</i>`;
+
+        await answerCallbackQuery(botToken, cb.id);
+        await sendTelegramMsg(botToken, cbChatId, promptText, {
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: "❌ Cancel", callback_data: "adm_back_menu" }]
+            ]
+          }
+        });
+        res.status(200).json({ ok: true });
+        return;
+      }
+
+      // Check User Referrals - Pagination Handler
+      if (cbData.startsWith("adm_ref_p_")) {
+        const adminIds = await getAdminTelegramIds(db);
+        if (!adminIds.has(cbSenderId)) {
+          await answerCallbackQuery(botToken, cb.id, "Unauthorized: Admin only", true);
+          res.status(200).json({ ok: true });
+          return;
+        }
+
+        // Format: adm_ref_p_<uid>_<page>
+        const rest = cbData.replace("adm_ref_p_", "");
+        const lastUnderscore = rest.lastIndexOf("_");
+        const targetUid = rest.substring(0, lastUnderscore);
+        const pNum = parseInt(rest.substring(lastUnderscore + 1), 10) || 0;
+
+        await answerCallbackQuery(botToken, cb.id);
+        await renderReferralsPage(db, botToken, cbChatId, cb.message?.message_id, targetUid, pNum, baseUrl);
+        res.status(200).json({ ok: true });
+        return;
+      }
+
+      // Return to main Admin menu
+      if (cbData === "adm_back_menu") {
+        const adminIds = await getAdminTelegramIds(db);
+        if (!adminIds.has(cbSenderId)) {
+          await answerCallbackQuery(botToken, cb.id, "Unauthorized: Admin only", true);
+          res.status(200).json({ ok: true });
+          return;
+        }
+
+        if (db) {
+          await db.collection("settings").deleteOne({ key: "admin_state_" + cbSenderId });
+        }
+
+        const adminUrl = `${baseUrl}/admin.html`;
+        const replyText = 
+          `🛡️ <b>HOOCOOH Admin Control Center</b>\n\n` +
+          `Tap a button below to manage the platform:`;
+
+        await answerCallbackQuery(botToken, cb.id);
+        const menuKeyboard = [
+          [
+            { text: "🛡️ Open Admin Panel", web_app: { url: adminUrl } },
+            { text: "💸 Withdraw", callback_data: "adm_wd_page_0" }
+          ],
+          [
+            { text: "👥 Check User Refer Users", callback_data: "adm_ref_prompt" }
+          ],
+          [
+            { text: "📋 Tasks", callback_data: "adm_tasks_page_0" },
+            { text: "➕ Add Task", callback_data: "adm_task_prompt" }
+          ]
+        ];
+
+        if (cb.message?.message_id) {
+          await editTelegramMsg(botToken, cbChatId, cb.message.message_id, replyText, { reply_markup: { inline_keyboard: menuKeyboard } });
+        } else {
+          await sendTelegramMsg(botToken, cbChatId, replyText, { reply_markup: { inline_keyboard: menuKeyboard } });
+        }
+        res.status(200).json({ ok: true });
+        return;
+      }
+
       await answerCallbackQuery(botToken, cb.id);
       res.status(200).send("OK");
       return;
@@ -1088,6 +1304,12 @@ module.exports = async (req, res) => {
               {
                 text: "💸 Withdraw",
                 callback_data: "adm_wd_page_0"
+              }
+            ],
+            [
+              {
+                text: "👥 Check User Refer Users",
+                callback_data: "adm_ref_prompt"
               }
             ],
             [
@@ -1200,11 +1422,78 @@ module.exports = async (req, res) => {
       }
 
       let isAwaitingTask = false;
+      let isAwaitingRefUid = false;
       if (db) {
         const adminStateDoc = await db.collection("settings").findOne({ key: "admin_state_" + senderId });
-        if (adminStateDoc && adminStateDoc.state === "awaiting_task") {
-          isAwaitingTask = true;
+        if (adminStateDoc) {
+          if (adminStateDoc.state === "awaiting_task") isAwaitingTask = true;
+          if (adminStateDoc.state === "awaiting_ref_uid") isAwaitingRefUid = true;
         }
+      }
+
+      // 1. Direct Command or Prompt response for Check User Referrals
+      if (command === "/referrals" || command === "/checkreferrals" || command === "/checkreferral" || command === "/checkrefs" || isAwaitingRefUid) {
+        let targetQuery = "";
+        if (isAwaitingRefUid) {
+          targetQuery = text.trim();
+        } else {
+          targetQuery = parts[1] ? parts[1].trim() : "";
+        }
+
+        if (!targetQuery) {
+          const promptText = 
+            `👥 <b>Check User Referrals</b>\n\n` +
+            `Please send the <b>Telegram UID or Username</b> of the miner:\n\n` +
+            `<b>Usage:</b>\n` +
+            `<code>/referrals 123456789</code>\n` +
+            `or <code>/referrals @username</code>`;
+
+          await sendTelegramMsg(botToken, chatId, promptText, {
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: "❌ Cancel", callback_data: "adm_back_menu" }]
+              ]
+            }
+          });
+
+          if (db) {
+            await db.collection("settings").updateOne(
+              { key: "admin_state_" + senderId },
+              { $set: { state: "awaiting_ref_uid", updatedAt: Date.now() } },
+              { upsert: true }
+            );
+          }
+
+          res.status(200).json({ ok: true, promptSent: true });
+          return;
+        }
+
+        // Clean query (could be @username or UID)
+        let cleanQ = targetQuery.replace(/^@/, "").trim();
+        const usersCol = db ? db.collection("users") : null;
+        let foundTargetUid = cleanQ;
+
+        if (usersCol) {
+          const numQ = Number(cleanQ);
+          const foundU = await usersCol.findOne({
+            $or: [
+              { telegramId: cleanQ },
+              ...(numQ ? [{ telegramId: numQ }] : []),
+              { username: { $regex: "^" + cleanQ + "$", $options: "i" } }
+            ]
+          });
+          if (foundU) {
+            foundTargetUid = String(foundU.telegramId);
+          }
+        }
+
+        if (db) {
+          await db.collection("settings").deleteOne({ key: "admin_state_" + senderId });
+        }
+
+        await renderReferralsPage(db, botToken, chatId, null, foundTargetUid, 0, baseUrl);
+        res.status(200).json({ ok: true, referralsRendered: true });
+        return;
       }
 
       const isAddTaskCmd = command === "/addtask";

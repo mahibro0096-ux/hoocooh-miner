@@ -106,11 +106,16 @@ module.exports = async (req, res) => {
         return;
       }
 
-      const challenge = await challengesCol.findOne({
-        challengeId,
-        userId: { $in: [uid, Number(uid), tgUser.id] },
-        used: false
-      });
+      const challengeRes = await challengesCol.findOneAndUpdate(
+        {
+          challengeId,
+          userId: { $in: [uid, Number(uid), tgUser.id] },
+          used: false
+        },
+        { $set: { used: true, verifiedAt: now } },
+        { returnDocument: "after" }
+      );
+      const challenge = challengeRes && (challengeRes.value || challengeRes);
 
       // Attack / Replay detection:
       if (!challenge) {
@@ -128,12 +133,6 @@ module.exports = async (req, res) => {
         res.status(400).json({ error: "Invalid or expired challenge. Please try again." });
         return;
       }
-
-      // Mark challenge as used immediately to prevent replay attacks
-      await challengesCol.updateOne(
-        { _id: challenge._id },
-        { $set: { used: true, verifiedAt: now } }
-      );
 
       if (now - challenge.createdAt > CHALLENGE_EXPIRY_MS) {
         res.status(400).json({ error: "Challenge expired. Please try again." });

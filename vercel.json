@@ -5,7 +5,30 @@
     { "src": "api/**/*.js", "use": "@vercel/node" }
   ],
   "routes": [
-    { "src": "/api/([^/]+?)(?:\\.js)?$", "dest": "/api/$1.js" },
-    { "src": "/(.*)", "dest": "/public/$1" }
+    {
+      "src": "/api/([^/]+?)(?:\\.js)?$",
+      "dest": "/api/$1.js",
+      "headers": {
+        "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate"
+      }
+    },
+    {
+      "src": "/assets/(.*)",
+      "dest": "/public/assets/$1",
+      "headers": {
+        "cache-control": "public, max-age=604800, s-maxage=604800, stale-while-revalidate=86400"
+      }
+    },
+    {
+      "src": "/(.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|woff2|woff|ttf|css))",
+      "dest": "/public/$1",
+      "headers": {
+        "cache-control": "public, max-age=604800, s-maxage=604800, stale-while-revalidate=86400"
+      }
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/public/$1"
+    }
   ]
 }

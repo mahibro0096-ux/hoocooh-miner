@@ -260,28 +260,41 @@ async function findOrCreateUser(usersCol, tgUser, meta = {}) {
     if (lastCheckin) primaryUser.lastCheckinAt = lastCheckin;
   }
 
-  // Ensure telegramId is normalized to string, update any changed user profile fields
-  const updateFields = { telegramId: telegramId, lastActiveAt: new Date() };
-  if (primaryUser.balance !== undefined) updateFields.balance = primaryUser.balance;
-  if (primaryUser.minerLevel !== undefined) updateFields.minerLevel = primaryUser.minerLevel;
-  if (primaryUser.totalMinedCoins !== undefined) updateFields.totalMinedCoins = primaryUser.totalMinedCoins;
-  if (primaryUser.totalMinedClaims !== undefined) updateFields.totalMinedClaims = primaryUser.totalMinedClaims;
-  if (primaryUser.lastMineCollectedAt !== undefined) updateFields.lastMineCollectedAt = primaryUser.lastMineCollectedAt;
-  if (primaryUser.lastCheckinAt !== undefined) updateFields.lastCheckinAt = primaryUser.lastCheckinAt;
-  if (primaryUser.recruitsCount !== undefined) updateFields.recruitsCount = primaryUser.recruitsCount;
-  if (primaryUser.refEarnings !== undefined) updateFields.refEarnings = primaryUser.refEarnings;
-  if (primaryUser.totalDailyEarned !== undefined) updateFields.totalDailyEarned = primaryUser.totalDailyEarned;
-  if (primaryUser.dailyCycle !== undefined) updateFields.dailyCycle = primaryUser.dailyCycle;
-  if (primaryUser.dailyDayIndex !== undefined) updateFields.dailyDayIndex = primaryUser.dailyDayIndex;
-  if (primaryUser.claimedMilestones !== undefined) updateFields.claimedMilestones = primaryUser.claimedMilestones;
-  if (primaryUser.completedTasks !== undefined) updateFields.completedTasks = primaryUser.completedTasks;
-  if (primaryUser.referredBy !== undefined) updateFields.referredBy = primaryUser.referredBy;
-  if (primaryUser.referralRewarded !== undefined) updateFields.referralRewarded = primaryUser.referralRewarded;
-  if (primaryUser.languageSelected !== undefined) updateFields.languageSelected = primaryUser.languageSelected;
-  if (primaryUser.termsAccepted !== undefined) updateFields.termsAccepted = primaryUser.termsAccepted;
-  if (primaryUser.isIdentityVerified !== undefined) updateFields.isIdentityVerified = primaryUser.isIdentityVerified;
-  if (primaryUser.identityVerifiedAt !== undefined) updateFields.identityVerifiedAt = primaryUser.identityVerifiedAt;
-  if (primaryUser.boundWalletAddress !== undefined) updateFields.boundWalletAddress = primaryUser.boundWalletAddress;
+  // Optimize DB writes: only write progression fields if duplicate docs were merged
+  const updateFields = {};
+  if (matchingUsers.length > 1) {
+    updateFields.telegramId = telegramId;
+    if (primaryUser.balance !== undefined) updateFields.balance = primaryUser.balance;
+    if (primaryUser.minerLevel !== undefined) updateFields.minerLevel = primaryUser.minerLevel;
+    if (primaryUser.totalMinedCoins !== undefined) updateFields.totalMinedCoins = primaryUser.totalMinedCoins;
+    if (primaryUser.totalMinedClaims !== undefined) updateFields.totalMinedClaims = primaryUser.totalMinedClaims;
+    if (primaryUser.lastMineCollectedAt !== undefined) updateFields.lastMineCollectedAt = primaryUser.lastMineCollectedAt;
+    if (primaryUser.lastCheckinAt !== undefined) updateFields.lastCheckinAt = primaryUser.lastCheckinAt;
+    if (primaryUser.recruitsCount !== undefined) updateFields.recruitsCount = primaryUser.recruitsCount;
+    if (primaryUser.refEarnings !== undefined) updateFields.refEarnings = primaryUser.refEarnings;
+    if (primaryUser.totalDailyEarned !== undefined) updateFields.totalDailyEarned = primaryUser.totalDailyEarned;
+    if (primaryUser.dailyCycle !== undefined) updateFields.dailyCycle = primaryUser.dailyCycle;
+    if (primaryUser.dailyDayIndex !== undefined) updateFields.dailyDayIndex = primaryUser.dailyDayIndex;
+    if (primaryUser.claimedMilestones !== undefined) updateFields.claimedMilestones = primaryUser.claimedMilestones;
+    if (primaryUser.completedTasks !== undefined) updateFields.completedTasks = primaryUser.completedTasks;
+    if (primaryUser.referredBy !== undefined) updateFields.referredBy = primaryUser.referredBy;
+    if (primaryUser.referralRewarded !== undefined) updateFields.referralRewarded = primaryUser.referralRewarded;
+    if (primaryUser.languageSelected !== undefined) updateFields.languageSelected = primaryUser.languageSelected;
+    if (primaryUser.termsAccepted !== undefined) updateFields.termsAccepted = primaryUser.termsAccepted;
+    if (primaryUser.isIdentityVerified !== undefined) updateFields.isIdentityVerified = primaryUser.isIdentityVerified;
+    if (primaryUser.identityVerifiedAt !== undefined) updateFields.identityVerifiedAt = primaryUser.identityVerifiedAt;
+    if (primaryUser.boundWalletAddress !== undefined) updateFields.boundWalletAddress = primaryUser.boundWalletAddress;
+  } else if (typeof primaryUser.telegramId !== "string" || primaryUser.telegramId !== telegramId) {
+    updateFields.telegramId = telegramId;
+  }
+
+  // Throttle lastActiveAt update to once every 30 mins to avoid continuous DB writes
+  const lastActiveTime = primaryUser.lastActiveAt ? new Date(primaryUser.lastActiveAt).getTime() : 0;
+  if (!primaryUser.isBanned && (!lastActiveTime || (Date.now() - lastActiveTime > 30 * 60 * 1000))) {
+    updateFields.lastActiveAt = new Date();
+    primaryUser.lastActiveAt = updateFields.lastActiveAt;
+  }
+
   if (primaryUser.isSuspicious) {
     updateFields.isSuspicious = true;
     if (primaryUser.suspiciousReason) updateFields.suspiciousReason = primaryUser.suspiciousReason;
@@ -305,14 +318,22 @@ async function findOrCreateUser(usersCol, tgUser, meta = {}) {
     primaryUser.photoUrl = tgUser.photo_url;
   }
 
-  // Update IP & device metadata if present
-  if (clientIp) {
+  // Update IP & device metadata only if changed/missing
+  if (clientIp && primaryUser.lastIp !== clientIp) {
     updateFields.lastIp = clientIp;
-    if (!primaryUser.registeredIp) updateFields.registeredIp = clientIp;
+    primaryUser.lastIp = clientIp;
+    if (!primaryUser.registeredIp) {
+      updateFields.registeredIp = clientIp;
+      primaryUser.registeredIp = clientIp;
+    }
   }
-  if (clientDeviceId) {
+  if (clientDeviceId && primaryUser.lastDeviceId !== clientDeviceId) {
     updateFields.lastDeviceId = clientDeviceId;
-    if (!primaryUser.registeredDeviceId) updateFields.registeredDeviceId = clientDeviceId;
+    primaryUser.lastDeviceId = clientDeviceId;
+    if (!primaryUser.registeredDeviceId) {
+      updateFields.registeredDeviceId = clientDeviceId;
+      primaryUser.registeredDeviceId = clientDeviceId;
+    }
   }
 
   // Check if primaryUser is a secondary account on the same device switching in:
@@ -399,14 +420,19 @@ async function findOrCreateUser(usersCol, tgUser, meta = {}) {
     }
   }
 
-  const updateOp = { $set: updateFields };
+  const updateOp = {};
+  if (Object.keys(updateFields).length > 0) {
+    updateOp.$set = updateFields;
+  }
   if (primaryUser.isBanned) {
     // Crucial: remove lastActiveAt so 60-day inactivity TTL never deletes the banned record
     delete updateFields.lastActiveAt;
     updateOp.$unset = { lastActiveAt: "" };
   }
 
-  await usersCol.updateOne({ _id: primaryUser._id }, updateOp);
+  if ((updateOp.$set && Object.keys(updateOp.$set).length > 0) || (updateOp.$unset && Object.keys(updateOp.$unset).length > 0)) {
+    await usersCol.updateOne({ _id: primaryUser._id }, updateOp);
+  }
   return primaryUser;
 }
 

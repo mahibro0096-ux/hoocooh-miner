@@ -2,9 +2,7 @@
 <html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
+<meta http-equiv="Cache-Control" content="no-cache">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>HOOCOOH Mine</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11904,11 +11902,18 @@
     var expiry = dep.expiresAt || (dep.createdAt ? dep.createdAt + 30 * 60 * 1000 : Date.now() + 30 * 60 * 1000);
     startDepositCountdown(expiry);
 
-    // Start auto-polling verification every 4 seconds
+    // Start auto-polling verification every 8 seconds (optimized for serverless resource conservation)
     stopDepositPolling();
+    var depositPollAttempts = 0;
     depositPollInterval = setInterval(function() {
+      if (document.hidden) return;
+      depositPollAttempts++;
+      if (depositPollAttempts > 35) {
+        stopDepositPolling();
+        return;
+      }
       verifyDepositStatus(true);
-    }, 4000);
+    }, 8000);
   }
 
   function stopDepositPolling() {
@@ -13070,10 +13075,18 @@
     renderAds();
   }, 1000);
 
-  // Sync state from server every 30 seconds
-  setInterval(function(){
+  // High-efficiency background sync (optimized for Vercel Hobby limits):
+  // 1. Never poll when tab/app is hidden (screen off or Telegram minimized)
+  // 2. Poll only once every 120s (2 minutes) instead of 30s
+  // 3. Omit referral & wallet data from timer (they are already loaded on demand when switching tabs)
+  // 4. When app is reopened / regains visibility, refresh once if >60s have elapsed
+  var lastBackgroundSyncTime = Date.now();
+
+  function performBackgroundSync() {
+    if (document.hidden) return;
+    lastBackgroundSyncTime = Date.now();
     apiGet().then(function(res){
-      if (res.ok) {
+      if (res && res.ok && res.data) {
         Object.assign(user, res.data);
         user.languageSelected = res.data.languageSelected === true;
         user.termsAccepted = (res.data.termsAccepted === true) || (user.termsAccepted === true);
@@ -13088,9 +13101,17 @@
         renderAll();
       }
     }).catch(function(){});
-    loadReferralData();
-    loadWalletData();
-  }, 30000);
+  }
+
+  // Periodic gentle sync (every 120 seconds, only if app is visible)
+  setInterval(performBackgroundSync, 120000);
+
+  // Resume sync when user reopens or switches back to the Telegram WebApp
+  document.addEventListener("visibilitychange", function() {
+    if (!document.hidden && (Date.now() - lastBackgroundSyncTime > 60000)) {
+      performBackgroundSync();
+    }
+  });
 
 })();
 </script>

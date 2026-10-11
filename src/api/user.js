@@ -23,6 +23,26 @@ async function fetchBotUsername(token) {
   return "hoocooh_miner_bot";
 }
 
+let cachedAppSettings = null;
+let cachedAppSettingsTime = 0;
+async function getCachedAppSettings(db) {
+  const now = Date.now();
+  if (cachedAppSettings && (now - cachedAppSettingsTime < 60000)) {
+    return cachedAppSettings;
+  }
+  try {
+    const s = await db.collection("settings").findOne({ key: "app_settings" });
+    cachedAppSettings = {
+      watchAdReward: (s && typeof s.watchAdReward === "number" && s.watchAdReward > 0) ? s.watchAdReward : 10,
+      coinRate: (s && typeof s.coinPriceUsd === "number" && s.coinPriceUsd > 0) ? s.coinPriceUsd : 0.00003
+    };
+    cachedAppSettingsTime = now;
+    return cachedAppSettings;
+  } catch(e) {
+    return { watchAdReward: 10, coinRate: 0.00003 };
+  }
+}
+
 module.exports = async (req, res) => {
   if (req.method !== "GET" && req.method !== "POST") {
     res.status(405).json({ error: "Method not allowed" });
@@ -458,17 +478,9 @@ module.exports = async (req, res) => {
       },
       boundWalletAddress: user.boundWalletAddress || null,
       botUsername: botUsername,
-      watchAdReward: (await (async () => {
-        try {
-          const s = await db.collection("settings").findOne({ key: "app_settings" });
-          return (s && typeof s.watchAdReward === "number" && s.watchAdReward > 0) ? s.watchAdReward : 10;
-        } catch(e){ return 10; }
-      })()),
-      coinRate: (await (async () => {
-        try {
-          const s = await db.collection("settings").findOne({ key: "app_settings" });
-          return (s && typeof s.coinPriceUsd === "number" && s.coinPriceUsd > 0) ? s.coinPriceUsd : 0.00003;
-        } catch(e){ return 0.00003; }
+      ...(await (async () => {
+        const s = await getCachedAppSettings(db);
+        return { watchAdReward: s.watchAdReward, coinRate: s.coinRate };
       })())
     });
   } catch (err) {

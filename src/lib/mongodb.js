@@ -73,62 +73,6 @@ async function ensureIndexes(db) {
     // 6. Tasks Collection Indexes
     tasksCol.createIndex({ status: 1, createdAt: -1 }).catch(() => {});
 
-    // Background purge of legacy unindexed documents older than threshold
-    const tenMinAgo = Date.now() - (10 * 60 * 1000);
-    tokensCol.deleteMany({ createdAt: { $lt: tenMinAgo } }).catch(() => {});
-    challengesCol.deleteMany({ createdAt: { $lt: tenMinAgo } }).catch(() => {});
-    codesCol.deleteMany({ createdAt: { $lt: Date.now() - (3600 * 1000) } }).catch(() => {});
-
-    // Mark any existing clean users who lack lastActiveAt with new Date() so their 60-day window starts now
-    usersCol.updateMany(
-      { isBanned: { $ne: true }, lastActiveAt: { $exists: false } },
-      { $set: { lastActiveAt: new Date() } }
-    ).catch(() => {});
-
-    // Ensure banned accounts NEVER have lastActiveAt so MongoDB TTL never deletes their suspension record
-    usersCol.updateMany(
-      { isBanned: true, lastActiveAt: { $exists: true } },
-      { $unset: { lastActiveAt: "" } }
-    ).catch(() => {});
-
-    // Ensure all existing active players who have progression (balance, mining, ads) are marked as termsAccepted
-    usersCol.updateMany(
-      {
-        termsAccepted: { $ne: true },
-        $or: [
-          { balance: { $gt: 0 } },
-          { minerLevel: { $gt: 1 } },
-          { recruitsCount: { $gt: 0 } },
-          { totalAdsWatched: { $gt: 0 } },
-          { lastMineCollectedAt: { $ne: null } }
-        ]
-      },
-      { $set: { termsAccepted: true, termsAcceptedAt: Date.now() } }
-    ).catch(() => {});
-
-    // Backfill totalMinedCoins for legacy players who have mining activity
-    usersCol.updateMany(
-      {
-        totalMinedCoins: { $exists: false },
-        $or: [
-          { lastMineCollectedAt: { $ne: null } },
-          { minerLevel: { $gt: 1 } }
-        ]
-      },
-      { $set: { totalMinedCoins: 25, totalMinedClaims: 1 } }
-    ).catch(() => {});
-
-    // Ensure all users have numeric totalMinedCoins & totalMinedClaims
-    usersCol.updateMany(
-      { totalMinedCoins: { $exists: false } },
-      { $set: { totalMinedCoins: 0, totalMinedClaims: 0 } }
-    ).catch(() => {});
-
-    // Purge progression data for users who have been banned > 7 days without being unbanned
-    try {
-      const { purgeExpiredBannedUsers } = require("./userHelper");
-      purgeExpiredBannedUsers(db).catch(() => {});
-    } catch(e) {}
   } catch (err) {
     console.warn("MongoDB ensureIndexes warning (non-fatal):", err.message);
   }

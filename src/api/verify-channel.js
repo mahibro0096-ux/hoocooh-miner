@@ -1,5 +1,20 @@
 const { validateInitData } = require("../lib/telegramAuth");
 
+let cachedBotInfo = null;
+async function getBotInfo(botToken) {
+  if (cachedBotInfo) return cachedBotInfo;
+  const botId = botToken.split(":")[0];
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${botToken}/getMe`);
+    const data = await res.json();
+    if (data.ok && data.result) {
+      cachedBotInfo = { id: data.result.id, username: data.result.username || "HOOCOOH Bot" };
+      return cachedBotInfo;
+    }
+  } catch(e) {}
+  return { id: botId, username: "HOOCOOH Bot" };
+}
+
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
     res.status(405).json({ error: "Method not allowed" });
@@ -35,15 +50,10 @@ module.exports = async (req, res) => {
   const chatId = "@" + channel;
 
   try {
-    // 1. Get bot's own user ID and username
-    const meRes = await fetch(`https://api.telegram.org/bot${botToken}/getMe`);
-    const meData = await meRes.json();
-    if (!meData.ok || !meData.result || !meData.result.id) {
-      res.status(500).json({ error: "Failed to connect to Telegram Bot API" });
-      return;
-    }
-    const botId = meData.result.id;
-    const botUsername = meData.result.username || "HOOCOOH Bot";
+    // 1. Get bot's own user ID and username from cache
+    const botInfo = await getBotInfo(botToken);
+    const botId = botInfo.id;
+    const botUsername = botInfo.username;
 
     // 2. Check chat member status of bot in that channel/group
     const memberRes = await fetch(
