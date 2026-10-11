@@ -3,6 +3,7 @@ const { validateInitData } = require("../lib/telegramAuth");
 const { findOrCreateUser } = require("../lib/userHelper");
 const { dailyStatus, rewardForCycleDay } = require("../lib/gameLogic");
 const { verifyActionToken, createActionToken } = require("../lib/actionSigner");
+const { checkVelocityLimit } = require("../lib/velocityLimiter");
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
@@ -22,6 +23,11 @@ module.exports = async (req, res) => {
     return;
   }
   const uid = String(tgUser.id);
+
+  // Velocity Check: Max 5 daily check-in attempts per minute per user/IP
+  if (!checkVelocityLimit(req, res, { endpoint: "checkin", max: 5, windowMs: 60000, uid: uid })) {
+    return;
+  }
 
   try {
     const db = await getDb();
@@ -82,9 +88,6 @@ module.exports = async (req, res) => {
         dailyCycle = Math.max(2, dailyCycle + 1);
       }
     }
-
-    const reward = rewardForCycleDay(dailyCycle, dailyDayIndex);
-    const now = Date.now();
 
     // Atomically claim daily checkin bonus (impossible for concurrent requests to both claim)
     const cutoff24h = now - (24 * 60 * 60 * 1000);

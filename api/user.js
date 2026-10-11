@@ -5,6 +5,7 @@ const { mineIsReady, dailyStatus, MINE_INTERVAL_MS, LEVEL_NAMES, getMultiplierFo
 const { generateVerificationImage } = require("../lib/verificationImage");
 const { notifyInviterReferralSuccess } = require("../lib/miningReminder");
 const { createActionToken } = require("../lib/actionSigner");
+const { checkVelocityLimit } = require("../lib/velocityLimiter");
 
 let cachedBotUsername = null;
 async function fetchBotUsername(token) {
@@ -61,6 +62,11 @@ module.exports = async (req, res) => {
     return;
   }
   const telegramId = String(tgUser.id);
+
+  // Velocity Check: Max 30 profile requests per minute per user/IP
+  if (!checkVelocityLimit(req, res, { endpoint: "user", max: 30, windowMs: 60000, uid: telegramId })) {
+    return;
+  }
   const clientIp = (
     req.headers["x-forwarded-for"] ||
     req.headers["x-real-ip"] ||

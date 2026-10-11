@@ -2,6 +2,7 @@ const { getDb } = require("../lib/mongodb");
 const { validateInitData } = require("../lib/telegramAuth");
 const { findOrCreateUser } = require("../lib/userHelper");
 const { verifyActionToken, createActionToken } = require("../lib/actionSigner");
+const { checkVelocityLimit } = require("../lib/velocityLimiter");
 
 const MAX_ADS_PER_DAY = 10;
 const AD_REWARD = 15;
@@ -20,6 +21,12 @@ module.exports = async (req, res) => {
   const tgUser = validateInitData(initData, botToken);
   if (!tgUser) {
     res.status(401).json({ error: "Invalid session - reopen app from Telegram" });
+    return;
+  }
+  const uid = String(tgUser.id);
+
+  // Velocity Check: Max 15 ad/spin requests per minute per user/IP
+  if (!checkVelocityLimit(req, res, { endpoint: "ads", max: 15, windowMs: 60000, uid: uid })) {
     return;
   }
 

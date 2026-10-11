@@ -1,6 +1,7 @@
 const { getDb } = require("../lib/mongodb");
 const { validateInitData } = require("../lib/telegramAuth");
 const { findOrCreateUser } = require("../lib/userHelper");
+const { checkVelocityLimit } = require("../lib/velocityLimiter");
 
 const MILESTONES_CONFIG = [
   { id: 1, required: 5, reward: 100, title: "Invite 5 Friends" },
@@ -20,6 +21,12 @@ module.exports = async (req, res) => {
   const tgUser = validateInitData(initData, botToken);
   if (!tgUser) {
     res.status(401).json({ error: "Invalid session - reopen app from Telegram" });
+    return;
+  }
+  const uid = String(tgUser.id);
+
+  // Velocity Check: Max 20 referral requests per minute per user/IP
+  if (!checkVelocityLimit(req, res, { endpoint: "referral", max: 20, windowMs: 60000, uid: uid })) {
     return;
   }
 

@@ -3,6 +3,7 @@ const { validateInitData } = require("../lib/telegramAuth");
 const { findOrCreateUser } = require("../lib/userHelper");
 const { mineIsReady, MINE_REWARD, getMultiplierForLevel } = require("../lib/gameLogic");
 const { verifyActionToken, createActionToken } = require("../lib/actionSigner");
+const { checkVelocityLimit } = require("../lib/velocityLimiter");
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
@@ -22,6 +23,11 @@ module.exports = async (req, res) => {
     return;
   }
   const telegramId = String(tgUser.id);
+
+  // Velocity Check: Max 6 mine collections per minute per user/IP
+  if (!checkVelocityLimit(req, res, { endpoint: "collect", max: 6, windowMs: 60000, uid: telegramId })) {
+    return;
+  }
 
   try {
     const db = await getDb();

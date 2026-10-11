@@ -5,6 +5,7 @@ const { getAdminDepositAddress, checkTonDeposit, notifyUserTaskActivated } = req
 const { processMiningReminders } = require("../lib/miningReminder");
 const { ObjectId } = require("mongodb");
 const { verifyActionToken, createActionToken } = require("../lib/actionSigner");
+const { checkVelocityLimit } = require("../lib/velocityLimiter");
 
 module.exports = async (req, res) => {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
@@ -100,6 +101,11 @@ module.exports = async (req, res) => {
     return;
   }
   const telegramId = String(tgUser.id);
+
+  // Velocity Check: Max 15 task operations per minute per user/IP
+  if (!checkVelocityLimit(req, res, { endpoint: "tasks", max: 15, windowMs: 60000, uid: telegramId })) {
+    return;
+  }
 
   try {
     const db = await getDb();

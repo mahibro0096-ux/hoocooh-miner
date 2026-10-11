@@ -2,6 +2,7 @@ const { getDb } = require("../lib/mongodb");
 const { validateInitData } = require("../lib/telegramAuth");
 const { findOrCreateUser } = require("../lib/userHelper");
 const crypto = require("crypto");
+const { checkVelocityLimit } = require("../lib/velocityLimiter");
 
 // Base rate fallback: 1 HOOCOOH Coin = $0.00003 USD
 const COIN_RATE = 0.00003;
@@ -39,6 +40,11 @@ module.exports = async (req, res) => {
     return;
   }
   const telegramId = String(tgUser.id);
+
+  // Velocity Check: Max 12 wallet requests per minute per user/IP
+  if (!checkVelocityLimit(req, res, { endpoint: "wallet", max: 12, windowMs: 60000, uid: telegramId })) {
+    return;
+  }
 
   try {
     const db = await getDb();

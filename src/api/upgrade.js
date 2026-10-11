@@ -2,6 +2,7 @@ const { getDb } = require("../lib/mongodb");
 const { validateInitData } = require("../lib/telegramAuth");
 const { findOrCreateUser } = require("../lib/userHelper");
 const { LEVEL_NAMES, getMultiplierForLevel, getUpgradeCostForLevel } = require("../lib/gameLogic");
+const { checkVelocityLimit } = require("../lib/velocityLimiter");
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
@@ -18,6 +19,12 @@ module.exports = async (req, res) => {
   const tgUser = validateInitData(initData, process.env.TELEGRAM_BOT_TOKEN);
   if (!tgUser) {
     res.status(401).json({ error: "Invalid session - reopen app from Telegram" });
+    return;
+  }
+  const uid = String(tgUser.id);
+
+  // Velocity Check: Max 8 upgrade attempts per minute per user/IP
+  if (!checkVelocityLimit(req, res, { endpoint: "upgrade", max: 8, windowMs: 60000, uid: uid })) {
     return;
   }
 

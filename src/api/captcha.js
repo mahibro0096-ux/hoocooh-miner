@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const { getDb } = require("../lib/mongodb");
 const { validateInitData } = require("../lib/telegramAuth");
+const { checkVelocityLimit } = require("../lib/velocityLimiter");
 
 const CHALLENGE_EXPIRY_MS = 120 * 1000; // 2 minutes
 const TOKEN_EXPIRY_MS = 90 * 1000;      // 90 seconds
@@ -26,6 +27,11 @@ module.exports = async (req, res) => {
 
   const { action } = req.body || {};
   const uid = String(tgUser.id);
+
+  // Velocity Check: Max 12 captcha operations per minute per user/IP
+  if (!checkVelocityLimit(req, res, { endpoint: "captcha", max: 12, windowMs: 60000, uid: uid })) {
+    return;
+  }
 
   try {
     const db = await getDb();
