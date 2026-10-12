@@ -158,7 +158,11 @@ module.exports = async (req, res) => {
       const getAction = req.query && (req.query.action || req.query.type);
       if (getAction === "check_s2s" || getAction === "poll_s2s") {
         const lastS2s = Number(user.lastAdsgramS2sRewardAt || 0);
-        const lastConsumed = Number(user.lastWatchEarnS2sConsumedAt || 0);
+        const lastConsumed = Math.max(
+          Number(user.lastAdsgramS2sConsumedAt || 0),
+          Number(user.lastWatchEarnS2sConsumedAt || 0),
+          Number(user.lastSpinS2sConsumedAt || 0)
+        );
         const isVerified = (lastS2s > 0) && (lastS2s > lastConsumed) && ((now - lastS2s) < 300000);
         res.status(200).json({
           ok: true,
@@ -428,6 +432,58 @@ module.exports = async (req, res) => {
         return;
       }
 
+      // ========================================================
+      // GHOST CLAIM DETECTION (TRICK 1) FOR SPIN TICKETS:
+      // Spin Ticket ad plays Adsgram Reward Ad (Block 53118) which triggers an S2S GET callback.
+      // If a bot/hacker calls this API without an actual Adsgram S2S confirmation,
+      // they are immediately trapped and permanently flagged as RED_FLAG_FAKE_AD_BYPASS!
+      // ========================================================
+      let s2sRecordTime = Number(user.lastAdsgramS2sRewardAt || 0);
+      let lastConsumed = Math.max(
+        Number(user.lastAdsgramS2sConsumedAt || 0),
+        Number(user.lastWatchEarnS2sConsumedAt || 0),
+        Number(user.lastSpinS2sConsumedAt || 0)
+      );
+      let isS2sValid = (s2sRecordTime > 0) && (s2sRecordTime > lastConsumed) && ((now - s2sRecordTime) < 300000);
+
+      // Grace retry (2.5 seconds) in case of microsecond webhook latency for legitimate players
+      if (!isS2sValid) {
+        await new Promise(r => setTimeout(r, 2500));
+        const freshUser = await usersCol.findOne({ _id: user._id });
+        if (freshUser) {
+          s2sRecordTime = Number(freshUser.lastAdsgramS2sRewardAt || 0);
+          lastConsumed = Math.max(
+            Number(freshUser.lastAdsgramS2sConsumedAt || 0),
+            Number(freshUser.lastWatchEarnS2sConsumedAt || 0),
+            Number(freshUser.lastSpinS2sConsumedAt || 0)
+          );
+          isS2sValid = (s2sRecordTime > 0) && (s2sRecordTime > lastConsumed) && ((Date.now() - s2sRecordTime) < 300000);
+          if (isS2sValid) {
+            user = freshUser;
+          }
+        }
+      }
+
+      if (!isS2sValid) {
+        const updateData = {
+          isSuspicious: true,
+          isFakeAdBypasser: true,
+          isHighRiskHacker: true,
+          permanentWarning: true,
+          securityFlag: "RED_FLAG_FAKE_AD_BYPASS",
+          suspiciousReason: "🚨 Ghost Claim Exploit: Attempted to claim Spin Ticket reward via bot/script without Adsgram S2S verification.",
+          lastSuspiciousAt: Date.now()
+        };
+        await usersCol.updateOne({ _id: user._id }, { $set: updateData });
+        res.status(403).json({
+          error: "🚨 Security Violation (RED_FLAG_FAKE_AD_BYPASS): Spin ad view could not be verified by Adsgram server! Bot or automated script detected. This warning is PERMANENT.",
+          flagged: true,
+          permanent: true,
+          correctTickets: Number(user.spinTickets || 0)
+        });
+        return;
+      }
+
       spinWatchedToday += 1;
       const newTickets = Number(user.spinTickets || 0) + 1;
 
@@ -436,6 +492,8 @@ module.exports = async (req, res) => {
         spinAdsWatchedToday: spinWatchedToday,
         spinAdsCycleStartedAt: spinCycleStart,
         lastSpinAdWatchedAt: now,
+        lastAdsgramS2sConsumedAt: now,
+        lastSpinS2sConsumedAt: now,
         lastActiveAt: new Date()
       };
 
@@ -537,7 +595,11 @@ module.exports = async (req, res) => {
     // ========================================================
     if (watchedToday === 0) {
       let s2sRecordTime = Number(user.lastAdsgramS2sRewardAt || 0);
-      let lastConsumed = Number(user.lastWatchEarnS2sConsumedAt || 0);
+      let lastConsumed = Math.max(
+        Number(user.lastAdsgramS2sConsumedAt || 0),
+        Number(user.lastWatchEarnS2sConsumedAt || 0),
+        Number(user.lastSpinS2sConsumedAt || 0)
+      );
       let isS2sValid = (s2sRecordTime > 0) && (s2sRecordTime > lastConsumed) && ((now - s2sRecordTime) < 300000);
 
       // Grace retry (2.5 seconds) in case of microsecond webhook latency for legitimate players
@@ -546,7 +608,11 @@ module.exports = async (req, res) => {
         const freshUser = await usersCol.findOne({ _id: user._id });
         if (freshUser) {
           s2sRecordTime = Number(freshUser.lastAdsgramS2sRewardAt || 0);
-          lastConsumed = Number(freshUser.lastWatchEarnS2sConsumedAt || 0);
+          lastConsumed = Math.max(
+            Number(freshUser.lastAdsgramS2sConsumedAt || 0),
+            Number(freshUser.lastWatchEarnS2sConsumedAt || 0),
+            Number(freshUser.lastSpinS2sConsumedAt || 0)
+          );
           isS2sValid = (s2sRecordTime > 0) && (s2sRecordTime > lastConsumed) && ((Date.now() - s2sRecordTime) < 300000);
           if (isS2sValid) {
             user = freshUser;
@@ -627,6 +693,7 @@ module.exports = async (req, res) => {
           adsCycleStartedAt: cycleStart,
           lastWatchAdAt: now,
           lastWatchEarnS2sConsumedAt: (watchedToday === 0 ? now : (user.lastWatchEarnS2sConsumedAt || 0)),
+          lastAdsgramS2sConsumedAt: (watchedToday === 0 ? now : (user.lastAdsgramS2sConsumedAt || 0)),
           lastActiveAt: new Date()
         }
       },
