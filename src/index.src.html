@@ -8173,7 +8173,7 @@
       if (activeView) activeView.scrollTop = 0;
 
       if (targetTab === "tab-earn") {
-        initAdMissions();
+        initAdMissions(true);
         var watchCard = document.querySelector("#tab-earn .watch-card") || document.querySelector("#tab-earn");
         if (watchCard && watchCard.scrollIntoView) {
           try {
@@ -10280,10 +10280,10 @@
   var adMissionsInitialized = false;
   var adMissionRewardAmount = 20;
 
-  function initAdMissions() {
+  function initAdMissions(force) {
     var container = document.getElementById("adMissionsBody");
     if (!container) return;
-    if (adMissionsInitialized) return;
+    if (adMissionsInitialized && !force) return;
     adMissionsInitialized = true;
 
     // Fetch latest app settings (coin reward) from /api/ads
@@ -10296,11 +10296,19 @@
     .then(function(data) {
       if (data && typeof data.adMissionReward === "number" && data.adMissionReward > 0) {
         adMissionRewardAmount = data.adMissionReward;
+        var rewBadges = document.querySelectorAll(".ad-mission-reward");
+        rewBadges.forEach(function(el) {
+          el.textContent = "+" + adMissionRewardAmount + " Coins";
+        });
       }
-      renderAdMissions();
+      if (!container.querySelector("adsgram-task")) {
+        renderAdMissions();
+      }
     })
     .catch(function() {
-      renderAdMissions();
+      if (!container.querySelector("adsgram-task")) {
+        renderAdMissions();
+      }
     });
   }
 

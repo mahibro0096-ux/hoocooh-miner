@@ -1202,6 +1202,7 @@
   function loadAll() {
     loadStats();
     loadWithdrawals();
+    loadTasks();
   }
 
   // 1. Stats
@@ -2155,7 +2156,7 @@
         if (typeof data.watchAdReward === "number") {
           var rewardInput = document.getElementById("watchAdRewardInput");
           var rewardText = document.getElementById("currentWatchAdRewardText");
-          if (rewardInput && !rewardInput.value) rewardInput.value = data.watchAdReward;
+          if (rewardInput) rewardInput.value = data.watchAdReward;
           if (rewardText) rewardText.textContent = "Current Reward: " + data.watchAdReward + " HOOCOOH Coins per ad";
         }
 
@@ -2170,12 +2171,11 @@
           }
         }
 
-        if (typeof data.adMissionReward === "number") {
-          var missionInput = document.getElementById("adMissionRewardInput");
-          var missionText = document.getElementById("currentAdMissionRewardText");
-          if (missionInput && !missionInput.value) missionInput.value = data.adMissionReward;
-          if (missionText) missionText.textContent = "Current Reward: " + data.adMissionReward + " HOOCOOH Coins per mission";
-        }
+        var missionInput = document.getElementById("adMissionRewardInput");
+        var missionText = document.getElementById("currentAdMissionRewardText");
+        var currentMissionRew = (typeof data.adMissionReward === "number" && data.adMissionReward > 0) ? data.adMissionReward : 20;
+        if (missionInput) missionInput.value = currentMissionRew;
+        if (missionText) missionText.textContent = "Current Reward: " + currentMissionRew + " HOOCOOH Coins per mission";
 
         if (!data.tasks || data.tasks.length === 0) {
           box.innerHTML = '<p style="text-align: center; color: var(--text-dim); padding: 20px;">No custom tasks posted yet.</p>';
