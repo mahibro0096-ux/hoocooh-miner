@@ -5688,6 +5688,23 @@
     display: inline-block;
   }
 
+  body.lang-rtl {
+    direction: rtl;
+    text-align: right;
+  }
+  body.lang-rtl .controls,
+  body.lang-rtl .stats-grid,
+  body.lang-rtl .days-grid,
+  body.lang-rtl .miner-stats-row,
+  body.lang-rtl .spin-wheel-stage,
+  body.lang-rtl .withdraw-net-single-card,
+  body.lang-rtl .nav,
+  body.lang-rtl .watch-progress-track,
+  body.lang-rtl .ticket-progress-track,
+  body.lang-rtl .header {
+    direction: ltr;
+  }
+
   /* Language Selection Modal (Exact match to reference image) */
   .lang-modal-overlay {
     position: fixed;
@@ -6336,6 +6353,7 @@
       <div class="sub">STARLIGHT PROTOCOL · SEASON 1</div>
     </div>
     <div class="controls">
+      <button class="theme-btn" id="langSwitchBtn" aria-label="Change language" title="Change Language">🌐</button>
       <button class="theme-btn" id="themeToggle" aria-label="Toggle theme">🌙</button>
       <div class="avatar" id="avatar">H</div>
     </div>
@@ -8517,6 +8535,22 @@
       ready_to_collect: "Ready to collect",
       collect_hoocooh: "Collect HOOCOOH",
 
+      // Daily Bonus Card
+      daily_bonus_title: "Daily Bonus",
+      daily_bonus_sub: "Keep your streak alive for bigger rewards",
+      daily_day_pill: "Day",
+      stat_current_streak: "CURRENT STREAK",
+      stat_next_reward: "NEXT REWARD",
+      stat_total_earned: "TOTAL EARNED",
+      collect_daily_bonus: "Collect Daily Reward",
+      claimed_for_today: "Claimed for Today",
+      next_in: "Next in",
+      next_checkin_in: "NEXT CHECK-IN IN",
+      day_x_reward: "DAY {d} REWARD",
+      day_unit: "day",
+      days_unit: "days",
+      ready_now: "Ready now",
+
       // Mining Tab
       stat_level: "LEVEL",
       stat_multiplier: "MULTIPLIER",
@@ -8549,6 +8583,93 @@
       filter_all: "All",
       filter_verified: "✓ Verified",
       filter_normal: "Normal",
+
+      // Ad Missions
+      ad_missions_title: "🎬 Ad Missions",
+      ad_missions_empty: "No ad mission available right now",
+      claim_reward: "Claim Reward",
+
+      // Lucky Wheel / Spin Modal
+      spin_modal_title: "🎡 Lucky Spin & Earn",
+      spin_top_title: "Spin & Win Coins",
+      spin_top_sub: "Win 10 – 30 HOOCOOH Coins every spin!",
+      spin_tickets_label: "Tickets",
+      spin_btn_center: "SPIN",
+      spin_status_note: "Cost: 1 Ticket per Spin • 100% Real Reward",
+      get_tickets_header: "🎟️ GET TICKETS",
+      watch_ads_tickets_title: "Watch Ads for Tickets",
+      watch_ads_tickets_sub: "Watch 1 ad = 1 Ticket (Max 6 tickets / 10 hours)",
+      watch_ad_ticket_btn: "🎬 Watch Ad (+1 Ticket)",
+      spin_limit_reached: "Limit Reached (6/6 Today)",
+      resets_in: "Resets in",
+      referrals_tickets_title: "Earn More Tickets (Referrals)",
+      referrals_tickets_sub: "Get 1 Free Ticket for each valid verified referral!",
+      verified_member_alert: "A friend becomes a Verified Member when they complete 30 ad watches.",
+      total_valid_refer: "Total Valid Refer:",
+      available_tickets: "Available:",
+      claim_free_tickets: "Claim Free Tickets",
+      invite_friends_tickets: "🔗 Invite Friends",
+
+      // Watch & Earn Bottom Sheet
+      sheet_watch_title: "Watch & Earn",
+      sheet_watch_sub: "Watch a short ad to earn HOOCOOH Coins instantly. Your support keeps the protocol running!",
+      sheet_stat_reward: "REWARD",
+      sheet_stat_watched: "WATCHED TODAY",
+      sheet_stat_remaining: "REMAINING",
+      sheet_unit_coins: "HOOCOOH Coins",
+      sheet_unit_of: "of 10",
+      sheet_unit_left: "ads left",
+      sheet_must_watch: "⚠️ You must watch full ad to earn your reward.",
+      sheet_start_btn: "▶ Watch Ad & Earn",
+      sheet_cancel_btn: "Cancel",
+      sheet_claimed_title: "Reward Claimed!",
+      sheet_claimed_sub: "You completed sponsor ad in this session!",
+      sheet_you_got: "YOU GOT",
+      sheet_collect_btn: "COLLECT & CONTINUE",
+
+      // S2S PLEASE WAIT Modal
+      s2s_wait_title: "PLEASE WAIT",
+      s2s_wait_desc: "Verifying ad view with Adsgram ad network...",
+      s2s_status_awaiting: "Awaiting server confirmation...",
+      s2s_status_confirmed: "✅ Server confirmed! Crediting reward...",
+      s2s_wait_note: "Please do not close this window. Your reward will be credited automatically as soon as the ad network confirms.",
+
+      // Withdraw Modal
+      withdraw_step1_title: "Watch Ad to Withdraw",
+      withdraw_step1_sub: "Watch a short ad completely to authorize your withdrawal. This helps us prevent bot abuse.",
+      withdraw_step1_btn: "▶ Watch Ad & Continue",
+      withdraw_notice_title: "Important Notice",
+      withdraw_notice_sub: "Please review the withdrawal rules carefully before proceeding.",
+      withdraw_rule_1: "Processing takes 24–48 hours.",
+      withdraw_rule_2: "Incorrect addresses result in permanent loss.",
+      withdraw_rule_3: "Ensure you use a supported network (TON).",
+      withdraw_understand_btn: "I Understand",
+      withdraw_step3_title: "Withdraw USDT",
+      withdraw_step3_sub: "Select a supported network.",
+      withdraw_step4_sub: "Enter your withdrawal details.",
+      withdraw_lbl_amount: "AMOUNT (HOOCOOH COINS)",
+      withdraw_min_coins: "Min: 1,000",
+      withdraw_lbl_address: "WITHDRAWAL ADDRESS (TON)",
+      withdraw_address_hint: "Enter your 48-character TON wallet address. It will be permanently locked on your first withdrawal.",
+      withdraw_btn_back: "Back",
+      withdraw_btn_confirm: "Confirm",
+      vault_sealed_status: "Vault Sealed",
+      vault_sealed_hint: "Mine {r} more HOOCOOH to withdraw",
+      vault_unlocked_status: "Vault Unlocked",
+      vault_unlocked_hint: "Ready to withdraw!",
+
+      // Terms Modal
+      terms_title: "Terms & Conditions",
+      terms_subtitle: "Please read and agree to our mining rules to continue",
+      terms_accept_btn: "Accept & Continue",
+      terms_decline_btn: "Decline",
+
+      // Tasks & Rankings
+      all_tasks_completed: "All Tasks Completed!",
+      no_tasks_available: "No pending tasks available right now. Check back soon for new tasks!",
+      task_claim: "CLAIM",
+      task_start: "START",
+      task_verify: "VERIFY",
 
       // Invite Tab
       your_network: "YOUR NETWORK:",
@@ -8605,6 +8726,22 @@
       ready_to_collect: "Готово к сбору",
       collect_hoocooh: "Собрать HOOCOOH",
 
+      // Daily Bonus Card
+      daily_bonus_title: "Ежедневный бонус",
+      daily_bonus_sub: "Поддерживайте серию для больших наград",
+      daily_day_pill: "День",
+      stat_current_streak: "ТЕКУЩАЯ СЕРИЯ",
+      stat_next_reward: "СЛЕД. НАГРАДА",
+      stat_total_earned: "ВСЕГО ЗАРАБОТАНО",
+      collect_daily_bonus: "Забрать бонус",
+      claimed_for_today: "Получено на сегодня",
+      next_in: "Следующий через",
+      next_checkin_in: "СЛЕД. СБОР ЧЕРЕЗ",
+      day_x_reward: "НАГРАДА ЗА ДЕНЬ {d}",
+      day_unit: "день",
+      days_unit: "дней",
+      ready_now: "Готово",
+
       // Mining Tab
       stat_level: "УРОВЕНЬ",
       stat_multiplier: "МНОЖИТЕЛЬ",
@@ -8637,6 +8774,93 @@
       filter_all: "Все",
       filter_verified: "✓ Проверенные",
       filter_normal: "Обычные",
+
+      // Ad Missions
+      ad_missions_title: "🎬 Рекламные миссии",
+      ad_missions_empty: "Сейчас нет доступных рекламных миссий",
+      claim_reward: "Забрать награду",
+
+      // Lucky Wheel / Spin Modal
+      spin_modal_title: "🎡 Колесо удачи",
+      spin_top_title: "Крути и выигрывай",
+      spin_top_sub: "Выигрывай 10 – 30 монет за каждый спин!",
+      spin_tickets_label: "Билеты",
+      spin_btn_center: "КРУТИТЬ",
+      spin_status_note: "Стоимость: 1 билет за спин • 100% реальные награды",
+      get_tickets_header: "🎟️ ПОЛУЧИТЬ БИЛЕТЫ",
+      watch_ads_tickets_title: "Смотреть рекламу за билеты",
+      watch_ads_tickets_sub: "1 реклама = 1 билет (макс. 6 билетов / 10 часов)",
+      watch_ad_ticket_btn: "🎬 Смотреть рекламу (+1 билет)",
+      spin_limit_reached: "Лимит исчерпан (6/6)",
+      resets_in: "Сброс через",
+      referrals_tickets_title: "Больше билетов за друзей",
+      referrals_tickets_sub: "Получайте 1 билет за каждого подтвержденного друга!",
+      verified_member_alert: "Друг становится проверенным участником после 30 просмотров рекламы.",
+      total_valid_refer: "Всего рефералов:",
+      available_tickets: "Доступно:",
+      claim_free_tickets: "Забрать билеты",
+      invite_friends_tickets: "🔗 Пригласить друзей",
+
+      // Watch & Earn Bottom Sheet
+      sheet_watch_title: "Смотри и зарабатывай",
+      sheet_watch_sub: "Посмотрите короткое видео и получите монеты сразу. Ваша поддержка развивает проект!",
+      sheet_stat_reward: "НАГРАДА",
+      sheet_stat_watched: "СЕГОДНЯ",
+      sheet_stat_remaining: "ОСТАЛОСЬ",
+      sheet_unit_coins: "Монеты",
+      sheet_unit_of: "из 10",
+      sheet_unit_left: "осталось",
+      sheet_must_watch: "⚠️ Для получения награды посмотрите видео полностью.",
+      sheet_start_btn: "▶ Смотреть рекламу",
+      sheet_cancel_btn: "Отмена",
+      sheet_claimed_title: "Награда получена!",
+      sheet_claimed_sub: "Вы успешно посмотрели спонсорскую рекламу!",
+      sheet_you_got: "ВЫ ПОЛУЧИЛИ",
+      sheet_collect_btn: "ЗАБРАТЬ И ПРОДОЛЖИТЬ",
+
+      // S2S PLEASE WAIT Modal
+      s2s_wait_title: "ПОЖАЛУЙСТА, ЖДИТЕ",
+      s2s_wait_desc: "Проверка просмотра рекламы в сети Adsgram...",
+      s2s_status_awaiting: "Ожидание подтверждения сервера...",
+      s2s_status_confirmed: "✅ Сервер подтвердил! Начисление награды...",
+      s2s_wait_note: "Пожалуйста, не закрывайте окно. Награда зачислится автоматически сразу после подтверждения.",
+
+      // Withdraw Modal
+      withdraw_step1_title: "Смотрите рекламу для вывода",
+      withdraw_step1_sub: "Посмотрите рекламу полностью для подтверждения вывода. Это защищает от ботов.",
+      withdraw_step1_btn: "▶ Смотреть и продолжить",
+      withdraw_notice_title: "Важное уведомление",
+      withdraw_notice_sub: "Пожалуйста, внимательно ознакомьтесь с правилами вывода.",
+      withdraw_rule_1: "Обработка занимает 24–48 часов.",
+      withdraw_rule_2: "Неверный адрес приведет к безвозвратной потере.",
+      withdraw_rule_3: "Убедитесь, что используете сеть TON.",
+      withdraw_understand_btn: "Понятно",
+      withdraw_step3_title: "Вывод USDT",
+      withdraw_step3_sub: "Выберите поддерживаемую сеть.",
+      withdraw_step4_sub: "Введите данные для вывода.",
+      withdraw_lbl_amount: "СУММА (МОНЕТЫ HOOCOOH)",
+      withdraw_min_coins: "Мин: 1,000",
+      withdraw_lbl_address: "АДРЕС ВЫВОДА (TON)",
+      withdraw_address_hint: "Введите ваш 48-значный адрес кошелька TON. Он будет закреплен навсегда.",
+      withdraw_btn_back: "Назад",
+      withdraw_btn_confirm: "Подтвердить",
+      vault_sealed_status: "Хранилище закрыто",
+      vault_sealed_hint: "Добудьте еще {r} HOOCOOH для вывода",
+      vault_unlocked_status: "Хранилище открыто",
+      vault_unlocked_hint: "Готово к выводу!",
+
+      // Terms Modal
+      terms_title: "Условия использования",
+      terms_subtitle: "Пожалуйста, ознакомьтесь с правилами для продолжения",
+      terms_accept_btn: "Принять и продолжить",
+      terms_decline_btn: "Отклонить",
+
+      // Tasks & Rankings
+      all_tasks_completed: "Все задания выполнены!",
+      no_tasks_available: "Нет доступных заданий. Загляните позже!",
+      task_claim: "ЗАБРАТЬ",
+      task_start: "НАЧАТЬ",
+      task_verify: "ПРОВЕРИТЬ",
 
       // Invite Tab
       your_network: "ВАША СЕТЬ:",
@@ -8693,6 +8917,22 @@
       ready_to_collect: "جاهز للجمع",
       collect_hoocooh: "جمع HOOCOOH",
 
+      // Daily Bonus Card
+      daily_bonus_title: "مكافأة يومية",
+      daily_bonus_sub: "حافظ على سلسلتك لمكافآت أكبر",
+      daily_day_pill: "اليوم",
+      stat_current_streak: "السلسلة الحالية",
+      stat_next_reward: "المكافأة التالية",
+      stat_total_earned: "إجمالي المكتسب",
+      collect_daily_bonus: "جمع المكافأة اليومية",
+      claimed_for_today: "تم الجمع لليوم",
+      next_in: "التالي خلال",
+      next_checkin_in: "تسجيل الدخول القادم",
+      day_x_reward: "مكافأة اليوم {d}",
+      day_unit: "يوم",
+      days_unit: "أيام",
+      ready_now: "جاهز الآن",
+
       // Mining Tab
       stat_level: "المستوى",
       stat_multiplier: "المضاعف",
@@ -8725,6 +8965,93 @@
       filter_all: "الكل",
       filter_verified: "✓ موثق",
       filter_normal: "عادي",
+
+      // Ad Missions
+      ad_missions_title: "🎬 مهام الإعلانات",
+      ad_missions_empty: "لا توجد مهام إعلانية متاحة الآن",
+      claim_reward: "المطالبة بالمكافأة",
+
+      // Lucky Wheel / Spin Modal
+      spin_modal_title: "🎡 عجلة الحظ واربح",
+      spin_top_title: "أدر واربح العملات",
+      spin_top_sub: "اربح 10 – 30 عملة مع كل لفة!",
+      spin_tickets_label: "تذاكر",
+      spin_btn_center: "تدوير",
+      spin_status_note: "التكلفة: تذكرة واحدة لكل لفة • مكافأة حقيقية 100%",
+      get_tickets_header: "🎟️ احصل على التذاكر",
+      watch_ads_tickets_title: "شاهد الإعلانات للحصول على تذاكر",
+      watch_ads_tickets_sub: "مشاهدة إعلان 1 = تذكرة واحدة (حد أقصى 6 تذاكر / 10 ساعات)",
+      watch_ad_ticket_btn: "🎬 مشاهدة إعلان (+1 تذكرة)",
+      spin_limit_reached: "تم الوصول للحد الأقصى (6/6 اليوم)",
+      resets_in: "إعادة التعيين خلال",
+      referrals_tickets_title: "احصل على المزيد من التذاكر (الإحالات)",
+      referrals_tickets_sub: "احصل على تذكرة مجانية واحدة لكل إحالة موثقة صالحة!",
+      verified_member_alert: "يصبح الصديق عضواً موثقاً عند إكماله مشاهدة 30 إعلاناً.",
+      total_valid_refer: "إجمالي الإحالات الصالحة:",
+      available_tickets: "متاح:",
+      claim_free_tickets: "المطالبة بالتذاكر المجانية",
+      invite_friends_tickets: "🔗 دعوة الأصدقاء",
+
+      // Watch & Earn Flow Modal / Sheet
+      sheet_watch_title: "شاهد واربح",
+      sheet_watch_sub: "شاهد إعلاناً قصيراً لربح عملات HOOCOOH فوراً. دعمك يحافظ على استمرار البروتوكول!",
+      sheet_stat_reward: "المكافأة",
+      sheet_stat_watched: "شوهد اليوم",
+      sheet_stat_remaining: "المتبقي",
+      sheet_unit_coins: "عملات",
+      sheet_unit_of: "من 10",
+      sheet_unit_left: "إعلانات متبقية",
+      sheet_must_watch: "⚠️ يجب مشاهدة الإعلان كاملاً للحصول على مكافأتك.",
+      sheet_start_btn: "▶ شاهد الإعلان واكسب",
+      sheet_cancel_btn: "إلغاء",
+      sheet_claimed_title: "تم استلام المكافأة!",
+      sheet_claimed_sub: "لقد أكملت إعلان الراعي في هذه الجلسة!",
+      sheet_you_got: "لقد حصلت على",
+      sheet_collect_btn: "جمع ومتابعة",
+
+      // S2S PLEASE WAIT Modal
+      s2s_wait_title: "يرجى الانتظار",
+      s2s_wait_desc: "جارٍ التحقق من مشاهدة الإعلان مع شبكة Adsgram...",
+      s2s_status_awaiting: "في انتظار تأكيد الخادم...",
+      s2s_status_confirmed: "✅ تم تأكيد الخادم! جارٍ إضافة المكافأة...",
+      s2s_wait_note: "يرجى عدم إغلاق هذه النافذة. ستتم إضافة مكافأتك تلقائياً فور تأكيد شبكة الإعلانات.",
+
+      // Withdraw Modal
+      withdraw_step1_title: "شاهد إعلاناً للسحب",
+      withdraw_step1_sub: "شاهد إعلاناً كاملاً لتفويض عملية السحب. هذا يساعدنا على منع استخدام البوتات.",
+      withdraw_step1_btn: "▶ شاهد الإعلان وتابع",
+      withdraw_notice_title: "إشعار مهم",
+      withdraw_notice_sub: "يرجى مراجعة قواعد السحب بعناية قبل المتابعة.",
+      withdraw_rule_1: "المعالجة تستغرق 24-48 ساعة.",
+      withdraw_rule_2: "العناوين غير الصحيحة تؤدي إلى خسارة دائمة.",
+      withdraw_rule_3: "تأكد من استخدام شبكة مدعومة (TON).",
+      withdraw_understand_btn: "فهمت",
+      withdraw_step3_title: "سحب USDT",
+      withdraw_step3_sub: "اختر شبكة مدعومة.",
+      withdraw_step4_sub: "أدخل تفاصيل السحب الخاصة بك.",
+      withdraw_lbl_amount: "المبلغ (عملات HOOCOOH)",
+      withdraw_min_coins: "الحد الأدنى: 1,000",
+      withdraw_lbl_address: "عنوان السحب (TON)",
+      withdraw_address_hint: "أدخل عنوان محفظة TON المكون من 48 حرفاً. سيتم قفله نهائياً عند أول سحب.",
+      withdraw_btn_back: "رجوع",
+      withdraw_btn_confirm: "تأكيد",
+      vault_sealed_status: "الخزينة مقفلة",
+      vault_sealed_hint: "قم بتعدين {r} أخرى من HOOCOOH للسحب",
+      vault_unlocked_status: "الخزينة مفتوحة",
+      vault_unlocked_hint: "جاهز للسحب!",
+
+      // Terms Modal
+      terms_title: "الشروط والأحكام",
+      terms_subtitle: "يرجى قراءة والموافقة على قواعد التعدين للمتابعة",
+      terms_accept_btn: "قبول ومتابعة",
+      terms_decline_btn: "رفض",
+
+      // Tasks & Rankings
+      all_tasks_completed: "اكتملت جميع المهام!",
+      no_tasks_available: "لا توجد مهام معلقة متاحة حالياً. تفقد مرة أخرى قريباً!",
+      task_claim: "مطالبة",
+      task_start: "بدء",
+      task_verify: "تحقق",
 
       // Invite Tab
       your_network: "شبكتك:",
@@ -8806,6 +9133,24 @@
     var mineTitle = document.getElementById("mineTitle");
     if (mineTitle) mineTitle.textContent = t("mining_complete");
 
+    // Daily Bonus Card
+    var dTitle = document.querySelector(".daily-card .d-title");
+    if (dTitle) dTitle.textContent = t("daily_bonus_title");
+    var dSub = document.querySelector(".daily-card .d-sub");
+    if (dSub) dSub.textContent = t("daily_bonus_sub");
+    var streakPill = document.querySelector(".daily-card .streak-pill");
+    if (streakPill) {
+      var sTag = document.getElementById("streakDayTag");
+      var sVal = sTag ? sTag.textContent : "1";
+      streakPill.innerHTML = '<span>⚡</span> ' + t("day_unit") + ' <span id="streakDayTag">' + sVal + '</span>';
+    }
+    var dStatLbls = document.querySelectorAll(".daily-card .stats-grid .s-lbl");
+    if (dStatLbls[0]) dStatLbls[0].textContent = t("stat_current_streak");
+    if (dStatLbls[1]) dStatLbls[1].textContent = t("stat_next_reward");
+    if (dStatLbls[2]) dStatLbls[2].textContent = t("stat_total_earned");
+    var dBotLbl = document.querySelector(".daily-bottom-col:not(.right) .lbl");
+    if (dBotLbl) dBotLbl.textContent = t("next_checkin_in");
+
     // Mining Tab
     var mStatLvl = document.querySelector(".miner-stats-row .miner-stat-box:nth-child(1) .lbl");
     if (mStatLvl) mStatLvl.textContent = t("stat_level");
@@ -8864,6 +9209,127 @@
     var fNorm = document.querySelector('button[data-filter="normal"]');
     if (fNorm) fNorm.textContent = t("filter_normal");
 
+    // Ad Missions
+    var adMissionsTitle = document.querySelector(".ad-missions-title");
+    if (adMissionsTitle) adMissionsTitle.textContent = t("ad_missions_title");
+
+    // Lucky Wheel Modal
+    var spinModalTitle = document.querySelector("#spinWheelModal .modal-title");
+    if (spinModalTitle) spinModalTitle.textContent = t("spin_modal_title");
+    var spinTopTitle = document.querySelector(".spin-top-title");
+    if (spinTopTitle) spinTopTitle.textContent = t("spin_top_title");
+    var spinTopSub = document.querySelector(".spin-top-sub");
+    if (spinTopSub) spinTopSub.textContent = t("spin_top_sub");
+    var spinTicketLabel = document.querySelector(".spin-ticket-label");
+    if (spinTicketLabel) spinTicketLabel.textContent = t("spin_tickets_label");
+    var spinCenterBtnTxt = document.querySelector(".spin-btn-txt");
+    if (spinCenterBtnTxt) spinCenterBtnTxt.textContent = t("spin_btn_center");
+    var spinStatusNote = document.getElementById("spinStatusNote");
+    if (spinStatusNote) spinStatusNote.textContent = t("spin_status_note");
+    var spinSectionTitle = document.querySelector(".spin-section-title span");
+    if (spinSectionTitle) spinSectionTitle.textContent = t("get_tickets_header");
+
+    var getTicketCards = document.querySelectorAll(".get-ticket-card");
+    if (getTicketCards[0]) {
+      var t1Title = getTicketCards[0].querySelector(".ticket-card-title");
+      if (t1Title) t1Title.textContent = t("watch_ads_tickets_title");
+      var t1Sub = getTicketCards[0].querySelector(".ticket-card-sub");
+      if (t1Sub) t1Sub.textContent = t("watch_ads_tickets_sub");
+    }
+    if (getTicketCards[1]) {
+      var t2Title = getTicketCards[1].querySelector(".ticket-card-title");
+      if (t2Title) t2Title.textContent = t("referrals_tickets_title");
+      var t2Sub = getTicketCards[1].querySelector(".ticket-card-sub");
+      if (t2Sub) t2Sub.textContent = t("referrals_tickets_sub");
+      var t2Alert = getTicketCards[1].querySelector(".verified-member-alert span:last-child");
+      if (t2Alert) t2Alert.innerHTML = t("verified_member_alert");
+    }
+    var inviteFriendsTicketsBtn = document.getElementById("inviteFriendsTicketsBtn");
+    if (inviteFriendsTicketsBtn) inviteFriendsTicketsBtn.textContent = t("invite_friends_tickets");
+
+    // Watch & Earn Flow Modal (Sheet)
+    var watchSheetPreTitle = document.querySelector("#watchFlowPreView .watch-flow-title");
+    if (watchSheetPreTitle) watchSheetPreTitle.textContent = t("sheet_watch_title");
+    var watchSheetPreSub = document.querySelector("#watchFlowPreView .watch-flow-sub");
+    if (watchSheetPreSub) watchSheetPreSub.textContent = t("sheet_watch_sub");
+    var sheetStatLbls = document.querySelectorAll(".watch-flow-stats-box .w-stat-lbl");
+    if (sheetStatLbls[0]) sheetStatLbls[0].textContent = t("sheet_stat_reward");
+    if (sheetStatLbls[1]) sheetStatLbls[1].textContent = t("sheet_stat_watched");
+    if (sheetStatLbls[2]) sheetStatLbls[2].textContent = t("sheet_stat_remaining");
+    var sheetWarn = document.querySelector(".watch-flow-warning span");
+    if (sheetWarn) sheetWarn.innerHTML = t("sheet_watch_warning");
+    var sheetStartBtn = document.querySelector("#sheetStartAdBtn span");
+    if (sheetStartBtn) sheetStartBtn.textContent = t("sheet_start_btn");
+    var sheetCancelBtn = document.querySelector("#sheetCancelBtn span");
+    if (sheetCancelBtn) sheetCancelBtn.textContent = t("sheet_cancel_btn");
+    var sheetSuccessTitle = document.querySelector("#watchFlowSuccessView .watch-flow-title");
+    if (sheetSuccessTitle) sheetSuccessTitle.textContent = t("sheet_claimed_title");
+    var sheetSuccessSub = document.querySelector("#watchFlowSuccessView .watch-flow-sub");
+    if (sheetSuccessSub) sheetSuccessSub.textContent = t("sheet_claimed_sub");
+    var sheetYouGotLbl = document.querySelector(".w-reward-card-lbl");
+    if (sheetYouGotLbl) sheetYouGotLbl.textContent = t("sheet_you_got");
+    var sheetCollectBtn = document.querySelector("#sheetCollectContinueBtn span");
+    if (sheetCollectBtn) sheetCollectBtn.textContent = t("sheet_collect_btn");
+
+    // S2S PLEASE WAIT Modal
+    var s2sBigTitle = document.querySelector(".s2s-big-title");
+    if (s2sBigTitle) s2sBigTitle.textContent = t("s2s_wait_title");
+    var s2sNoteBox = document.querySelector(".s2s-safety-note i");
+    if (s2sNoteBox) s2sNoteBox.textContent = t("s2s_wait_note");
+
+    // Withdraw Modal
+    var wStep1Title = document.querySelector("#withdrawStep1 .withdraw-step-title");
+    if (wStep1Title) wStep1Title.textContent = t("withdraw_step1_title");
+    var wStep1Sub = document.querySelector("#withdrawStep1 .withdraw-step-sub");
+    if (wStep1Sub) wStep1Sub.textContent = t("withdraw_step1_sub");
+    var wStep1Btn = document.querySelector("#withdrawAdActionBtn span");
+    if (wStep1Btn) wStep1Btn.textContent = t("withdraw_step1_btn");
+
+    var wStep2Title = document.querySelector("#withdrawStep2 .withdraw-step-title");
+    if (wStep2Title) wStep2Title.textContent = t("withdraw_notice_title");
+    var wStep2Sub = document.querySelector("#withdrawStep2 .withdraw-step-sub");
+    if (wStep2Sub) wStep2Sub.textContent = t("withdraw_notice_sub");
+    var wRules = document.querySelectorAll(".withdraw-notice-item");
+    if (wRules[0]) wRules[0].textContent = t("withdraw_rule_1");
+    if (wRules[1]) wRules[1].innerHTML = t("withdraw_rule_2");
+    if (wRules[2]) wRules[2].textContent = t("withdraw_rule_3");
+    var wStep2Btn = document.querySelector("#withdrawNoticeUnderstandBtn span");
+    if (wStep2Btn) wStep2Btn.textContent = t("withdraw_understand_btn");
+
+    var wStep3Title = document.querySelector("#withdrawStep3 .withdraw-step-title");
+    if (wStep3Title) wStep3Title.textContent = t("withdraw_step3_title");
+    var wStep3Sub = document.querySelector("#withdrawStep3 .withdraw-step-sub");
+    if (wStep3Sub) wStep3Sub.textContent = t("withdraw_step3_sub");
+
+    var wStep4Title = document.querySelector("#withdrawStep4 .withdraw-step-title");
+    if (wStep4Title) wStep4Title.textContent = t("withdraw_step3_title");
+    var wStep4Sub = document.querySelector("#withdrawStep4 .withdraw-step-sub");
+    if (wStep4Sub) wStep4Sub.textContent = t("withdraw_step4_sub");
+
+    var wCancelBtns = [document.getElementById("withdrawCancelBtn1"), document.getElementById("withdrawCancelBtn2"), document.getElementById("withdrawCancelBtn3")];
+    wCancelBtns.forEach(function(b){ if (b) b.textContent = t("btn_cancel"); });
+    var wBackBtn = document.getElementById("withdrawBackBtn");
+    if (wBackBtn) wBackBtn.textContent = t("btn_back");
+    var wConfirmBtn = document.getElementById("confirmWithdrawBtn");
+    if (wConfirmBtn) wConfirmBtn.textContent = t("btn_confirm");
+
+    var wLblAmt = document.querySelector("#withdrawStep4 .form-group:nth-child(1) .form-label");
+    if (wLblAmt) wLblAmt.textContent = t("withdraw_lbl_amount");
+    var wMinAmt = document.querySelector("#withdrawStep4 .form-group:nth-child(1) span");
+    if (wMinAmt) wMinAmt.textContent = t("withdraw_min_coins");
+    var wLblAddr = document.querySelector("#withdrawStep4 .form-group:nth-child(2) .form-label");
+    if (wLblAddr) wLblAddr.textContent = t("withdraw_lbl_address");
+    var wHint = document.getElementById("withdrawWalletHint");
+    if (wHint) wHint.textContent = t("withdraw_address_hint");
+
+    // Terms Modal
+    var tmTitle = document.querySelector(".terms-modal-title");
+    if (tmTitle) tmTitle.textContent = t("terms_title");
+    var tmSub = document.querySelector(".terms-modal-subtitle");
+    if (tmSub) tmSub.textContent = t("terms_subtitle");
+    var tmAgreeBtn = document.querySelector("#agreeTermsBtn span");
+    if (tmAgreeBtn) tmAgreeBtn.textContent = t("terms_accept_btn");
+
     // Invite Tab
     var invNetStrip = document.querySelector(".invite-network-strip span:first-child");
     if (invNetStrip) invNetStrip.innerHTML = t("your_network") + ' <span class="strip-val" id="stripFriendsCount">' + (user.recruitsCount || 0) + ' ' + t("friends_unit") + '</span>';
@@ -8895,6 +9361,11 @@
     if (tabMileSpan) tabMileSpan.textContent = t("tab_milestones");
     var tabOverSpan = document.querySelector('button[data-subtab="overview"] span');
     if (tabOverSpan) tabOverSpan.textContent = t("tab_overview");
+
+    var togRecruiters = document.getElementById("toggleRecruitersBtn");
+    if (togRecruiters) togRecruiters.textContent = t("ranking_tab_recruiters");
+    var togMiners = document.getElementById("toggleMinersBtn");
+    if (togMiners) togMiners.textContent = t("ranking_tab_miners");
 
     // Wallet Tab
     var vaultBadgeSpan = document.querySelector(".vault-hero-badge span:last-child");
@@ -8935,6 +9406,12 @@
       });
     }
 
+    // Immediately trigger dynamic UI rerenders in the new language
+    if (typeof renderDaily === "function") renderDaily();
+    if (typeof renderMining === "function") renderMining();
+    if (typeof renderAds === "function") renderAds();
+    if (typeof renderWallet === "function") renderWallet();
+    if (typeof loadSpinStatus === "function") loadSpinStatus();
     if (typeof renderAll === "function") {
       renderAll();
     }
@@ -8957,6 +9434,37 @@
   function setupLanguageModal() {
     var modal = document.getElementById("languageModal");
     if (!modal) return;
+
+    var switchBtn = document.getElementById("langSwitchBtn");
+    if (switchBtn) {
+      switchBtn.addEventListener("click", function(e) {
+        e.stopPropagation();
+        openLanguageModal();
+      });
+    }
+
+    var av = document.getElementById("avatar");
+    if (av) {
+      av.addEventListener("click", function(e) {
+        e.stopPropagation();
+        openLanguageModal();
+      });
+    }
+
+    // Close when clicking modal backdrop if language was already picked
+    modal.addEventListener("click", function(e) {
+      if (e.target === modal) {
+        var tgUid = (user && user.telegramId) || (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) || "me";
+        var hasSelected = false;
+        try {
+          hasSelected = (user && user.languageSelected === true) || localStorage.getItem("hoocooh_lang_selected_" + tgUid) === "true";
+        } catch(err){}
+        if (hasSelected) {
+          modal.style.display = "none";
+        }
+      }
+    });
+
     var pills = modal.querySelectorAll(".lang-option-pill");
     pills.forEach(function(pill){
       pill.addEventListener("click", function(){
@@ -9660,7 +10168,7 @@
     if (streakDayTag) streakDayTag.textContent = totalCurrentDay;
 
     var currentStreakVal = document.getElementById("currentStreakVal");
-    if (currentStreakVal) currentStreakVal.textContent = displayStreak + " day" + (displayStreak === 1 ? "" : "s");
+    if (currentStreakVal) currentStreakVal.textContent = displayStreak + " " + (displayStreak === 1 ? t("day_unit") : t("days_unit"));
 
     var totalEarnedVal = document.getElementById("totalEarnedVal");
     if (totalEarnedVal) totalEarnedVal.textContent = (user.totalDailyEarned || 0).toLocaleString();
@@ -9671,7 +10179,7 @@
     var dailyBtn = document.getElementById("dailyCollectBtn");
     var dayRewardLblEl = document.getElementById("dayRewardLbl");
     var dayRewardValEl = document.getElementById("dayRewardVal");
-    if (dayRewardLblEl) dayRewardLblEl.textContent = "DAY " + totalCurrentDay + " REWARD";
+    if (dayRewardLblEl) dayRewardLblEl.textContent = t("day_x_reward").replace("{x}", totalCurrentDay);
     if (dayRewardValEl) dayRewardValEl.textContent = "+" + currentReward;
 
     if (status === "waiting") {
@@ -9684,15 +10192,15 @@
 
       if (dailyBtn) {
         dailyBtn.disabled = true;
-        dailyBtn.innerHTML = '<span>✓ Claimed for Today (Next in ' + formatDuration(remaining) + ')</span>';
+        dailyBtn.innerHTML = '<span>' + t("claimed_for_today") + ' (' + t("next_in") + ' ' + formatDuration(remaining) + ')</span>';
       }
     } else {
-      checkinEl.textContent = "Ready now";
+      checkinEl.textContent = t("ready_now");
       if (nextRewardValEl) nextRewardValEl.textContent = "+" + currentReward;
 
       if (dailyBtn) {
         dailyBtn.disabled = false;
-        dailyBtn.innerHTML = '<span>🎁 Collect Daily Reward (+' + currentReward + ' HOOCOOH)</span>';
+        dailyBtn.innerHTML = '<span>🎁 ' + t("collect_daily_bonus") + ' (+' + currentReward + ' HOOCOOH)</span>';
       }
     }
   }
@@ -9777,7 +10285,7 @@
     if (watched >= maxAds && cycleStart && (now - cycleStart < CYCLE_MS)) {
       btn.disabled = true;
       var remainingCooldown = CYCLE_MS - (now - cycleStart);
-      btn.innerHTML = '<span>⏳ Next ads in ' + formatDuration(remainingCooldown) + '</span>';
+      btn.innerHTML = '<span>⏳ ' + t("next_in") + ' ' + formatDuration(remainingCooldown) + '</span>';
     } else if (watched >= maxAds && (!cycleStart || (now - cycleStart >= CYCLE_MS))) {
       user.adsWatchedToday = 0;
       user.adsEarnedToday = 0;
@@ -10485,7 +10993,7 @@
 
     function checkEmptyNotice() {
       if (evaluatedCount >= AD_MISSION_BLOCK_IDS.length && activeCount === 0) {
-        container.innerHTML = '<div class="ad-missions-empty">No ad mission available right now</div>';
+        container.innerHTML = '<div class="ad-missions-empty">' + t("ad_missions_empty") + '</div>';
       }
     }
 
@@ -11349,17 +11857,17 @@
         if (watchSpinAdActionBtn) {
           if (watched >= maxAds) {
             watchSpinAdActionBtn.disabled = true;
-            watchSpinAdActionBtn.innerHTML = '<span>Limit Reached (6/6 Today)</span>';
+            watchSpinAdActionBtn.innerHTML = '<span>' + t("spin_limit_reached") + '</span>';
           } else {
             watchSpinAdActionBtn.disabled = false;
-            watchSpinAdActionBtn.innerHTML = '<span>🎬 Watch Ad (+1 Ticket)</span>';
+            watchSpinAdActionBtn.innerHTML = '<span>' + t("watch_ad_ticket_btn") + '</span>';
           }
         }
 
         if (spinAdsResetCountdown && sp.nextResetMs > 0 && watched >= maxAds) {
           var hrs = Math.floor(sp.nextResetMs / (1000 * 60 * 60));
           var mins = Math.floor((sp.nextResetMs % (1000 * 60 * 60)) / (1000 * 60));
-          spinAdsResetCountdown.textContent = "Resets in " + hrs + "h " + mins + "m";
+          spinAdsResetCountdown.textContent = t("resets_in") + " " + hrs + "h " + mins + "m";
         } else if (spinAdsResetCountdown) {
           spinAdsResetCountdown.textContent = "";
         }
@@ -11368,15 +11876,15 @@
         var claimable = Number(sp.claimableRefTickets || 0);
         if (totalValidReferralsCount) totalValidReferralsCount.textContent = verified;
         if (verifiedFriendsCount) verifiedFriendsCount.textContent = verified;
-        if (claimableTicketsCount) claimableTicketsCount.textContent = claimable + " Tickets";
+        if (claimableTicketsCount) claimableTicketsCount.textContent = claimable + " " + t("spin_tickets_label");
 
         if (claimRefTicketsBtn) {
           if (claimable > 0) {
             claimRefTicketsBtn.disabled = false;
-            claimRefTicketsBtn.textContent = "🎁 Claim +" + claimable + " Free Tickets";
+            claimRefTicketsBtn.textContent = "🎁 " + t("claim_free_tickets") + " (+" + claimable + ")";
           } else {
             claimRefTicketsBtn.disabled = true;
-            claimRefTicketsBtn.textContent = "🎁 Claim Free Tickets";
+            claimRefTicketsBtn.textContent = "🎁 " + t("claim_free_tickets");
           }
         }
       }
@@ -11844,8 +12352,8 @@
     if (filtered.length === 0) {
       container.innerHTML = '<div style="text-align: center; padding: 36px 12px; color: var(--text-dim); font-size: 13px;">' +
         '<div style="font-size: 32px; margin-bottom: 8px;">🎉</div>' +
-        '<div style="font-weight: 700; color: #fff; margin-bottom: 4px;">All Tasks Completed!</div>' +
-        '<div>No pending tasks available right now. Check back soon for new tasks!</div>' +
+        '<div style="font-weight: 700; color: #fff; margin-bottom: 4px;">' + t("all_tasks_completed") + '</div>' +
+        '<div>' + t("no_tasks_available") + '</div>' +
       '</div>';
       return;
     }
@@ -12718,7 +13226,7 @@
     var earnings = Number(user.refEarnings || (referralData && referralData.refEarnings) || 0);
 
     var stripFriendsCount = document.getElementById("stripFriendsCount");
-    if (stripFriendsCount) stripFriendsCount.textContent = recruits + " friends";
+    if (stripFriendsCount) stripFriendsCount.textContent = recruits + " " + t("friends_unit");
 
     var refHeroRecruited = document.getElementById("refHeroRecruited");
     if (refHeroRecruited) refHeroRecruited.textContent = recruits.toLocaleString();
@@ -13108,9 +13616,9 @@
       if (vaultPillEl) vaultPillEl.classList.remove("unlocked");
       if (vaultIconEl) vaultIconEl.textContent = "🔒";
       if (vaultTextEl) {
-        vaultTextEl.innerHTML = "<strong>Vault Sealed</strong> — Mine " + formattedRem + " more HOOCOOH to withdraw";
+        vaultTextEl.innerHTML = "<strong>" + t("vault_sealed_status") + "</strong> — " + t("vault_sealed_hint").replace("{x}", formattedRem);
       }
-      if (withdrawBtnTextEl) withdrawBtnTextEl.textContent = "Vault Sealed";
+      if (withdrawBtnTextEl) withdrawBtnTextEl.textContent = t("vault_sealed_status");
       if (withdrawBtnEl) {
         withdrawBtnEl.classList.remove("unlocked");
         withdrawBtnEl.classList.add("sealed");
@@ -13119,9 +13627,9 @@
       if (vaultPillEl) vaultPillEl.classList.add("unlocked");
       if (vaultIconEl) vaultIconEl.textContent = "🔓";
       if (vaultTextEl) {
-        vaultTextEl.innerHTML = "<strong>Vault Unlocked</strong> — Ready to withdraw!";
+        vaultTextEl.innerHTML = "<strong>" + t("vault_unlocked_status") + "</strong> — " + t("vault_unlocked_hint");
       }
-      if (withdrawBtnTextEl) withdrawBtnTextEl.textContent = "💎 Withdraw USDT";
+      if (withdrawBtnTextEl) withdrawBtnTextEl.textContent = t("withdraw_btn");
       if (withdrawBtnEl) {
         withdrawBtnEl.classList.remove("sealed");
         withdrawBtnEl.classList.add("unlocked");
@@ -13148,8 +13656,8 @@
         txListEl.innerHTML =
           '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:18px;padding:24px 16px;text-align:center;box-shadow:0 4px 16px var(--card-shadow);">' +
           '<div style="font-size:28px;margin-bottom:8px;">📭</div>' +
-          '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;">No withdrawal transactions yet</div>' +
-          '<div style="font-size:11.5px;color:var(--text-dim);font-weight:600;line-height:1.4;">Mine coins and invite friends to earn and request payouts!</div>' +
+          '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;">' + t("no_tx_title") + '</div>' +
+          '<div style="font-size:11.5px;color:var(--text-dim);font-weight:600;line-height:1.4;">' + t("no_tx_sub") + '</div>' +
           '</div>';
       } else {
         var html = "";
