@@ -11452,8 +11452,10 @@
             var pollAttempts = 0;
             var maxPollAttempts = 12; // 12 * 1.5s = 18s total wait time
             var pollTimer = null;
+            var s2sAdClaimInitiated = false;
 
             function doPollS2s() {
+              if (s2sAdClaimInitiated) return;
               pollAttempts++;
               if (s2sStatusText) {
                 s2sStatusText.textContent = "Awaiting server confirmation (" + pollAttempts + "/" + maxPollAttempts + ")...";
@@ -11467,7 +11469,9 @@
                 }
                 return r;
               }).then(handleResponse).then(function(res) {
+                if (s2sAdClaimInitiated) return;
                 if (res && res.data && res.data.verified === true) {
+                  s2sAdClaimInitiated = true;
                   // Adsgram S2S successfully verified on server!
                   clearInterval(pollTimer);
                   updateS2sWaitingModal("✅ Server confirmed! Crediting reward...", true);
@@ -12031,83 +12035,92 @@
           var maxPollAttempts = 12; // 12 * 1.5s = 18s total wait time
           var pollTimer = null;
 
-          function claimSpinTicket(onFinish) {
-            watchSpinAdActionBtn.textContent = "Claiming Ticket...";
+            var isClaimingSpinTicket = false;
+            function claimSpinTicket(onFinish) {
+              if (isClaimingSpinTicket) return;
+              isClaimingSpinTicket = true;
+              watchSpinAdActionBtn.textContent = "Claiming Ticket...";
 
-            fetch("/api/ads", {
-              method: "POST",
-              headers: getClientHeaders({ "Content-Type": "application/json" }),
-              body: JSON.stringify({
-                action: "spin_watch_ad",
-                watchDurationMs: elapsedMs || 5000,
-                actionToken: currentActionTokens.spin_watch_ad
-              })
-            }).then(handleResponse).then(function(res) {
-              watchSpinAdActionBtn.disabled = false;
-              watchSpinAdActionBtn.textContent = "🎬 Watch Ad (+1 Ticket)";
-              if (typeof onFinish === "function") onFinish();
+              fetch("/api/ads", {
+                method: "POST",
+                headers: getClientHeaders({ "Content-Type": "application/json" }),
+                body: JSON.stringify({
+                  action: "spin_watch_ad",
+                  watchDurationMs: elapsedMs || 5000,
+                  actionToken: currentActionTokens.spin_watch_ad
+                })
+              }).then(handleResponse).then(function(res) {
+                isClaimingSpinTicket = false;
+                watchSpinAdActionBtn.disabled = false;
+                watchSpinAdActionBtn.textContent = "🎬 Watch Ad (+1 Ticket)";
+                if (typeof onFinish === "function") onFinish();
 
-              if (!res.ok) {
-                var err = (res.data && res.data.error) ? res.data.error : "Could not claim ticket";
-                showToast(err);
-                if (res.data && res.data.flagged) {
-                  user.isSuspicious = true;
-                  if (typeof res.data.correctTickets === "number") {
-                    currentSpinTickets = res.data.correctTickets;
-                    user.spinTickets = currentSpinTickets;
-                    if (spinTicketsCount) spinTicketsCount.textContent = currentSpinTickets;
+                if (!res.ok) {
+                  var err = (res.data && res.data.error) ? res.data.error : "Could not claim ticket";
+                  showToast(err);
+                  if (res.data && res.data.flagged) {
+                    user.isSuspicious = true;
+                    if (typeof res.data.correctTickets === "number") {
+                      currentSpinTickets = res.data.correctTickets;
+                      user.spinTickets = currentSpinTickets;
+                      if (spinTicketsCount) spinTicketsCount.textContent = currentSpinTickets;
+                    }
+                    alert("🚨 SECURITY WARNING:\n\nYou attempted to claim a spin ticket without verified ad view!\n\nThis unauthorized ticket has been revoked and your account has been RED-FLAGGED for fraud review.");
                   }
-                  alert("🚨 SECURITY WARNING:\n\nYou attempted to claim a spin ticket without verified ad view!\n\nThis unauthorized ticket has been revoked and your account has been RED-FLAGGED for fraud review.");
+                  return;
                 }
-                return;
-              }
 
-              if (res.data && res.data.newActionToken) {
-                currentActionTokens.spin_watch_ad = res.data.newActionToken;
-              }
+                if (res.data && res.data.newActionToken) {
+                  currentActionTokens.spin_watch_ad = res.data.newActionToken;
+                }
 
-              showToast("🎟️ +1 Spin Ticket received successfully!");
-              currentSpinTickets = Number(res.data.spinTickets || 0);
-              user.spinTickets = currentSpinTickets;
-              user.spinAdsWatchedToday = res.data.spinAdsWatchedToday;
-              if (spinTicketsCount) spinTicketsCount.textContent = currentSpinTickets;
-              loadSpinStatus();
-              if (tg && tg.HapticFeedback) {
-                try { tg.HapticFeedback.notificationOccurred("success"); } catch(e){}
-              }
-            }).catch(function(err) {
-              watchSpinAdActionBtn.disabled = false;
-              watchSpinAdActionBtn.textContent = "🎬 Watch Ad (+1 Ticket)";
-              if (typeof onFinish === "function") onFinish();
-              showToast(err.message || "Network issue");
-            });
-          }
-
-          function doPollS2sSpin() {
-            pollAttempts++;
-            if (s2sStatusText) {
-              s2sStatusText.textContent = "Awaiting server confirmation (" + pollAttempts + "/" + maxPollAttempts + ")...";
+                showToast("🎟️ +1 Spin Ticket received successfully!");
+                currentSpinTickets = Number(res.data.spinTickets || 0);
+                user.spinTickets = currentSpinTickets;
+                user.spinAdsWatchedToday = res.data.spinAdsWatchedToday;
+                if (spinTicketsCount) spinTicketsCount.textContent = currentSpinTickets;
+                loadSpinStatus();
+                if (tg && tg.HapticFeedback) {
+                  try { tg.HapticFeedback.notificationOccurred("success"); } catch(e){}
+                }
+              }).catch(function(err) {
+                isClaimingSpinTicket = false;
+                watchSpinAdActionBtn.disabled = false;
+                watchSpinAdActionBtn.textContent = "🎬 Watch Ad (+1 Ticket)";
+                if (typeof onFinish === "function") onFinish();
+                showToast(err.message || "Network issue");
+              });
             }
 
-            fetch("/api/ads?action=check_s2s", {
-              headers: getClientHeaders()
-            }).then(function(r) {
-              if (r.status === 404) {
-                return fetch("/api/ads.js?action=check_s2s", { headers: getClientHeaders() });
+            var s2sSpinClaimInitiated = false;
+            function doPollS2sSpin() {
+              if (s2sSpinClaimInitiated) return;
+              pollAttempts++;
+              if (s2sStatusText) {
+                s2sStatusText.textContent = "Awaiting server confirmation (" + pollAttempts + "/" + maxPollAttempts + ")...";
               }
-              return r;
-            }).then(handleResponse).then(function(res) {
-              if (res && res.data && res.data.verified === true) {
-                // Adsgram S2S successfully verified on server!
-                clearInterval(pollTimer);
-                updateS2sWaitingModal("✅ Server confirmed! Crediting spin ticket...", true);
-                setTimeout(function() {
-                  claimSpinTicket(function onFinish() {
-                    closeS2sWaitingModal();
-                  });
-                }, 500);
-                return;
-              }
+
+              fetch("/api/ads?action=check_s2s", {
+                headers: getClientHeaders()
+              }).then(function(r) {
+                if (r.status === 404) {
+                  return fetch("/api/ads.js?action=check_s2s", { headers: getClientHeaders() });
+                }
+                return r;
+              }).then(handleResponse).then(function(res) {
+                if (s2sSpinClaimInitiated) return;
+                if (res && res.data && res.data.verified === true) {
+                  s2sSpinClaimInitiated = true;
+                  // Adsgram S2S successfully verified on server!
+                  clearInterval(pollTimer);
+                  updateS2sWaitingModal("✅ Server confirmed! Crediting spin ticket...", true);
+                  setTimeout(function() {
+                    claimSpinTicket(function onFinish() {
+                      closeS2sWaitingModal();
+                    });
+                  }, 500);
+                  return;
+                }
 
               if (pollAttempts >= maxPollAttempts) {
                 clearInterval(pollTimer);

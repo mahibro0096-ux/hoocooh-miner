@@ -392,9 +392,21 @@ module.exports = async (req, res) => {
       const lastWatchedAt = Number(user.lastSpinAdWatchedAt || 0);
       const timeSinceLast = (lastWatchedAt > 0) ? (now - lastWatchedAt) : 999999;
 
-      // Normal users who skip ads in the app do NOT call this API (they receive no reward and no strikes).
-      // Only automated scripts or exploit attempts trying to claim ticket into balance under 5s hit this check:
-      if (duration < 5000 || timeSinceLast < 5000) {
+      // 1. Duplicate / parallel request check: if this request arrived within 5 seconds of an already credited spin ad:
+      if (timeSinceLast < 5000) {
+        res.status(200).json({
+          ok: true,
+          duplicate: true,
+          message: "Spin ticket was already credited",
+          spinTickets: Number(user.spinTickets || 0),
+          spinAdsWatchedToday: Number(user.spinAdsWatchedToday || 0)
+        });
+        return;
+      }
+
+      // 2. Strict 5-Second Watch Rule Anti-Cheat Enforcement:
+      // Only flag if the user ACTUALLY skipped before 5 seconds (duration < 5000ms):
+      if (duration < 5000) {
         const strikes = Number(user.spinUnder5sStrikes || 0) + 1;
         const updateData = {
           spinUnder5sStrikes: strikes,
@@ -544,9 +556,22 @@ module.exports = async (req, res) => {
     const lastWatchedAt = Number(user.lastWatchAdAt || 0);
     const timeSinceLast = (lastWatchedAt > 0) ? (now - lastWatchedAt) : 999999;
 
-    // Strict 9-Second Watch Rule Anti-Cheat Enforcement:
-    // If user skipped the ad before 9 seconds while attempting to claim coins into balance:
-    if (duration < 9000 || timeSinceLast < 9000) {
+    // 1. Duplicate / parallel request check: if this request arrived within 5 seconds of an already credited watch ad:
+    if (timeSinceLast < 5000) {
+      res.status(200).json({
+        ok: true,
+        duplicate: true,
+        message: "Ad reward was already credited",
+        newBalance: Number(user.balance || 0),
+        adsWatchedToday: Number(user.adsWatchedToday || 0),
+        adsEarnedToday: Number(user.adsEarnedToday || 0)
+      });
+      return;
+    }
+
+    // 2. Strict 9-Second Watch Rule Anti-Cheat Enforcement:
+    // Only flag if user ACTUALLY skipped the ad before 9 seconds (duration < 9000ms):
+    if (duration < 9000) {
       const strikes = Number(user.adSkipUnder9sStrikes || 0) + 1;
       const updateData = {
         adSkipUnder9sStrikes: strikes,
