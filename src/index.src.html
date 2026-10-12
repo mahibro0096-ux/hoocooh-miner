@@ -11498,22 +11498,22 @@
   }
 
   function verifyChannelApi(channel) {
-    return fetch("/api/verify-channel", {
+    return fetch("/api/tasks?action=verify_channel", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-Telegram-Init-Data": initData
       },
-      body: JSON.stringify({ channel: channel })
+      body: JSON.stringify({ action: "verify_channel", channel: channel })
     }).then(function(r) {
       if (r.status === 404) {
-        return fetch("/api/verify-channel.js", {
+        return fetch("/api/verify-channel", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "X-Telegram-Init-Data": initData
           },
-          body: JSON.stringify({ channel: channel })
+          body: JSON.stringify({ action: "verify_channel", channel: channel })
         });
       }
       return r;

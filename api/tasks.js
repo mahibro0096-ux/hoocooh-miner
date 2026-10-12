@@ -225,9 +225,86 @@ module.exports = async (req, res) => {
       return;
     }
 
-    // POST: claim or create
+    // POST: claim or create or verify_channel
     if (req.method === "POST") {
-      const { action } = req.body || {};
+      const action = (req.body && req.body.action) || (req.query && req.query.action);
+
+      // 0. VERIFY CHANNEL (Integrated from verify-channel.js to optimize Vercel serverless functions count)
+      if (action === "verify_channel" || (req.url && req.url.includes("verify-channel"))) {
+        let { channel } = req.body || {};
+        if (!channel || typeof channel !== "string") {
+          res.status(400).json({ error: "Please provide a valid channel or group username" });
+          return;
+        }
+
+        channel = channel.trim().replace(/https?:\/\/t\.me\//i, "").replace(/^@/, "").trim();
+        if (!channel) {
+          res.status(400).json({ error: "Invalid username format" });
+          return;
+        }
+
+        const chatId = "@" + channel;
+        try {
+          const botId = botToken.split(":")[0];
+          let botUsername = "HOOCOOH Bot";
+          try {
+            const botMeRes = await fetch(`https://api.telegram.org/bot${botToken}/getMe`);
+            const botMeData = await botMeRes.json();
+            if (botMeData.ok && botMeData.result && botMeData.result.username) {
+              botUsername = botMeData.result.username;
+            }
+          } catch(e) {}
+
+          const memberRes = await fetch(
+            `https://api.telegram.org/bot${botToken}/getChatMember?chat_id=${encodeURIComponent(chatId)}&user_id=${botId}`
+          );
+          const memberData = await memberRes.json();
+
+          if (!memberData.ok) {
+            const desc = memberData.description || "";
+            if (desc.includes("chat not found")) {
+              res.status(400).json({
+                ok: false,
+                error: `Channel or group "@${channel}" not found. Please make sure the channel is public and the username is correct.`
+              });
+              return;
+            }
+            if (desc.includes("bot is not a member") || desc.includes("user not found")) {
+              res.status(400).json({
+                ok: false,
+                error: `Bot is not added to "@${channel}". Please add @${botUsername} as an Admin with "Invite Users" permission first.`
+              });
+              return;
+            }
+            res.status(400).json({
+              ok: false,
+              error: `Could not verify "@${channel}": ${desc}`
+            });
+            return;
+          }
+
+          const status = memberData.result && memberData.result.status;
+          if (status !== "administrator" && status !== "creator") {
+            res.status(400).json({
+              ok: false,
+              error: `Bot is not an administrator in "@${channel}". Please promote @${botUsername} to Admin with permission to invite users.`
+            });
+            return;
+          }
+
+          res.status(200).json({
+            ok: true,
+            channel: "@" + channel,
+            botUsername: botUsername,
+            message: `Verification successful! Bot is an administrator in @${channel}.`
+          });
+          return;
+        } catch (err) {
+          console.error("verify_channel error in tasks.js:", err);
+          res.status(500).json({ error: "Internal server error verifying channel" });
+          return;
+        }
+      }
 
       // 1. CLAIM
       if (action === "claim") {

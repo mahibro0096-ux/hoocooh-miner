@@ -6,6 +6,20 @@
   ],
   "routes": [
     {
+      "src": "/api/verify-channel(?:\\.js)?$",
+      "dest": "/api/tasks.js?action=verify_channel",
+      "headers": {
+        "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate"
+      }
+    },
+    {
+      "src": "/api/setup-indexes(?:\\.js)?$",
+      "dest": "/api/admin.js?action=setup_indexes",
+      "headers": {
+        "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate"
+      }
+    },
+    {
       "src": "/api/([^/]+?)(?:\\.js)?$",
       "dest": "/api/$1.js",
       "headers": {
