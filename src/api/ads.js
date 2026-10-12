@@ -188,7 +188,7 @@ module.exports = async (req, res) => {
           earnedToday,
           maxAds: MAX_ADS_PER_DAY,
           rewardPerAd: currentAdReward,
-          requiresCaptcha: ((watchedToday + 1) % 3 === 0),
+          requiresCaptcha: false,
           nextResetMs: Math.max(0, CYCLE_MS - (now - cycleStart))
         },
         spin: {
@@ -560,32 +560,6 @@ module.exports = async (req, res) => {
       }
     }
 
-    // Puzzle Captcha Verification: required only once every 3 completed ads (e.g. ad #3, #6, #9)
-    const requiresCaptcha = ((watchedToday + 1) % 3 === 0);
-    if (requiresCaptcha) {
-      const { captchaToken } = req.body || {};
-      if (!captchaToken) {
-        res.status(403).json({ error: "Security verification required. Please solve the puzzle." });
-        return;
-      }
-
-      // Atomically burn token (impossible for duplicate concurrent clicks to claim twice)
-      const burnTokenRes = await tokensCol.updateOne(
-        {
-          token: captchaToken,
-          userId: { $in: [uid, Number(uid), tgUser.id] },
-          used: false,
-          createdAt: { $gte: now - 90 * 1000 }
-        },
-        { $set: { used: true, usedAt: now } }
-      );
-
-      if (!burnTokenRes || burnTokenRes.modifiedCount === 0) {
-        res.status(403).json({ error: "Invalid, expired, or already used verification. Please solve the puzzle again." });
-        return;
-      }
-    }
-
     // ATOMIC compare-and-set claim (one ad = exactly one reward, even with double-tap / duplicate / parallel requests):
     // The filter requires lastWatchAdAt to be EXACTLY the value read at the top of this request.
     // Every successful claim overwrites lastWatchAdAt with `now`, so a second request that read the same
@@ -641,7 +615,7 @@ module.exports = async (req, res) => {
       adsCycleStartedAt: cycleStart,
       remainingToday: Math.max(0, MAX_ADS_PER_DAY - finalWatchedToday),
       maxAds: MAX_ADS_PER_DAY,
-      requiresNextCaptcha: ((finalWatchedToday + 1) % 3 === 0)
+      requiresNextCaptcha: false
     });
   } catch (err) {
     console.error("ads.js error:", err);
