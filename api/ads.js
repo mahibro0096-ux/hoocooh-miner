@@ -153,8 +153,23 @@ module.exports = async (req, res) => {
     const currentAdReward = (appSetting && typeof appSetting.watchAdReward === "number" && appSetting.watchAdReward > 0) ? appSetting.watchAdReward : 10;
     const currentAdMissionReward = (appSetting && typeof appSetting.adMissionReward === "number" && appSetting.adMissionReward > 0) ? appSetting.adMissionReward : 20;
 
-    // 1. GET: Fetch Ads and Spin status
+    // 1. GET: Fetch Ads and Spin status (or Poll S2S status)
     if (req.method === "GET") {
+      const getAction = req.query && (req.query.action || req.query.type);
+      if (getAction === "check_s2s" || getAction === "poll_s2s") {
+        const lastS2s = Number(user.lastAdsgramS2sRewardAt || 0);
+        const lastConsumed = Number(user.lastWatchEarnS2sConsumedAt || 0);
+        const isVerified = (lastS2s > 0) && (lastS2s > lastConsumed) && ((now - lastS2s) < 300000);
+        res.status(200).json({
+          ok: true,
+          verified: isVerified,
+          lastS2sAt: lastS2s,
+          consumedAt: lastConsumed,
+          userId: uid
+        });
+        return;
+      }
+
       let cycleStart = user.adsCycleStartedAt ? Number(user.adsCycleStartedAt) : 0;
       let watchedToday = Number(user.adsWatchedToday || 0);
       let earnedToday = Number(user.adsEarnedToday || 0);

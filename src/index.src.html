@@ -5375,6 +5375,121 @@
     background: #0b141a;
   }
 
+  /* ===================================================
+     ADSGRAM S2S "PLEASE WAIT" VERIFICATION MODAL
+     =================================================== */
+  .s2s-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(6, 10, 20, 0.93);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 999999;
+    padding: 24px;
+    box-sizing: border-box;
+    text-align: center;
+  }
+  .s2s-modal-overlay.open {
+    display: flex !important;
+  }
+  .s2s-modal-card {
+    background: linear-gradient(145deg, #182234, #0f172a);
+    border: 2px solid rgba(99, 102, 241, 0.45);
+    border-radius: 28px;
+    padding: 34px 24px 28px;
+    max-width: 380px;
+    width: 100%;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.7), 0 0 35px rgba(99, 102, 241, 0.25);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: s2sCardPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-sizing: border-box;
+  }
+  @keyframes s2sCardPop {
+    from { transform: scale(0.85); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .s2s-spinner-ring {
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    border: 4px solid rgba(99, 102, 241, 0.2);
+    border-top-color: #6366f1;
+    border-right-color: #a855f7;
+    animation: s2sSpin 1.1s linear infinite;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 22px;
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+  }
+  @keyframes s2sSpin {
+    to { transform: rotate(360deg); }
+  }
+  .s2s-spinner-inner {
+    font-size: 30px;
+    animation: s2sHourglass 2s ease-in-out infinite;
+  }
+  @keyframes s2sHourglass {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+  }
+  .s2s-big-title {
+    font-size: 32px;
+    font-weight: 900;
+    letter-spacing: 2.5px;
+    color: #ffffff;
+    text-transform: uppercase;
+    margin: 0 0 10px 0;
+    text-shadow: 0 0 25px rgba(99, 102, 241, 0.7);
+    line-height: 1.1;
+  }
+  .s2s-main-desc {
+    font-size: 14.5px;
+    color: #cbd5e1;
+    margin: 0 0 20px 0;
+    line-height: 1.5;
+    font-weight: 600;
+  }
+  .s2s-status-pill {
+    background: rgba(99, 102, 241, 0.16);
+    border: 1px solid rgba(99, 102, 241, 0.45);
+    border-radius: 30px;
+    padding: 9px 18px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13.5px;
+    color: #c7d2fe;
+    font-weight: 700;
+    margin-bottom: 20px;
+  }
+  .s2s-live-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 12px #10b981;
+    animation: s2sPulseDot 1.4s ease-in-out infinite;
+  }
+  @keyframes s2sPulseDot {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.35); opacity: 0.6; }
+  }
+  .s2s-safety-note {
+    font-size: 12px;
+    color: #94a3b8;
+    line-height: 1.55;
+    padding: 0 6px;
+  }
+
   /* Faint concentric circular rings watermark background pattern */
   .loading-bg-circles {
     position: absolute;
@@ -7579,6 +7694,26 @@
       </div>
     </div>
 
+  </div>
+
+  <!-- Adsgram Server-to-Server (S2S) "PLEASE WAIT" Verification Overlay -->
+  <div class="s2s-modal-overlay" id="s2sWaitingModal">
+    <div class="s2s-modal-card">
+      <div class="s2s-spinner-ring">
+        <div class="s2s-spinner-inner">⏳</div>
+      </div>
+      <h2 class="s2s-big-title">PLEASE WAIT</h2>
+      <p class="s2s-main-desc" id="s2sModalDesc">Verifying ad view with Adsgram ad network...</p>
+      
+      <div class="s2s-status-pill">
+        <span class="s2s-live-dot" id="s2sLiveDot"></span>
+        <span id="s2sStatusText">Awaiting server confirmation...</span>
+      </div>
+
+      <div class="s2s-safety-note">
+        🔒 <i>Please do not close this window. Your reward will be credited automatically as soon as the ad network confirms.</i>
+      </div>
+    </div>
   </div>
 
   <!-- Watch & Earn Flow Modal (Images 1 & 2: media_1791207364746.png & media_1791207701560.png) -->
@@ -10084,6 +10219,34 @@
   var pendingCaptchaToken = null;
   var adPlaybackTimer = null;
 
+  // Adsgram S2S "PLEASE WAIT" Modal Elements & Helpers
+  var s2sWaitingModal = document.getElementById("s2sWaitingModal");
+  var s2sStatusText = document.getElementById("s2sStatusText");
+  var s2sModalDesc = document.getElementById("s2sModalDesc");
+  var s2sLiveDot = document.getElementById("s2sLiveDot");
+
+  function openS2sWaitingModal(desc, status) {
+    if (s2sModalDesc) s2sModalDesc.textContent = desc || "Verifying ad view with Adsgram ad network...";
+    if (s2sStatusText) s2sStatusText.textContent = status || "Awaiting server confirmation...";
+    if (s2sLiveDot) {
+      s2sLiveDot.style.background = "#10b981";
+      s2sLiveDot.style.boxShadow = "0 0 12px #10b981";
+    }
+    if (s2sWaitingModal) s2sWaitingModal.classList.add("open");
+  }
+
+  function updateS2sWaitingModal(status, isSuccess) {
+    if (s2sStatusText) s2sStatusText.textContent = status;
+    if (isSuccess && s2sLiveDot) {
+      s2sLiveDot.style.background = "#22c55e";
+      s2sLiveDot.style.boxShadow = "0 0 16px #22c55e";
+    }
+  }
+
+  function closeS2sWaitingModal() {
+    if (s2sWaitingModal) s2sWaitingModal.classList.remove("open");
+  }
+
   // ========================================================
   // REAL ADSGRAM INTEGRATION (Block ID: int-52852)
   // Fullscreen Ads with 9-Second Minimum Watch Enforcement:
@@ -10702,7 +10865,7 @@
           // Reward Ad (Ad #1) is completely FREE of puzzle because it is secured by Adsgram S2S!
           var requiresCaptcha = !isFirstAdOfDay && ((watched + 1) % 3 === 0);
 
-          function claimAdReward(captchaToken, actualDurationMs) {
+          function claimAdReward(captchaToken, actualDurationMs, onComplete) {
             var bodyPayload = {
               watchDurationMs: actualDurationMs || 9200
             };
@@ -10759,6 +10922,7 @@
               renderAds();
             }).then(function() {
               setWatchEarnBusy(false);
+              if (typeof onComplete === "function") onComplete();
             });
           }
 
@@ -10771,10 +10935,62 @@
               claimAdReward(verifiedCaptchaToken, elapsedMs);
             });
           } else if (isFirstAdOfDay) {
-            showToast("⏳ Verifying ad receipt with network...");
-            setTimeout(function() {
-              claimAdReward(null, elapsedMs);
-            }, 2500);
+            // S2S REWARD AD CONFIRMATION WITH "PLEASE WAIT" OVERLAY
+            openS2sWaitingModal(
+              "Verifying ad view with Adsgram ad network...",
+              "Awaiting server confirmation..."
+            );
+
+            var pollAttempts = 0;
+            var maxPollAttempts = 12; // 12 * 1.5s = 18s total wait time
+            var pollTimer = null;
+
+            function doPollS2s() {
+              pollAttempts++;
+              if (s2sStatusText) {
+                s2sStatusText.textContent = "Awaiting server confirmation (" + pollAttempts + "/" + maxPollAttempts + ")...";
+              }
+
+              fetch("/api/ads?action=check_s2s", {
+                headers: getClientHeaders()
+              }).then(function(r) {
+                if (r.status === 404) {
+                  return fetch("/api/ads.js?action=check_s2s", { headers: getClientHeaders() });
+                }
+                return r;
+              }).then(handleResponse).then(function(res) {
+                if (res && res.data && res.data.verified === true) {
+                  // Adsgram S2S successfully verified on server!
+                  clearInterval(pollTimer);
+                  updateS2sWaitingModal("✅ Server confirmed! Crediting reward...", true);
+                  setTimeout(function() {
+                    claimAdReward(null, elapsedMs, function onFinish() {
+                      closeS2sWaitingModal();
+                    });
+                  }, 500);
+                  return;
+                }
+
+                if (pollAttempts >= maxPollAttempts) {
+                  clearInterval(pollTimer);
+                  closeS2sWaitingModal();
+                  setWatchEarnBusy(false);
+                  alert("⏳ Ad Network Latency:\n\nThe ad network server took longer than usual to confirm your ad view.\n\nPlease try watching again in a few moments. No penalties were applied.");
+                  renderAds();
+                }
+              }).catch(function(err) {
+                if (pollAttempts >= maxPollAttempts) {
+                  clearInterval(pollTimer);
+                  closeS2sWaitingModal();
+                  setWatchEarnBusy(false);
+                  showToast("Network issue while waiting for ad server.");
+                  renderAds();
+                }
+              });
+            }
+
+            pollTimer = setInterval(doPollS2s, 1500);
+            doPollS2s();
           } else {
             claimAdReward(null, elapsedMs);
           }
