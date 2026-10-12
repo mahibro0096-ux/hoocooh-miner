@@ -45,6 +45,7 @@ module.exports = async (req, res) => {
     const now = Date.now();
     const appSetting = await db.collection("settings").findOne({ key: "app_settings" });
     const currentAdReward = (appSetting && typeof appSetting.watchAdReward === "number" && appSetting.watchAdReward > 0) ? appSetting.watchAdReward : 10;
+    const currentAdMissionReward = (appSetting && typeof appSetting.adMissionReward === "number" && appSetting.adMissionReward > 0) ? appSetting.adMissionReward : 20;
 
     // 1. GET: Fetch Ads and Spin status
     if (req.method === "GET") {
@@ -74,6 +75,7 @@ module.exports = async (req, res) => {
 
       res.status(200).json({
         ok: true,
+        adMissionReward: currentAdMissionReward,
         ads: {
           watchedToday,
           remainingToday: Math.max(0, MAX_ADS_PER_DAY - watchedToday),
@@ -104,6 +106,34 @@ module.exports = async (req, res) => {
     }
 
     const { action } = req.body || {};
+
+    // 1.5 ACTION: CLAIM AD MISSION (Adsgram Task Ad Reward)
+    if (action === "claim_ad_mission") {
+      const claimMissionRes = await usersCol.findOneAndUpdate(
+        { _id: user._id },
+        {
+          $inc: {
+            balance: currentAdMissionReward,
+            adMissionsCompleted: 1
+          },
+          $set: {
+            lastAdMissionAt: now,
+            lastActiveAt: new Date()
+          }
+        },
+        { returnDocument: "after" }
+      );
+
+      const updatedUser = claimMissionRes && (claimMissionRes.value || (claimMissionRes._id ? claimMissionRes : null));
+      const finalBalance = Number(updatedUser ? updatedUser.balance : (user.balance || 0) + currentAdMissionReward);
+
+      res.status(200).json({
+        ok: true,
+        reward: currentAdMissionReward,
+        newBalance: finalBalance
+      });
+      return;
+    }
 
     // 2. ACTION: SPIN THE LUCKY WHEEL (Cost: 1 ticket)
     if (action === "spin") {

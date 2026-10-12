@@ -837,6 +837,28 @@
       </div>
     </div>
 
+    <!-- Ad Mission Reward Setting -->
+    <div class="panel-card" style="margin-bottom: 24px; border-left: 4px solid #14b8a6;">
+      <div class="panel-title">
+        <span>🎬 Ad Mission Reward Setting</span>
+      </div>
+      <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 16px; line-height: 1.5;">
+        Configure how many HOOCOOH Coins users receive for completing an Ad Mission in the Earn section (Adsgram Task Ad).
+      </p>
+      <div style="display: flex; gap: 12px; align-items: flex-end; max-width: 480px; flex-wrap: wrap;">
+        <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+          <label class="form-label">Coins Per Ad Mission</label>
+          <input type="number" id="adMissionRewardInput" class="form-input" min="1" max="100000" placeholder="e.g. 20">
+        </div>
+        <button class="btn-primary" id="saveAdMissionRewardBtn" style="white-space: nowrap; height: 42px; background: #14b8a6; border-color: #14b8a6;">
+          <span>🎬 Save Reward</span>
+        </button>
+      </div>
+      <div id="currentAdMissionRewardText" style="font-size: 12.5px; color: #14b8a6; margin-top: 10px; font-weight: 700;">
+        Current Reward: Loading...
+      </div>
+    </div>
+
     <div class="panel-card">
       <div class="panel-title">
         <span>Post New Task (Free for Admin)</span>
@@ -2148,6 +2170,13 @@
           }
         }
 
+        if (typeof data.adMissionReward === "number") {
+          var missionInput = document.getElementById("adMissionRewardInput");
+          var missionText = document.getElementById("currentAdMissionRewardText");
+          if (missionInput && !missionInput.value) missionInput.value = data.adMissionReward;
+          if (missionText) missionText.textContent = "Current Reward: " + data.adMissionReward + " HOOCOOH Coins per mission";
+        }
+
         if (!data.tasks || data.tasks.length === 0) {
           box.innerHTML = '<p style="text-align: center; color: var(--text-dim); padding: 20px;">No custom tasks posted yet.</p>';
           return;
@@ -2253,6 +2282,31 @@
         alert(e.message);
       } finally {
         saveWatchAdRewardBtn.disabled = false;
+      }
+    });
+  }
+
+  var saveAdMissionRewardBtn = document.getElementById("saveAdMissionRewardBtn");
+  if (saveAdMissionRewardBtn) {
+    saveAdMissionRewardBtn.addEventListener("click", async function(){
+      var input = document.getElementById("adMissionRewardInput");
+      var val = parseInt(input.value, 10);
+      if (isNaN(val) || val < 1 || val > 100000) {
+        alert("Please enter a valid reward amount between 1 and 100,000");
+        return;
+      }
+      saveAdMissionRewardBtn.disabled = true;
+      try {
+        var res = await apiAdmin("POST", null, { action: "update_ad_mission_reward", reward: val });
+        if (res.ok) {
+          showToast("🎉 Ad Mission reward saved: " + val + " Coins!");
+          var missionText = document.getElementById("currentAdMissionRewardText");
+          if (missionText) missionText.textContent = "Current Reward: " + val + " HOOCOOH Coins per mission";
+        }
+      } catch(e) {
+        alert(e.message);
+      } finally {
+        saveAdMissionRewardBtn.disabled = false;
       }
     });
   }

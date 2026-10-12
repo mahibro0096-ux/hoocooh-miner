@@ -1207,6 +1207,154 @@
     color: #0f8573;
   }
 
+  /* Ad Missions Card (Dynamic Auto-Sizing Box) */
+  .ad-missions-container {
+    background: #ffffff;
+    border: 1px solid rgba(14, 32, 41, 0.08);
+    border-radius: 20px;
+    padding: 16px;
+    margin: 14px 0 16px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.04);
+    box-sizing: border-box;
+    width: 100%;
+    height: auto;
+    transition: all 0.25s ease;
+  }
+  .ad-missions-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .ad-missions-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--text, #0e2029);
+    letter-spacing: -0.2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .ad-missions-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    height: auto;
+  }
+  .ad-mission-card {
+    background: rgba(0, 0, 0, 0.02);
+    border: 1px solid rgba(14, 32, 41, 0.07);
+    border-radius: 16px;
+    padding: 12px 14px;
+    box-sizing: border-box;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+  .ad-mission-task {
+    display: block;
+    width: 100%;
+    --adsgram-task-font-size: 14px;
+    --adsgram-task-icon-size: 44px;
+    --adsgram-task-icon-border-radius: 14px;
+    --adsgram-task-icon-title-gap: 12px;
+    --adsgram-task-button-width: 82px;
+  }
+  .ad-mission-reward {
+    font-size: 13px;
+    font-weight: 800;
+    color: #14b8a6;
+    margin-top: 3px;
+    font-family: inherit;
+    line-height: 1.2;
+  }
+  .ad-mission-btn {
+    background: #14b8a6;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    padding: 9px 18px;
+    border-radius: 100px;
+    text-align: center;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(20, 184, 166, 0.28);
+    transition: transform 0.15s ease, background 0.15s ease;
+    user-select: none;
+    white-space: nowrap;
+  }
+  .ad-mission-btn:active {
+    transform: scale(0.94);
+  }
+  .ad-mission-btn-claim {
+    background: #0ea5e9;
+    box-shadow: 0 4px 14px rgba(14, 165, 233, 0.35);
+    animation: adMissionPulse 1.4s infinite;
+  }
+  @keyframes adMissionPulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.5); }
+    70% { transform: scale(1.03); box-shadow: 0 0 0 8px rgba(14, 165, 233, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(14, 165, 233, 0); }
+  }
+  .ad-mission-btn-done {
+    background: #64748b;
+    box-shadow: none;
+    opacity: 0.75;
+    cursor: default;
+  }
+  .ad-missions-empty {
+    padding: 18px 14px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-dim, #778d99);
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 14px;
+    border: 1px dashed rgba(14, 32, 41, 0.12);
+  }
+  .ad-missions-skeleton {
+    width: 100%;
+    height: 64px;
+    border-radius: 16px;
+    background: linear-gradient(90deg, rgba(0,0,0,0.03) 25%, rgba(0,0,0,0.06) 50%, rgba(0,0,0,0.03) 75%);
+    background-size: 200% 100%;
+    animation: adMissionShimmer 1.5s infinite;
+  }
+  @keyframes adMissionShimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  [data-theme="dark"] .ad-missions-container {
+    background: var(--card-bg, #16242c);
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  }
+  [data-theme="dark"] .ad-missions-title {
+    color: #ffffff;
+  }
+  [data-theme="dark"] .ad-mission-card {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.07);
+  }
+  [data-theme="dark"] .ad-mission-reward {
+    color: #2dd4bf;
+  }
+  [data-theme="dark"] .ad-missions-empty {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #8da4b1;
+  }
+  [data-theme="dark"] .ad-missions-skeleton {
+    background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.03) 75%);
+    background-size: 200% 100%;
+  }
+
   /* Tasks Header & Tabs */
   .tasks-section-header {
     display: flex;
@@ -6314,6 +6462,16 @@
       </div>
     </div>
 
+    <!-- Ad Missions Section (Dynamic Auto-Sizing Adsgram Task Box) -->
+    <div class="ad-missions-container" id="adMissionsCard">
+      <div class="ad-missions-header">
+        <div class="ad-missions-title">🎬 Ad Missions</div>
+      </div>
+      <div class="ad-missions-body" id="adMissionsBody">
+        <div class="ad-missions-skeleton" id="adMissionsSkeleton"></div>
+      </div>
+    </div>
+
     <!-- Complete Tasks Section Header & Tabs -->
     <div class="tasks-section-header">
       <div class="tasks-section-title">COMPLETE TASKS</div>
@@ -8015,6 +8173,7 @@
       if (activeView) activeView.scrollTop = 0;
 
       if (targetTab === "tab-earn") {
+        initAdMissions();
         var watchCard = document.querySelector("#tab-earn .watch-card") || document.querySelector("#tab-earn");
         if (watchCard && watchCard.scrollIntoView) {
           try {
@@ -10109,6 +10268,132 @@
   var ADSGRAM_STARTUP_TASK_ENABLED = false;
   if (ADSGRAM_STARTUP_TASK_ENABLED) {
     initAdsgramStartupTask();
+  }
+
+  // ========================================================
+  // AD MISSIONS SYSTEM (Adsgram Task Ad blockId: task-53272)
+  // Dynamic Auto-Sizing Box, Real Adsgram Campaign Details,
+  // Admin-Configurable Coin Reward, Live Balance Updates,
+  // Empty State: "No ad mission available right now"
+  // ========================================================
+  var AD_MISSION_BLOCK_IDS = ["task-53272"];
+  var adMissionsInitialized = false;
+  var adMissionRewardAmount = 20;
+
+  function initAdMissions() {
+    var container = document.getElementById("adMissionsBody");
+    if (!container) return;
+    if (adMissionsInitialized) return;
+    adMissionsInitialized = true;
+
+    // Fetch latest app settings (coin reward) from /api/ads
+    fetch("/api/ads", {
+      headers: {
+        "x-telegram-init-data": (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) ? window.Telegram.WebApp.initData : ""
+      }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data && typeof data.adMissionReward === "number" && data.adMissionReward > 0) {
+        adMissionRewardAmount = data.adMissionReward;
+      }
+      renderAdMissions();
+    })
+    .catch(function() {
+      renderAdMissions();
+    });
+  }
+
+  function renderAdMissions() {
+    var container = document.getElementById("adMissionsBody");
+    if (!container) return;
+    container.innerHTML = "";
+
+    var activeCount = 0;
+    var evaluatedCount = 0;
+
+    function checkEmptyNotice() {
+      if (evaluatedCount >= AD_MISSION_BLOCK_IDS.length && activeCount === 0) {
+        container.innerHTML = '<div class="ad-missions-empty">No ad mission available right now</div>';
+      }
+    }
+
+    AD_MISSION_BLOCK_IDS.forEach(function(blockId) {
+      var card = document.createElement("div");
+      card.className = "ad-mission-card";
+      card.id = "adMissionCard_" + blockId.replace(/[^a-zA-Z0-9]/g, "_");
+
+      var taskEl = document.createElement("adsgram-task");
+      taskEl.setAttribute("data-block-id", blockId);
+      taskEl.className = "ad-mission-task";
+
+      taskEl.innerHTML =
+        '<div slot="reward" class="ad-mission-reward">+' + adMissionRewardAmount + ' Coins</div>' +
+        '<div slot="button" class="ad-mission-btn">GO</div>' +
+        '<div slot="claim" class="ad-mission-btn ad-mission-btn-claim">CLAIM</div>' +
+        '<div slot="done" class="ad-mission-btn ad-mission-btn-done">DONE ✓</div>';
+
+      card.appendChild(taskEl);
+      container.appendChild(card);
+
+      var settled = false;
+
+      function handleNotFound() {
+        if (settled) return;
+        settled = true;
+        evaluatedCount++;
+        if (card.parentNode) card.parentNode.removeChild(card);
+        checkEmptyNotice();
+      }
+
+      taskEl.addEventListener("onBannerNotFound", handleNotFound);
+      taskEl.addEventListener("onError", handleNotFound);
+
+      taskEl.addEventListener("reward", async function(e) {
+        console.log("[AdMission] Reward emitted for block:", blockId, e && e.detail);
+        try {
+          var res = await fetch("/api/ads", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-telegram-init-data": (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) ? window.Telegram.WebApp.initData : ""
+            },
+            body: JSON.stringify({ action: "claim_ad_mission" })
+          });
+          var data = await res.json();
+          if (data && data.ok) {
+            if (typeof data.newBalance === "number") {
+              if (window.user) window.user.balance = data.newBalance;
+              renderBalance();
+            }
+            showToast("🎉 Ad Mission completed! +" + (data.reward || adMissionRewardAmount) + " Coins added!");
+          } else {
+            showToast(data.error || "Could not claim reward");
+          }
+        } catch(err) {
+          console.error("[AdMission] Claim error:", err);
+        }
+      });
+
+      // Poll up to 5 seconds to detect if Adsgram task banner rendered
+      var pollCount = 0;
+      var poll = setInterval(function() {
+        if (settled) {
+          clearInterval(poll);
+          return;
+        }
+        pollCount++;
+        if (taskEl.getBoundingClientRect().height > 24) {
+          settled = true;
+          activeCount++;
+          evaluatedCount++;
+          clearInterval(poll);
+        } else if (pollCount >= 35) { // ~5 seconds timeout
+          clearInterval(poll);
+          handleNotFound();
+        }
+      }, 150);
+    });
   }
 
   // ========================================================
@@ -12968,6 +13253,7 @@
   loadTasks();
   loadReferralData();
   loadWalletData();
+  initAdMissions();
 
   // Fetch real server state
   apiGet().then(function(res){

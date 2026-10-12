@@ -584,8 +584,9 @@ module.exports = async (req, res) => {
         const appSetting = await db.collection("settings").findOne({ key: "app_settings" });
         const watchAdReward = (appSetting && typeof appSetting.watchAdReward === "number" && appSetting.watchAdReward > 0) ? appSetting.watchAdReward : 10;
         const coinPriceUsd = (appSetting && typeof appSetting.coinPriceUsd === "number" && appSetting.coinPriceUsd > 0) ? appSetting.coinPriceUsd : 0.00003;
+        const adMissionReward = (appSetting && typeof appSetting.adMissionReward === "number" && appSetting.adMissionReward > 0) ? appSetting.adMissionReward : 20;
 
-        res.status(200).json({ ok: true, tasks: mapped, watchAdReward, coinPriceUsd });
+        res.status(200).json({ ok: true, tasks: mapped, watchAdReward, coinPriceUsd, adMissionReward });
         return;
       }
 
@@ -594,7 +595,8 @@ module.exports = async (req, res) => {
         const appSetting = await db.collection("settings").findOne({ key: "app_settings" });
         const watchAdReward = (appSetting && typeof appSetting.watchAdReward === "number" && appSetting.watchAdReward > 0) ? appSetting.watchAdReward : 10;
         const coinPriceUsd = (appSetting && typeof appSetting.coinPriceUsd === "number" && appSetting.coinPriceUsd > 0) ? appSetting.coinPriceUsd : 0.00003;
-        res.status(200).json({ ok: true, watchAdReward, coinPriceUsd });
+        const adMissionReward = (appSetting && typeof appSetting.adMissionReward === "number" && appSetting.adMissionReward > 0) ? appSetting.adMissionReward : 20;
+        res.status(200).json({ ok: true, watchAdReward, coinPriceUsd, adMissionReward });
         return;
       }
 
@@ -1383,6 +1385,29 @@ module.exports = async (req, res) => {
           ok: true,
           watchAdReward: parsedReward,
           message: `Watch Ad reward successfully set to ${parsedReward} HOOCOOH Coins!`
+        });
+        return;
+      }
+
+      // 11.5. Update Ad Mission Reward (Coins)
+      if (action === "update_ad_mission_reward") {
+        const { reward } = req.body || {};
+        const parsedReward = parseInt(reward, 10);
+        if (isNaN(parsedReward) || parsedReward < 1 || parsedReward > 100000) {
+          res.status(400).json({ error: "Reward must be a positive number between 1 and 100,000" });
+          return;
+        }
+
+        await db.collection("settings").updateOne(
+          { key: "app_settings" },
+          { $set: { adMissionReward: parsedReward, updatedAt: Date.now() } },
+          { upsert: true }
+        );
+
+        res.status(200).json({
+          ok: true,
+          adMissionReward: parsedReward,
+          message: `Ad Mission reward successfully set to ${parsedReward} HOOCOOH Coins!`
         });
         return;
       }
