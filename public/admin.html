@@ -865,16 +865,16 @@
         <span>📡 Adsgram S2S Reward URL (Block ID: 53118 - Spin Tickets)</span>
       </div>
       <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 12px; line-height: 1.5;">
-        Configure this Reward URL in your <strong>Adsgram Publisher Dashboard</strong> under the settings for Reward Block <strong>53118</strong> (Spin Tickets). Adsgram will replace <code>[userId]</code> with the viewer's Telegram ID to verify and credit tickets server-to-server automatically:
+        Configure this Reward URL in your <strong>Adsgram Publisher Dashboard</strong> under Reward Block <strong>53118</strong>. This postback is <strong>100% hosted on Vercel</strong> (not GitHub) and secured with a 23-character secret key. Adsgram replaces <code>[userId]</code> with the viewer's Telegram ID:
       </p>
       <div style="background: rgba(0,0,0,0.04); border-radius: 12px; padding: 12px 14px; font-family: monospace; font-size: 12.5px; word-break: break-all; margin-bottom: 12px; border: 1px solid var(--border);" id="adsgramRewardUrlDisplay">
-        https://hoocooh-miner-roan.vercel.app/api/ads?action=adsgram_reward&userid=[userId]&secret=hoocooh_admin_2026
+        https://hoocooh-miner-roan.vercel.app/api/ads?action=adsgram_reward&userid=[userId]&secret=hoocooh_s2s_secret_2026
       </div>
       <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
         <button class="btn-primary" id="copyAdsgramRewardUrlBtn" type="button" style="font-size: 12.5px; padding: 8px 16px; background: #6366f1; border-color: #6366f1;">
           <span>📋 Copy Reward URL</span>
         </button>
-        <span style="font-size: 12px; color: var(--text-dim);">Method: <strong>GET</strong> | Macro: <strong>[userId]</strong> | Status: <strong style="color: #10b981;">Ready &amp; Active</strong></span>
+        <span style="font-size: 12px; color: var(--text-dim);">Platform: <strong>Vercel Serverless</strong> | Method: <strong>GET</strong> | Secret: <strong>23-char</strong> | Status: <strong style="color: #10b981;">Ready &amp; Active</strong></span>
       </div>
     </div>
 

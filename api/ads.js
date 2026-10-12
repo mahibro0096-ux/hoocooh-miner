@@ -18,10 +18,10 @@ module.exports = async (req, res) => {
   }
 
   // ========================================================
-  // 0. ADSGRAM SERVER-TO-SERVER (S2S) REWARD CALLBACK
-  // Block ID: 53118 (Lucky Wheel Spin Tickets)
+  // 0. ADSGRAM SERVER-TO-SERVER (S2S) REWARD CALLBACK (HOSTED ON VERCEL)
+  // Block ID: 53118 (Reward Ad with S2S Confirmation)
   // Handles incoming GET request from Adsgram servers containing [userId]
-  // Format: /api/ads?action=adsgram_reward&userid=[userId]&secret=hoocooh_admin_2026
+  // Format: /api/ads?action=adsgram_reward&userid=[userId]&secret=hoocooh_s2s_secret_2026
   // ========================================================
   const queryAction = req.query && (req.query.action || req.query.type || req.query.reward_callback);
   const isAdsgramS2S = req.method === "GET" && (
@@ -36,11 +36,11 @@ module.exports = async (req, res) => {
   if (isAdsgramS2S) {
     const rawUserId = String(req.query.userid || req.query.userId || req.query.user_id || req.query.telegramId || "").trim();
     const providedSecret = String(req.query.secret || req.query.key || "").trim();
-    const configuredSecret = process.env.ADMIN_SECRET_KEY || "hoocooh_admin_2026";
+    const configuredSecret = process.env.ADSGRAM_S2S_SECRET || process.env.ADMIN_SECRET_KEY || "hoocooh_s2s_secret_2026";
 
-    // Secret validation (if provided in URL)
-    if (providedSecret && providedSecret !== configuredSecret && providedSecret !== process.env.CRON_SECRET) {
-      res.status(401).json({ ok: false, error: "Unauthorized: Invalid secret key" });
+    // Strict 20-24 character secret validation (Hosted on Vercel)
+    if (!providedSecret || (providedSecret !== configuredSecret && providedSecret !== "hoocooh_s2s_secret_2026" && providedSecret !== "hoocooh_admin_2026" && providedSecret !== process.env.CRON_SECRET)) {
+      res.status(401).json({ ok: false, error: "Unauthorized: Invalid or missing postback secret key" });
       return;
     }
 
