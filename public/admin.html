@@ -1742,8 +1742,12 @@
       ? `<button class="btn-success" onclick="unbanUserAction('${u.telegramId}')">✅ Unban / Restore User</button>`
       : `<button class="btn-danger" onclick="banUserAction('${u.telegramId}')">⛔ Suspend / Ban User</button>`;
 
+    var isPermanentGhostWarning = (u.isFakeAdBypasser || u.permanentWarning || u.securityFlag === "RED_FLAG_FAKE_AD_BYPASS");
+
     var clearSusBtn = (!isBanned && (u.isSuspicious || u.isHighRiskHacker || (u.fraudRiskScore || 0) > 0))
-      ? `<button class="btn-secondary" style="margin-top: 4px; font-size: 11px; padding: 4px 8px; width: 100%; display: block;" onclick="clearSuspiciousAction('${u.telegramId}')">🛡️ Clear Security Flag</button>`
+      ? (isPermanentGhostWarning
+          ? `<button class="btn-secondary" style="margin-top: 4px; font-size: 11px; padding: 4px 8px; width: 100%; display: block; opacity: 0.6; cursor: not-allowed;" title="Permanent Ghost Claim warning cannot be cleared" disabled>🔒 Permanent Flag (Locked)</button>`
+          : `<button class="btn-secondary" style="margin-top: 4px; font-size: 11px; padding: 4px 8px; width: 100%; display: block;" onclick="clearSuspiciousAction('${u.telegramId}')">🛡️ Clear Security Flag</button>`)
       : '';
 
     var avatarHtml = u.photoUrl
@@ -1761,7 +1765,9 @@
     }
 
     var secBadge = '';
-    if (u.isHighRiskHacker) {
+    if (isPermanentGhostWarning) {
+      secBadge = `<span class="status-tag high-risk" style="margin-left: 6px; background: rgba(220, 38, 38, 0.25); border: 1px solid #dc2626; color: #f87171;">🚨 RED_FLAG_FAKE_AD_BYPASS (PERMANENT)</span>`;
+    } else if (u.isHighRiskHacker) {
       secBadge = `<span class="status-tag high-risk" style="margin-left: 6px;">🚨 HIGH RISK: HACKER</span>`;
     } else if (u.isSuspicious) {
       secBadge = `<span class="status-tag suspicious" style="margin-left: 6px;">⚠️ SUSPICIOUS</span>`;

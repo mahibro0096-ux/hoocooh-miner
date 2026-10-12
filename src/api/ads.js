@@ -90,78 +90,30 @@ module.exports = async (req, res) => {
       }
 
       const now = Date.now();
-      const lastSpinAdAt = Number(user.lastSpinAdWatchedAt || 0);
 
-      // Idempotency: If client-side callback already credited this spin ad in the last 60 seconds,
-      // we do NOT double-credit. This satisfies Adsgram's requirement of working in tandem with client-side.
-      if (lastSpinAdAt > 0 && (now - lastSpinAdAt < 60000)) {
-        res.status(200).json({
-          ok: true,
-          alreadyCredited: true,
-          message: "Spin ticket was already credited via client-side callback",
-          userId: targetUid,
-          spinTickets: Number(user.spinTickets || 0),
-          spinAdsWatchedToday: Number(user.spinAdsWatchedToday || 0)
-        });
-        return;
-      }
-
-      // Check 10-hour cycle for spin tickets
-      let spinCycleStart = user.spinAdsCycleStartedAt ? Number(user.spinAdsCycleStartedAt) : 0;
-      let spinWatchedToday = Number(user.spinAdsWatchedToday || 0);
-
-      if (!spinCycleStart || (now - spinCycleStart >= SPIN_CYCLE_MS)) {
-        spinWatchedToday = 0;
-        spinCycleStart = now;
-      }
-
-      if (spinWatchedToday >= MAX_SPIN_ADS_PER_DAY) {
-        res.status(200).json({
-          ok: true,
-          limitReached: true,
-          message: "User reached max 6 spin tickets for this 10-hour cycle",
-          userId: targetUid,
-          spinTickets: Number(user.spinTickets || 0),
-          spinAdsWatchedToday: spinWatchedToday
-        });
-        return;
-      }
-
-      spinWatchedToday += 1;
-      const isCompleted = (spinWatchedToday >= MAX_SPIN_ADS_PER_DAY);
-      const setPayload = {
-        spinAdsWatchedToday: spinWatchedToday,
-        spinAdsCycleStartedAt: spinCycleStart,
-        lastSpinAdWatchedAt: now,
-        lastAdsgramS2sRewardAt: now,
-        lastActiveAt: new Date()
-      };
-      if (isCompleted) {
-        setPayload.spinCycleCompletedAt = now;
-        setPayload.spinReminderSent = false;
-      }
-
-      const updatedRes = await usersCol.findOneAndUpdate(
+      // Record Adsgram S2S verification receipt:
+      // Proves that the video player actually ran and was viewed to completion!
+      await usersCol.updateOne(
         { _id: user._id },
         {
-          $inc: { spinTickets: 1 },
-          $set: setPayload
-        },
-        { returnDocument: "after" }
+          $set: {
+            lastAdsgramS2sRewardAt: now,
+            lastAdsgramS2sBlockId: "53118",
+            lastActiveAt: new Date()
+          },
+          $inc: {
+            totalAdsgramS2sCallbacks: 1
+          }
+        }
       );
-
-      const updatedUser = updatedRes && (updatedRes.value || (updatedRes._id ? updatedRes : null));
-      const finalTickets = Number(updatedUser ? updatedUser.spinTickets : (user.spinTickets || 0) + 1);
 
       res.status(200).json({
         ok: true,
-        rewardCredited: true,
-        rewardType: "spin_ticket",
+        status: "confirmed",
         userId: targetUid,
-        spinTickets: finalTickets,
-        spinAdsWatchedToday: spinWatchedToday,
-        maxAds: MAX_SPIN_ADS_PER_DAY,
-        message: `+1 Spin Ticket successfully confirmed and credited to user ${targetUid}`
+        blockId: "53118",
+        timestamp: now,
+        message: `Adsgram S2S ad view confirmed and recorded for user ${targetUid}`
       });
       return;
     } catch (s2sErr) {
@@ -562,6 +514,52 @@ module.exports = async (req, res) => {
       return;
     }
 
+    // ========================================================
+    // 4C. GHOST CLAIM DETECTION (TRICK 1) FOR AD #1:
+    // Ad #1 plays Adsgram Reward Ad (Block 53118) which triggers an S2S GET callback.
+    // If a bot/hacker calls this API without an actual Adsgram S2S confirmation,
+    // they are immediately trapped and permanently flagged as RED_FLAG_FAKE_AD_BYPASS!
+    // ========================================================
+    if (watchedToday === 0) {
+      let s2sRecordTime = Number(user.lastAdsgramS2sRewardAt || 0);
+      let lastConsumed = Number(user.lastWatchEarnS2sConsumedAt || 0);
+      let isS2sValid = (s2sRecordTime > 0) && (s2sRecordTime > lastConsumed) && ((now - s2sRecordTime) < 300000);
+
+      // Grace retry (2.5 seconds) in case of microsecond webhook latency for legitimate players
+      if (!isS2sValid) {
+        await new Promise(r => setTimeout(r, 2500));
+        const freshUser = await usersCol.findOne({ _id: user._id });
+        if (freshUser) {
+          s2sRecordTime = Number(freshUser.lastAdsgramS2sRewardAt || 0);
+          lastConsumed = Number(freshUser.lastWatchEarnS2sConsumedAt || 0);
+          isS2sValid = (s2sRecordTime > 0) && (s2sRecordTime > lastConsumed) && ((Date.now() - s2sRecordTime) < 300000);
+          if (isS2sValid) {
+            user = freshUser;
+          }
+        }
+      }
+
+      if (!isS2sValid) {
+        const updateData = {
+          isSuspicious: true,
+          isFakeAdBypasser: true,
+          isHighRiskHacker: true,
+          permanentWarning: true,
+          securityFlag: "RED_FLAG_FAKE_AD_BYPASS",
+          suspiciousReason: "🚨 Ghost Claim Exploit: Attempted to claim Watch Ad #1 reward via bot/script without Adsgram S2S verification.",
+          lastSuspiciousAt: Date.now()
+        };
+        await usersCol.updateOne({ _id: user._id }, { $set: updateData });
+        res.status(403).json({
+          error: "🚨 Security Violation (RED_FLAG_FAKE_AD_BYPASS): Ad view could not be verified by Adsgram server! Bot or automated script detected. This warning is PERMANENT.",
+          flagged: true,
+          permanent: true,
+          correctBalance: Number(user.balance || 0)
+        });
+        return;
+      }
+    }
+
     // Puzzle Captcha Verification: required only once every 3 completed ads (e.g. ad #3, #6, #9)
     const requiresCaptcha = ((watchedToday + 1) % 3 === 0);
     if (requiresCaptcha) {
@@ -611,6 +609,7 @@ module.exports = async (req, res) => {
           adsEarnedToday: newEarned,
           adsCycleStartedAt: cycleStart,
           lastWatchAdAt: now,
+          lastWatchEarnS2sConsumedAt: (watchedToday === 0 ? now : (user.lastWatchEarnS2sConsumedAt || 0)),
           lastActiveAt: new Date()
         }
       },

@@ -104,7 +104,12 @@ function calculateFraudRiskScore(u) {
 
   let score = 0;
 
-  // 1. Critical hacker / automated script tampering (Instantly high risk)
+  // 1a. Ghost Claim / Fake Ad Bypass Exploit (Instant 90%-100% High Risk)
+  if (u.isFakeAdBypasser || u.securityFlag === "RED_FLAG_FAKE_AD_BYPASS" || u.permanentWarning) {
+    score += 90;
+  }
+
+  // 1b. Critical hacker / automated script tampering (Instantly high risk)
   if (u.isHighRiskHacker) {
     score += 85;
   }
@@ -416,6 +421,8 @@ module.exports = async (req, res) => {
           isSuspicious: !!u.isSuspicious,
           suspiciousReason: u.suspiciousReason || "",
           isHighRiskHacker: !!u.isHighRiskHacker,
+          isFakeAdBypasser: !!u.isFakeAdBypasser,
+          permanentWarning: !!u.permanentWarning,
           securityFlag: u.securityFlag || "",
           isSuspendedMultipleAccount: !!u.isSuspendedMultipleAccount,
           deviceViolationsCount: Number(u.deviceViolationsCount || 0),
@@ -489,6 +496,8 @@ module.exports = async (req, res) => {
       if (action === "high_risk_users") {
         const candidates = await usersCol.find({
           $or: [
+            { isFakeAdBypasser: true },
+            { permanentWarning: true },
             { isHighRiskHacker: true },
             { balance: { $lt: 0 } },
             { isSuspendedMultipleAccount: true },
@@ -521,6 +530,8 @@ module.exports = async (req, res) => {
           isSuspicious: !!u.isSuspicious,
           suspiciousReason: u.suspiciousReason || "",
           isHighRiskHacker: !!u.isHighRiskHacker,
+          isFakeAdBypasser: !!u.isFakeAdBypasser,
+          permanentWarning: !!u.permanentWarning,
           securityFlag: u.securityFlag || "",
           isSuspendedMultipleAccount: !!u.isSuspendedMultipleAccount,
           deviceViolationsCount: Number(u.deviceViolationsCount || 0),
@@ -970,6 +981,8 @@ module.exports = async (req, res) => {
         const candidates = await usersCol.find({
           isBanned: { $ne: true },
           $or: [
+            { isFakeAdBypasser: true },
+            { permanentWarning: true },
             { isHighRiskHacker: true },
             { balance: { $lt: 0 } },
             { isSuspendedMultipleAccount: true },
@@ -1095,9 +1108,21 @@ module.exports = async (req, res) => {
 
         const tid = String(telegramId);
         const numId = Number(telegramId);
+        const query = { $or: [{ telegramId: tid }, ...(numId ? [{ telegramId: numId }] : [])] };
+
+        // Permanent warning safeguard: Cannot be removed if flagged as Ghost Claim bypass!
+        const targetUser = await usersCol.findOne(query);
+        if (targetUser && (targetUser.isFakeAdBypasser || targetUser.permanentWarning || targetUser.securityFlag === "RED_FLAG_FAKE_AD_BYPASS")) {
+          res.status(400).json({
+            ok: false,
+            error: "PERMANENT_WARNING_LOCKED",
+            message: `⚠️ User ${tid} has a PERMANENT security flag (${targetUser.securityFlag || "RED_FLAG_FAKE_AD_BYPASS"}). Ghost Claim / Fake Ad Bypass warnings cannot be cleared!`
+          });
+          return;
+        }
 
         await usersCol.updateMany(
-          { $or: [{ telegramId: tid }, ...(numId ? [{ telegramId: numId }] : [])] },
+          query,
           {
             $unset: {
               isSuspicious: "",

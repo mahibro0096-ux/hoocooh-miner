@@ -10672,6 +10672,10 @@
       var cycleStart = user.adsCycleStartedAt ? Number(user.adsCycleStartedAt) : 0;
       var CYCLE_MS = 24 * 60 * 60 * 1000;
 
+      if (!cycleStart || (now - cycleStart >= CYCLE_MS)) {
+        watched = 0;
+      }
+
       if (watched >= 10 && cycleStart && (now - cycleStart < CYCLE_MS)) {
         showToast("Daily limit of 10 ads reached! Next ads available in 24 hours.");
         return;
@@ -10681,6 +10685,11 @@
       var _adCallbackFired = false;
       sheetStartAdBtn.disabled = true;
       sheetStartAdBtn.innerHTML = '<span>⏳ Playing Ad...</span>';
+
+      // First ad of the cycle is Reward Ad (53118) with S2S verification!
+      // Subsequent ads (2-10) are Interstitial Ads (int-52852)
+      var isFirstAdOfDay = (watched === 0);
+      var targetBlockId = isFirstAdOfDay ? ADSGRAM_SPIN_BLOCK_ID : ADSGRAM_MAIN_BLOCK_ID;
 
       playAdsgramFullscreenAd(
         function onWatchedSuccess(result, elapsedMs) {
@@ -10716,11 +10725,15 @@
                 showToast(err);
                 if (res.data && res.data.flagged) {
                   user.isSuspicious = true;
+                  if (res.data.permanent) {
+                    user.permanentWarning = true;
+                    user.isFakeAdBypasser = true;
+                  }
                   if (typeof res.data.correctBalance === "number") {
                     user.balance = res.data.correctBalance;
                     renderBalance();
                   }
-                  alert("🚨 SECURITY WARNING:\n\nYou skipped the advertisement before 9 seconds but attempted to claim coins into your balance!\n\nThis unauthorized reward has been revoked and your account has been RED-FLAGGED for fraud review.");
+                  alert("🚨 SECURITY WARNING:\n\n" + (res.data.error || "Ad view verification failed!"));
                 }
                 renderAds();
                 return;
@@ -10755,6 +10768,11 @@
               setWatchEarnBusy(true);
               claimAdReward(verifiedCaptchaToken, elapsedMs);
             });
+          } else if (isFirstAdOfDay) {
+            showToast("⏳ Verifying ad receipt with network...");
+            setTimeout(function() {
+              claimAdReward(null, elapsedMs);
+            }, 2500);
           } else {
             claimAdReward(null, elapsedMs);
           }
@@ -10767,7 +10785,8 @@
             showToast("❌ Ad was skipped under 9 seconds! You must watch at least 9 seconds.");
           }
         },
-        9 // 9-Second minimum watch rule
+        9, // 9-Second minimum watch rule
+        targetBlockId
       );
     });
   }
