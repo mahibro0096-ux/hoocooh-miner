@@ -859,6 +859,25 @@
       </div>
     </div>
 
+    <!-- Adsgram Server-to-Server (S2S) Reward Callback Setting -->
+    <div class="panel-card" style="margin-bottom: 24px; border-left: 4px solid #6366f1;">
+      <div class="panel-title">
+        <span>📡 Adsgram S2S Reward URL (Block ID: 53118 - Spin Tickets)</span>
+      </div>
+      <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 12px; line-height: 1.5;">
+        Configure this Reward URL in your <strong>Adsgram Publisher Dashboard</strong> under the settings for Reward Block <strong>53118</strong> (Spin Tickets). Adsgram will replace <code>[userId]</code> with the viewer's Telegram ID to verify and credit tickets server-to-server automatically:
+      </p>
+      <div style="background: rgba(0,0,0,0.04); border-radius: 12px; padding: 12px 14px; font-family: monospace; font-size: 12.5px; word-break: break-all; margin-bottom: 12px; border: 1px solid var(--border);" id="adsgramRewardUrlDisplay">
+        https://hoocooh-miner-roan.vercel.app/api/ads?action=adsgram_reward&userid=[userId]&secret=hoocooh_admin_2026
+      </div>
+      <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <button class="btn-primary" id="copyAdsgramRewardUrlBtn" type="button" style="font-size: 12.5px; padding: 8px 16px; background: #6366f1; border-color: #6366f1;">
+          <span>📋 Copy Reward URL</span>
+        </button>
+        <span style="font-size: 12px; color: var(--text-dim);">Method: <strong>GET</strong> | Macro: <strong>[userId]</strong> | Status: <strong style="color: #10b981;">Ready &amp; Active</strong></span>
+      </div>
+    </div>
+
     <div class="panel-card">
       <div class="panel-title">
         <span>Post New Task (Free for Admin)</span>
@@ -2308,6 +2327,20 @@
       } finally {
         saveAdMissionRewardBtn.disabled = false;
       }
+    });
+  }
+
+  var copyRewardBtn = document.getElementById("copyAdsgramRewardUrlBtn");
+  if (copyRewardBtn) {
+    copyRewardBtn.addEventListener("click", function() {
+      var display = document.getElementById("adsgramRewardUrlDisplay");
+      var text = display ? display.textContent.trim() : "";
+      if (!text) return;
+      navigator.clipboard.writeText(text).then(function() {
+        showToast("📋 Adsgram Reward URL copied to clipboard!");
+      }).catch(function() {
+        prompt("Copy Adsgram Reward URL:", text);
+      });
     });
   }
 

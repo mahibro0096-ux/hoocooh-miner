@@ -17,6 +17,160 @@ module.exports = async (req, res) => {
     return;
   }
 
+  // ========================================================
+  // 0. ADSGRAM SERVER-TO-SERVER (S2S) REWARD CALLBACK
+  // Block ID: 53118 (Lucky Wheel Spin Tickets)
+  // Handles incoming GET request from Adsgram servers containing [userId]
+  // Format: /api/ads?action=adsgram_reward&userid=[userId]&secret=hoocooh_admin_2026
+  // ========================================================
+  const queryAction = req.query && (req.query.action || req.query.type || req.query.reward_callback);
+  const isAdsgramS2S = req.method === "GET" && (
+    queryAction === "adsgram_reward" ||
+    queryAction === "s2s_reward" ||
+    queryAction === "adsgram" ||
+    req.query.adsgram === "1" ||
+    (req.query.userid && req.query.secret) ||
+    (req.query.userId && req.query.secret)
+  );
+
+  if (isAdsgramS2S) {
+    const rawUserId = String(req.query.userid || req.query.userId || req.query.user_id || req.query.telegramId || "").trim();
+    const providedSecret = String(req.query.secret || req.query.key || "").trim();
+    const configuredSecret = process.env.ADMIN_SECRET_KEY || "hoocooh_admin_2026";
+
+    // Secret validation (if provided in URL)
+    if (providedSecret && providedSecret !== configuredSecret && providedSecret !== process.env.CRON_SECRET) {
+      res.status(401).json({ ok: false, error: "Unauthorized: Invalid secret key" });
+      return;
+    }
+
+    // Health / Moderation ping check by Adsgram validator
+    if (!rawUserId || rawUserId === "[userId]" || rawUserId === "0" || rawUserId === "123456789") {
+      res.status(200).json({
+        ok: true,
+        status: "active",
+        message: "Adsgram S2S reward endpoint is operational and ready for live callbacks",
+        blockId: "53118",
+        timestamp: Date.now()
+      });
+      return;
+    }
+
+    if (!/^\d+$/.test(rawUserId)) {
+      res.status(400).json({ ok: false, error: "Invalid userId parameter: must be numeric Telegram ID" });
+      return;
+    }
+
+    try {
+      const db = await getDb();
+      const usersCol = db.collection("users");
+      const targetUid = rawUserId;
+
+      const user = await usersCol.findOne({
+        $or: [
+          { telegramId: targetUid },
+          { telegramId: Number(targetUid) }
+        ]
+      });
+
+      if (!user) {
+        // Return 200 during moderation pings or if user hasn't registered yet
+        res.status(200).json({
+          ok: true,
+          status: "user_not_found",
+          message: `User with Telegram ID ${targetUid} not found yet in hoocooh database`,
+          userId: targetUid
+        });
+        return;
+      }
+
+      if (user.isBanned) {
+        res.status(200).json({ ok: true, status: "user_banned", message: "User is suspended" });
+        return;
+      }
+
+      const now = Date.now();
+      const lastSpinAdAt = Number(user.lastSpinAdWatchedAt || 0);
+
+      // Idempotency: If client-side callback already credited this spin ad in the last 60 seconds,
+      // we do NOT double-credit. This satisfies Adsgram's requirement of working in tandem with client-side.
+      if (lastSpinAdAt > 0 && (now - lastSpinAdAt < 60000)) {
+        res.status(200).json({
+          ok: true,
+          alreadyCredited: true,
+          message: "Spin ticket was already credited via client-side callback",
+          userId: targetUid,
+          spinTickets: Number(user.spinTickets || 0),
+          spinAdsWatchedToday: Number(user.spinAdsWatchedToday || 0)
+        });
+        return;
+      }
+
+      // Check 10-hour cycle for spin tickets
+      let spinCycleStart = user.spinAdsCycleStartedAt ? Number(user.spinAdsCycleStartedAt) : 0;
+      let spinWatchedToday = Number(user.spinAdsWatchedToday || 0);
+
+      if (!spinCycleStart || (now - spinCycleStart >= SPIN_CYCLE_MS)) {
+        spinWatchedToday = 0;
+        spinCycleStart = now;
+      }
+
+      if (spinWatchedToday >= MAX_SPIN_ADS_PER_DAY) {
+        res.status(200).json({
+          ok: true,
+          limitReached: true,
+          message: "User reached max 6 spin tickets for this 10-hour cycle",
+          userId: targetUid,
+          spinTickets: Number(user.spinTickets || 0),
+          spinAdsWatchedToday: spinWatchedToday
+        });
+        return;
+      }
+
+      spinWatchedToday += 1;
+      const isCompleted = (spinWatchedToday >= MAX_SPIN_ADS_PER_DAY);
+      const setPayload = {
+        spinAdsWatchedToday: spinWatchedToday,
+        spinAdsCycleStartedAt: spinCycleStart,
+        lastSpinAdWatchedAt: now,
+        lastAdsgramS2sRewardAt: now,
+        lastActiveAt: new Date()
+      };
+      if (isCompleted) {
+        setPayload.spinCycleCompletedAt = now;
+        setPayload.spinReminderSent = false;
+      }
+
+      const updatedRes = await usersCol.findOneAndUpdate(
+        { _id: user._id },
+        {
+          $inc: { spinTickets: 1 },
+          $set: setPayload
+        },
+        { returnDocument: "after" }
+      );
+
+      const updatedUser = updatedRes && (updatedRes.value || (updatedRes._id ? updatedRes : null));
+      const finalTickets = Number(updatedUser ? updatedUser.spinTickets : (user.spinTickets || 0) + 1);
+
+      res.status(200).json({
+        ok: true,
+        rewardCredited: true,
+        rewardType: "spin_ticket",
+        userId: targetUid,
+        spinTickets: finalTickets,
+        spinAdsWatchedToday: spinWatchedToday,
+        maxAds: MAX_SPIN_ADS_PER_DAY,
+        message: `+1 Spin Ticket successfully confirmed and credited to user ${targetUid}`
+      });
+      return;
+    } catch (s2sErr) {
+      console.error("Adsgram S2S reward callback error:", s2sErr);
+      res.status(500).json({ ok: false, error: s2sErr.message || "Internal server error" });
+      return;
+    }
+  }
+
   const initData = req.headers["x-telegram-init-data"];
   const tgUser = validateInitData(initData, botToken);
   if (!tgUser) {

@@ -6,6 +6,13 @@
   ],
   "routes": [
     {
+      "src": "/api/adsgram-reward(?:\\.js)?$",
+      "dest": "/api/ads.js?action=adsgram_reward",
+      "headers": {
+        "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate"
+      }
+    },
+    {
       "src": "/api/verify-channel(?:\\.js)?$",
       "dest": "/api/tasks.js?action=verify_channel",
       "headers": {
