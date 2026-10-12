@@ -10698,10 +10698,15 @@
           // Watched at least 9 seconds! Close sheet
           closeWatchEarnFlowModal();
 
-          function claimAdReward(actualDurationMs) {
+          // Puzzle Captcha: ONLY for Interstitial Ads (#3, #6, #9).
+          // Reward Ad (Ad #1) is completely FREE of puzzle because it is secured by Adsgram S2S!
+          var requiresCaptcha = !isFirstAdOfDay && ((watched + 1) % 3 === 0);
+
+          function claimAdReward(captchaToken, actualDurationMs) {
             var bodyPayload = {
               watchDurationMs: actualDurationMs || 9200
             };
+            if (captchaToken) bodyPayload.captchaToken = captchaToken;
 
             fetch("/api/ads", {
               method: "POST",
@@ -10757,13 +10762,21 @@
             });
           }
 
-          if (isFirstAdOfDay) {
+          if (requiresCaptcha) {
+            window._watchCaptchaOpen = true;
+            window._watchEarnRelease = function() { setWatchEarnBusy(false); };
+            openSecurityCaptcha(function(verifiedCaptchaToken) {
+              window._watchCaptchaOpen = false;
+              setWatchEarnBusy(true);
+              claimAdReward(verifiedCaptchaToken, elapsedMs);
+            });
+          } else if (isFirstAdOfDay) {
             showToast("⏳ Verifying ad receipt with network...");
             setTimeout(function() {
-              claimAdReward(elapsedMs);
+              claimAdReward(null, elapsedMs);
             }, 2500);
           } else {
-            claimAdReward(elapsedMs);
+            claimAdReward(null, elapsedMs);
           }
         },
         function onSkippedOrFailed(reason, elapsedMs) {
