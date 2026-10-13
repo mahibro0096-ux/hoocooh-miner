@@ -192,8 +192,8 @@ module.exports = async (req, res) => {
 
         const captionText =
           `🔐 <b>HOOCOOH MINER · Verify It's you</b>\n\n` +
-          `Here is your secure 4-digit verification code:\n` +
-          `👉 Code: <code>${codeStr}</code>\n\n` +
+          `Here is your secure 4-digit verification code.\n` +
+          `👉 <b>Check the image above!</b>\n\n` +
           `⏱ <b>Validity: 2 minutes</b>\n` +
           `<i>Enter this 4-digit code in the app to unlock access. Never share this code.</i>`;
 
@@ -222,33 +222,6 @@ module.exports = async (req, res) => {
           console.warn("sendPhoto exception:", photoErr.message);
         }
 
-        // Fallback: send text message if sendPhoto fails
-        if (!sentSuccess) {
-          try {
-            const msgRes = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                chat_id: telegramId,
-                parse_mode: "HTML",
-                text:
-                  `🔐 <b>HOOCOOH MINER · Verify It's you</b>\n\n` +
-                  `Your 4-digit verification code: <code>${codeStr}</code>\n\n` +
-                  `⏱ <b>Validity: 2 minutes</b>\n` +
-                  `<i>Enter this 4-digit code in the app to unlock access.</i>`
-              })
-            });
-            const msgData = await msgRes.json();
-            sentSuccess = Boolean(msgData && msgData.ok === true);
-            if (!sentSuccess) {
-              tgErrorDesc = (msgData && msgData.description) || tgErrorDesc;
-              console.warn("sendMessage fallback failed:", msgData);
-            }
-          } catch (msgErr) {
-            console.error("sendMessage fallback error:", msgErr.message);
-          }
-        }
-
         if (sentSuccess && insertRes && insertRes.insertedId) {
           await codesCol.updateOne({ _id: insertRes.insertedId }, { $set: { delivered: true } });
         }
@@ -263,8 +236,8 @@ module.exports = async (req, res) => {
           validitySeconds: 120,
           botUsername: `@${botUser}`,
           message: sentSuccess
-            ? "A 4-digit code was sent to your Telegram bot."
-            : "Please open @hoocoohmine_bot and press START to receive your verification code."
+            ? "A 4-digit code image was sent to your Telegram bot."
+            : "Please allow message permission to receive your verification code."
         });
         return;
       }

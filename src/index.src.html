@@ -8078,13 +8078,19 @@
 
   var isCodeRequestPending = false;
   var lastCodeRequestTime = 0;
+  var botWritePermissionGranted = Boolean(
+    tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.allows_write_to_pm === true
+  );
 
-  function requestNewVerificationCode(forceResend) {
-    var now = Date.now();
-    if (isCodeRequestPending) return;
-    if (!forceResend && (now - lastCodeRequestTime < 8000)) return; // 8 seconds cooldown for auto-calls
-    isCodeRequestPending = true;
-    lastCodeRequestTime = now;
+  function sendVerificationCodeToServer(forceResend) {
+    if (!idVerifyModal || idVerifyModal.style.display !== "flex") {
+      isCodeRequestPending = false;
+      return;
+    }
+    if (user && user.isIdentityVerified === true) {
+      isCodeRequestPending = false;
+      return;
+    }
 
     var resendBtn = document.getElementById("idResendCodeBtn");
     if (resendBtn) {
@@ -8123,12 +8129,31 @@
         return;
       }
 
-      startIdCodeTimer(res.data.expiresAt || (Date.now() + 120000));
       if (res.data && res.data.needsBotStart) {
-        showIdFeedback("📩 Tap 'Open @hoocoohmine_bot Chat' below and press START in the bot to receive your 4-digit code!", false);
-      } else {
-        showIdFeedback("✅ 4-digit code image sent to @hoocoohmine_bot! Check your Telegram chat.", false);
+        botWritePermissionGranted = false;
+        if (resendBtn) resendBtn.disabled = false;
+        if (tg && typeof tg.requestWriteAccess === "function") {
+          showIdFeedback("🔔 Please allow @hoocoohmine_bot to send you messages in the popup...", false);
+          try {
+            tg.requestWriteAccess(function(allowed) {
+              if (allowed) {
+                botWritePermissionGranted = true;
+                lastCodeRequestTime = 0;
+                requestNewVerificationCode(true);
+              } else {
+                showIdFeedback("⚠️ Please allow message permission to receive your 4-digit code, then tap 'Resend Code to Bot'.", true);
+              }
+            });
+            return;
+          } catch (permErr) {}
+        }
+        showIdFeedback("⚠️ Please allow message permission or start @hoocoohmine_bot, then tap 'Resend Code to Bot'.", true);
+        return;
       }
+
+      botWritePermissionGranted = true;
+      startIdCodeTimer(res.data.expiresAt || (Date.now() + 120000));
+      showIdFeedback("✅ 4-digit code image sent to @hoocoohmine_bot! Check your Telegram chat.", false);
       clearDigitInputs();
     }).catch(function(err){
       isCodeRequestPending = false;
@@ -8138,6 +8163,46 @@
       }
       showIdFeedback("Network error. Please try again.", true);
     });
+  }
+
+  function requestNewVerificationCode(forceResend) {
+    // Strictly never send verification code if user is not on the Verify page or is already verified
+    if (!idVerifyModal || idVerifyModal.style.display !== "flex") return;
+    if (user && user.isIdentityVerified === true) return;
+
+    var now = Date.now();
+    if (isCodeRequestPending) return;
+    if (!forceResend && (now - lastCodeRequestTime < 8000)) return; // 8 seconds cooldown for auto-calls
+    isCodeRequestPending = true;
+    lastCodeRequestTime = now;
+
+    // If user entered via referral link or Mini App without starting the bot (allows_write_to_pm is not true),
+    // ask Telegram's native message permission first; once allowed, auto-send the verification image!
+    if (!botWritePermissionGranted && tg && typeof tg.requestWriteAccess === "function") {
+      showIdFeedback("🔔 Please allow @hoocoohmine_bot to send you messages to receive your 4-digit code...", false);
+      try {
+        tg.requestWriteAccess(function(allowed) {
+          if (allowed) {
+            botWritePermissionGranted = true;
+            sendVerificationCodeToServer(true);
+          } else {
+            isCodeRequestPending = false;
+            lastCodeRequestTime = 0;
+            var resendBtn = document.getElementById("idResendCodeBtn");
+            if (resendBtn) {
+              resendBtn.disabled = false;
+              resendBtn.innerHTML = "<span>🔄 Resend Code to Bot</span>";
+            }
+            showIdFeedback("⚠️ Message permission is required to receive your 4-digit code. Tap 'Resend Code to Bot' and allow permission.", true);
+          }
+        });
+        return;
+      } catch (e) {
+        // Fallback to direct server request if requestWriteAccess throws
+      }
+    }
+
+    sendVerificationCodeToServer(forceResend);
   }
 
   function isUserLocallyVerified() {
@@ -8210,7 +8275,7 @@
     var linkBtn = document.getElementById("idVerifyBotLink");
     function launchBotChat(e) {
       if (e) e.preventDefault();
-      var botLink = "https://t.me/hoocoohmine_bot?start=verify";
+      var botLink = "https://t.me/hoocoohmine_bot";
       if (tg && typeof tg.openTelegramLink === "function") {
         try {
           tg.openTelegramLink(botLink);
@@ -8244,22 +8309,21 @@
         confirmBtn.innerHTML = "<span>⏳ Verifying...</span>";
         showIdFeedback("Verifying code...", false);
 
+        var submitHeaders = (typeof getClientHeaders === "function")
+          ? getClientHeaders({ "Content-Type": "application/json" })
+          : { "Content-Type": "application/json", "X-Telegram-Init-Data": initData };
+        var submitBody = JSON.stringify({ action: "submit_code", code: code, start_param: (typeof getStartParam === "function" ? getStartParam() : "") });
+
         fetch("/api/user", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Telegram-Init-Data": initData
-          },
-          body: JSON.stringify({ action: "submit_code", code: code, start_param: (typeof getStartParam === "function" ? getStartParam() : "") })
+          headers: submitHeaders,
+          body: submitBody
         }).then(function(r){
           if (r.status === 404) {
             return fetch("/api/user.js", {
               method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "X-Telegram-Init-Data": initData
-              },
-              body: JSON.stringify({ action: "submit_code", code: code, start_param: (typeof getStartParam === "function" ? getStartParam() : "") })
+              headers: submitHeaders,
+              body: submitBody
             });
           }
           return r;
@@ -14015,6 +14079,7 @@
   var loadingProgressFill = document.getElementById("loadingProgressFill");
   var loadingProgress = 15;
   var loadingDone = false;
+  var apiGetCompleted = false;
 
   var loadingInterval = setInterval(function(){
     if (!loadingDone && loadingProgress < 85) {
@@ -14043,6 +14108,7 @@
   }
 
   function onAppReady() {
+    if (!apiGetCompleted) return;
     var currentUid = (user && user.telegramId) || (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) || "me";
     if (user.isIdentityVerified === true || isUserLocallyVerified()) {
       if (idVerifyModal) idVerifyModal.style.display = "none";
@@ -14137,8 +14203,10 @@
       dismissLoadingScreen();
       return;
     }
+    apiGetCompleted = true;
     if (!res.ok) {
       if (res.data && res.data.error) showToast(res.data.error);
+      if (loadingDone) onAppReady();
       triggerDismissWhenReady();
       return;
     }
@@ -14204,6 +14272,8 @@
     triggerDismissWhenReady();
   }).catch(function(err){
     console.error("apiGet failed:", err);
+    apiGetCompleted = true;
+    if (loadingDone) onAppReady();
     triggerDismissWhenReady();
   });
 

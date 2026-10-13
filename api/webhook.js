@@ -1647,57 +1647,6 @@ module.exports = async (req, res) => {
     }
 
     // ----------------------------------------------------
-    // Command: /verify or /code (Direct verification code request in bot)
-    // ----------------------------------------------------
-    if (command === "/verify" || command === "/code") {
-      try {
-        const db = await getDb();
-        if (db) {
-          const codesCol = db.collection("user_verification_codes");
-          const now = Date.now();
-          const codeStr = String(Math.floor(1000 + Math.random() * 9000));
-          const expiresAt = now + (2 * 60 * 1000);
-
-          await codesCol.updateMany(
-            { userId: String(senderId), used: false },
-            { $set: { used: true, reason: "superseded" } }
-          );
-
-          await codesCol.insertOne({
-            userId: String(senderId),
-            code: codeStr,
-            createdAt: now,
-            createdAtDate: new Date(),
-            expiresAt,
-            used: false,
-            delivered: true
-          });
-
-          const verifyCaption =
-            `🔐 <b>HOOCOOH MINER · Verify It's you</b>\n\n` +
-            `Here is your secure 4-digit verification code:\n` +
-            `👉 Code: <code>${codeStr}</code>\n\n` +
-            `⏱ <b>Validity: 2 minutes</b>\n` +
-            `<i>Enter this 4-digit code in the app to unlock access. Never share this code.</i>`;
-
-          let verifyImgBuf = null;
-          try {
-            verifyImgBuf = generateVerificationImage(codeStr);
-          } catch (e) {}
-
-          await sendTelegramMsg(botToken, chatId, verifyCaption, {
-            photoBuffer: verifyImgBuf,
-            photoMime: "image/png"
-          });
-        }
-      } catch (e) {
-        console.error("Error in /verify command:", e);
-      }
-      res.status(200).json({ ok: true });
-      return;
-    }
-
-    // ----------------------------------------------------
     // Command: /start
     // ----------------------------------------------------
     if (command === "/start") {
@@ -1732,7 +1681,7 @@ module.exports = async (req, res) => {
         appUrl += `&needLang=1`;
       }
       const startParam = parts[1] || "";
-      if (startParam && startParam !== "verify") {
+      if (startParam) {
         appUrl += `&tgWebAppStartParam=${encodeURIComponent(startParam)}`;
         try {
           if (db) {
@@ -1784,63 +1733,6 @@ module.exports = async (req, res) => {
           ]
         }
       });
-
-      // If user has an undelivered/pending verification code (or opened via ?start=verify), automatically send it now!
-      try {
-        if (db) {
-          const codesCol = db.collection("user_verification_codes");
-          const now = Date.now();
-          let pendingCode = await codesCol.findOne(
-            { userId: String(senderId), used: false },
-            { sort: { createdAt: -1 } }
-          );
-
-          if ((pendingCode && (pendingCode.delivered === false || pendingCode.expiresAt > now)) || startParam === "verify") {
-            let codeStr = "";
-            if (pendingCode && pendingCode.expiresAt > now) {
-              codeStr = pendingCode.code;
-              await codesCol.updateOne(
-                { _id: pendingCode._id },
-                { $set: { delivered: true, expiresAt: now + (2 * 60 * 1000) } }
-              );
-            } else {
-              codeStr = String(Math.floor(1000 + Math.random() * 9000));
-              await codesCol.updateMany(
-                { userId: String(senderId), used: false },
-                { $set: { used: true, reason: "superseded" } }
-              );
-              await codesCol.insertOne({
-                userId: String(senderId),
-                code: codeStr,
-                createdAt: now,
-                createdAtDate: new Date(),
-                expiresAt: now + (2 * 60 * 1000),
-                used: false,
-                delivered: true
-              });
-            }
-
-            const verifyCaption =
-              `🔐 <b>HOOCOOH MINER · Verify It's you</b>\n\n` +
-              `Here is your secure 4-digit verification code:\n` +
-              `👉 Code: <code>${codeStr}</code>\n\n` +
-              `⏱ <b>Validity: 2 minutes</b>\n` +
-              `<i>Enter this 4-digit code in the app to unlock access. Never share this code.</i>`;
-
-            let verifyImgBuf = null;
-            try {
-              verifyImgBuf = generateVerificationImage(codeStr);
-            } catch (e) {}
-
-            await sendTelegramMsg(botToken, chatId, verifyCaption, {
-              photoBuffer: verifyImgBuf,
-              photoMime: "image/png"
-            });
-          }
-        }
-      } catch (verifyErr) {
-        console.warn("Auto-send pending verification code on /start error:", verifyErr.message);
-      }
 
       res.status(200).json({ ok: true, sent: true });
       return;
