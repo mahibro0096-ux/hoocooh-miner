@@ -150,17 +150,19 @@ module.exports = async (req, res) => {
       // Verification: Request 4-digit verification code image
       if (action === "request_code" || action === "request_verification_code") {
         const now = Date.now();
+        const forceResend = Boolean(req.body && req.body.force);
         const codesCol = db.collection("user_verification_codes");
 
-        // Duplicate suppression: if a code was created within the last 20 seconds, reuse it and don't re-send
+        // Duplicate suppression: only skip if an identical auto-request succeeded within the last 3 seconds and force is not set
         const recentCode = await codesCol.findOne(
           { userId: telegramId, used: false },
           { sort: { createdAt: -1 } }
         );
-        if (recentCode && (now - recentCode.createdAt < 20000)) {
+        if (!forceResend && recentCode && recentCode.delivered === true && (now - recentCode.createdAt < 3000)) {
           const botUser = await fetchBotUsername(process.env.TELEGRAM_BOT_TOKEN);
           res.status(200).json({
             ok: true,
+            delivered: true,
             expiresAt: recentCode.expiresAt,
             validitySeconds: Math.max(0, Math.floor((recentCode.expiresAt - now) / 1000)),
             botUsername: `@${botUser}`,
@@ -178,23 +180,25 @@ module.exports = async (req, res) => {
           { $set: { used: true, reason: "superseded" } }
         );
 
-        await codesCol.insertOne({
+        const insertRes = await codesCol.insertOne({
           userId: telegramId,
           code: codeStr,
           createdAt: now,
           createdAtDate: new Date(),
           expiresAt,
-          used: false
+          used: false,
+          delivered: false
         });
 
         const captionText =
           `🔐 <b>HOOCOOH MINER · Verify It's you</b>\n\n` +
           `Here is your secure 4-digit verification code:\n` +
-          `👉 <b>Check the image above!</b>\n\n` +
+          `👉 Code: <code>${codeStr}</code>\n\n` +
           `⏱ <b>Validity: 2 minutes</b>\n` +
           `<i>Enter this 4-digit code in the app to unlock access. Never share this code.</i>`;
 
         let sentSuccess = false;
+        let tgErrorDesc = "";
         try {
           const imageBuffer = generateVerificationImage(codeStr);
           const formData = new FormData();
@@ -209,8 +213,9 @@ module.exports = async (req, res) => {
             body: formData
           });
           const tgData = await tgRes.json();
-          sentSuccess = tgData && tgData.ok === true;
+          sentSuccess = Boolean(tgData && tgData.ok === true);
           if (!sentSuccess) {
+            tgErrorDesc = (tgData && tgData.description) || "";
             console.warn("sendPhoto by FormData failed:", tgData);
           }
         } catch (photoErr) {
@@ -220,7 +225,7 @@ module.exports = async (req, res) => {
         // Fallback: send text message if sendPhoto fails
         if (!sentSuccess) {
           try {
-            await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+            const msgRes = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -233,19 +238,33 @@ module.exports = async (req, res) => {
                   `<i>Enter this 4-digit code in the app to unlock access.</i>`
               })
             });
-            sentSuccess = true;
+            const msgData = await msgRes.json();
+            sentSuccess = Boolean(msgData && msgData.ok === true);
+            if (!sentSuccess) {
+              tgErrorDesc = (msgData && msgData.description) || tgErrorDesc;
+              console.warn("sendMessage fallback failed:", msgData);
+            }
           } catch (msgErr) {
             console.error("sendMessage fallback error:", msgErr.message);
           }
         }
 
+        if (sentSuccess && insertRes && insertRes.insertedId) {
+          await codesCol.updateOne({ _id: insertRes.insertedId }, { $set: { delivered: true } });
+        }
+
         const botUser = await fetchBotUsername(process.env.TELEGRAM_BOT_TOKEN);
         res.status(200).json({
           ok: true,
+          delivered: sentSuccess,
+          needsBotStart: !sentSuccess,
+          tgError: tgErrorDesc,
           expiresAt,
           validitySeconds: 120,
           botUsername: `@${botUser}`,
-          message: "A 4-digit code was sent to your Telegram bot."
+          message: sentSuccess
+            ? "A 4-digit code was sent to your Telegram bot."
+            : "Please open @hoocoohmine_bot and press START to receive your verification code."
         });
         return;
       }

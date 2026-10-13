@@ -8079,10 +8079,10 @@
   var isCodeRequestPending = false;
   var lastCodeRequestTime = 0;
 
-  function requestNewVerificationCode() {
+  function requestNewVerificationCode(forceResend) {
     var now = Date.now();
     if (isCodeRequestPending) return;
-    if (now - lastCodeRequestTime < 15000) return; // 15 seconds cooldown
+    if (!forceResend && (now - lastCodeRequestTime < 8000)) return; // 8 seconds cooldown for auto-calls
     isCodeRequestPending = true;
     lastCodeRequestTime = now;
 
@@ -8093,22 +8093,21 @@
     }
     showIdFeedback("📸 Generating code image & sending to @hoocoohmine_bot...", false);
 
+    var reqBody = JSON.stringify({ action: "request_code", force: Boolean(forceResend) });
+    var reqHeaders = (typeof getClientHeaders === "function")
+      ? getClientHeaders({ "Content-Type": "application/json" })
+      : { "Content-Type": "application/json", "X-Telegram-Init-Data": initData };
+
     fetch("/api/user", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Telegram-Init-Data": initData
-      },
-      body: JSON.stringify({ action: "request_code" })
+      headers: reqHeaders,
+      body: reqBody
     }).then(function(r){
       if (r.status === 404) {
         return fetch("/api/user.js", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Telegram-Init-Data": initData
-          },
-          body: JSON.stringify({ action: "request_code" })
+          headers: reqHeaders,
+          body: reqBody
         });
       }
       return r;
@@ -8116,7 +8115,7 @@
       isCodeRequestPending = false;
       if (resendBtn) {
         resendBtn.innerHTML = "<span>🔄 Resend Code to Bot</span>";
-        setTimeout(function(){ resendBtn.disabled = false; }, 15000);
+        setTimeout(function(){ resendBtn.disabled = false; }, 8000);
       }
 
       if (!res.ok) {
@@ -8125,7 +8124,11 @@
       }
 
       startIdCodeTimer(res.data.expiresAt || (Date.now() + 120000));
-      showIdFeedback("✅ 4-digit code image sent to @hoocoohmine_bot! Check your Telegram chat.", false);
+      if (res.data && res.data.needsBotStart) {
+        showIdFeedback("📩 Tap 'Open @hoocoohmine_bot Chat' below and press START in the bot to receive your 4-digit code!", false);
+      } else {
+        showIdFeedback("✅ 4-digit code image sent to @hoocoohmine_bot! Check your Telegram chat.", false);
+      }
       clearDigitInputs();
     }).catch(function(err){
       isCodeRequestPending = false;
@@ -8162,6 +8165,9 @@
   }
 
   function setupIdentityVerifyModal() {
+    if (window._idVerifyModalSetupDone) return;
+    window._idVerifyModalSetupDone = true;
+
     var cells = document.querySelectorAll(".id-digit-cell");
     cells.forEach(function(cell, idx){
       cell.addEventListener("input", function(e){
@@ -8204,13 +8210,14 @@
     var linkBtn = document.getElementById("idVerifyBotLink");
     function launchBotChat(e) {
       if (e) e.preventDefault();
+      var botLink = "https://t.me/hoocoohmine_bot?start=verify";
       if (tg && typeof tg.openTelegramLink === "function") {
         try {
-          tg.openTelegramLink("https://t.me/hoocoohmine_bot");
+          tg.openTelegramLink(botLink);
           return;
         } catch(err){}
       }
-      window.open("https://t.me/hoocoohmine_bot", "_blank");
+      window.open(botLink, "_blank");
     }
     if (openBtn) openBtn.addEventListener("click", launchBotChat);
     if (linkBtn) linkBtn.addEventListener("click", launchBotChat);
@@ -8219,7 +8226,7 @@
     var resendBtn = document.getElementById("idResendCodeBtn");
     if (resendBtn) {
       resendBtn.addEventListener("click", function(){
-        requestNewVerificationCode();
+        requestNewVerificationCode(true);
       });
     }
 
