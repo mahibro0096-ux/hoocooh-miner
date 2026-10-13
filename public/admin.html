@@ -516,6 +516,7 @@
       </div>
     </div>
     <div class="header-actions">
+      <button class="btn-icon-head" id="resetMyVerifyBtn" style="border-color: rgba(16, 185, 129, 0.45); color: #10b981;" title="Reset 4-digit code verification for your Admin account only">🔐 Re-Verify Me</button>
       <button class="btn-icon-head" id="refreshStatsBtn">🔄 Refresh</button>
       <button class="btn-icon-head" id="logoutBtn">🔒 Logout</button>
     </div>
@@ -1168,6 +1169,53 @@
     sessionStorage.removeItem("hoocooh_admin_key");
     location.reload();
   });
+
+  var resetMyVerifyBtn = document.getElementById("resetMyVerifyBtn");
+  if (resetMyVerifyBtn) {
+    resetMyVerifyBtn.addEventListener("click", async function() {
+      var tgApp = window.Telegram && window.Telegram.WebApp;
+      var adminUid = (tgApp && tgApp.initDataUnsafe && tgApp.initDataUnsafe.user && tgApp.initDataUnsafe.user.id)
+        ? String(tgApp.initDataUnsafe.user.id)
+        : "";
+      resetMyVerifyBtn.disabled = true;
+      resetMyVerifyBtn.textContent = "⏳ Resetting...";
+      try {
+        var res = await apiAdmin("POST", null, {
+          action: "reset_my_verification",
+          adminUid: adminUid
+        });
+        if (res && res.ok) {
+          // Clear local 24h verification cache on this device so Verify modal appears immediately
+          try {
+            localStorage.removeItem("hoocooh_verify_until_me");
+            if (adminUid) localStorage.removeItem("hoocooh_verify_until_" + adminUid);
+            if (Array.isArray(res.resetAdminIds)) {
+              res.resetAdminIds.forEach(function(id) {
+                localStorage.removeItem("hoocooh_verify_until_" + id);
+              });
+            }
+            Object.keys(localStorage).forEach(function(k) {
+              if (k && k.indexOf("hoocooh_verify_until_") === 0) {
+                localStorage.removeItem(k);
+              }
+            });
+          } catch (e) {}
+
+          showToast("🔐 Verification reset for your Admin ID!");
+          if (confirm("✅ Code Verification has been reset for your Admin account only!\n\nClick OK to open the Mini App right now and test the 4-digit verification code.")) {
+            window.location.href = "/index.html";
+          }
+        } else {
+          alert("⚠️ " + ((res && res.error) || "Failed to reset verification"));
+        }
+      } catch (err) {
+        alert("❌ " + (err.message || err));
+      } finally {
+        resetMyVerifyBtn.disabled = false;
+        resetMyVerifyBtn.textContent = "🔐 Re-Verify Me";
+      }
+    });
+  }
 
   // API Helper
   async function apiAdmin(method, params, body) {

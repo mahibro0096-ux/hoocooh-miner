@@ -1225,6 +1225,46 @@ module.exports = async (req, res) => {
         return;
       }
 
+      // Reset Admin's Own Verification Status (Admin Only - for re-testing 4-digit code verify anytime)
+      if (action === "reset_my_verification" || action === "reset_admin_verification") {
+        const adminIdsSet = await getAdminTelegramIds(db);
+        const reqAdminUid = String((req.body && req.body.adminUid) || "").trim();
+        if (reqAdminUid && adminIdsSet.has(reqAdminUid)) {
+          adminIdsSet.clear();
+          adminIdsSet.add(reqAdminUid);
+        }
+        const adminIdList = Array.from(adminIdsSet);
+        if (adminIdList.length === 0) {
+          res.status(400).json({ error: "No Admin Telegram ID configured." });
+          return;
+        }
+
+        const orQueries = [];
+        for (const aid of adminIdList) {
+          orQueries.push({ telegramId: String(aid) });
+          const nId = Number(aid);
+          if (!isNaN(nId)) orQueries.push({ telegramId: nId });
+        }
+
+        await usersCol.updateMany(
+          { $or: orQueries },
+          { $set: { isIdentityVerified: false, identityVerifiedAt: 0 } }
+        );
+
+        const codesCol = db.collection("user_verification_codes");
+        await codesCol.updateMany(
+          { userId: { $in: adminIdList.map(String) }, used: false },
+          { $set: { used: true, reason: "admin_reset" } }
+        );
+
+        res.status(200).json({
+          ok: true,
+          resetAdminIds: adminIdList,
+          message: `Code verification reset for your Admin ID (${adminIdList.join(", ")})! Open the Mini App now to verify again.`
+        });
+        return;
+      }
+
       // 7. Create Task (Admin can post for free, set limit or unlimited, reward fixed at 10)
       if (action === "create_task") {
         const { title, link, type, targetUsers, isUnlimited } = req.body || {};

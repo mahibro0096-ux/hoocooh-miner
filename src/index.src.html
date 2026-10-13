@@ -14297,8 +14297,17 @@
     apiGet().then(function(res){
       if (res && res.ok && res.data) {
         Object.assign(user, res.data);
+        user.isIdentityVerified = res.data.isIdentityVerified === true;
         user.languageSelected = res.data.languageSelected === true;
         user.termsAccepted = (res.data.termsAccepted === true) || (user.termsAccepted === true);
+        if (!user.isIdentityVerified) {
+          var syncUid = res.data.telegramId || (user && user.telegramId) || "me";
+          try {
+            localStorage.removeItem("hoocooh_verify_until_" + syncUid);
+            localStorage.removeItem("hoocooh_verify_until_me");
+          } catch(e){}
+          checkIdentityVerificationPrompt();
+        }
         if (res.data.language && res.data.language !== currentLang) {
           applyLanguage(res.data.language);
         }
