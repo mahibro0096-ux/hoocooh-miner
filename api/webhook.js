@@ -827,12 +827,19 @@ module.exports = async (req, res) => {
       }
     }
 
-    // Cron trigger for 2-hour mining reminders: /api/webhook?cron=mining_reminder or ?action=cron_mining
-    if (action === "cron_mining" || action === "mining_reminder" || (req.query && (req.query.cron === "mining_reminder" || req.query.cron === "mining"))) {
+    // Cron trigger for 2-hour mining reminders & broadcast queue: /api/webhook?cron=mining_reminder or ?cron=broadcast
+    const isCronWebhook =
+      action === "cron_mining" ||
+      action === "mining_reminder" ||
+      action === "cron_broadcast" ||
+      action === "broadcast" ||
+      (req.query && (req.query.cron === "mining_reminder" || req.query.cron === "mining" || req.query.cron === "broadcast" || req.query.cron === "true")) ||
+      (req.headers && req.headers["user-agent"] && req.headers["user-agent"].includes("cron-job.org"));
+    if (isCronWebhook) {
       try {
         const db = await getDb();
         const result = await processMiningReminders(db, botToken, baseUrl);
-        res.status(200).json({ ok: true, task: "mining_reminder", ...result });
+        res.status(200).json({ ok: true, task: "cron_worker", ...result });
         return;
       } catch (err) {
         res.status(500).json({ ok: false, error: err.message });

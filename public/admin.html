@@ -1597,9 +1597,38 @@
     });
   }
 
-  // 3. Broadcast
+  // 3. Broadcast (Instant + Cron-Job.org Background Queue for Large User Bases)
   var sendBroadcastBtn = document.getElementById("sendBroadcastBtn");
   var broadcastStatusBox = document.getElementById("broadcastStatusBox");
+
+  function renderBroadcastProgress(res, isDone) {
+    var total = Number(res.totalUsers) || 0;
+    var sent = Number(res.sentCount) || 0;
+    var failed = Number(res.failCount) || 0;
+    var skipped = Number(res.skippedCount) || 0;
+    var remaining = Number(res.remainingUsers) || 0;
+
+    if (isDone) {
+      broadcastStatusBox.innerHTML = `
+        <div style="color: var(--success); font-weight: 800; margin-bottom: 6px;">🎉 Broadcast Complete!</div>
+        <div>Total Users: <strong>${total}</strong></div>
+        <div>Successfully Sent: <strong style="color: var(--accent);">${sent}</strong></div>
+        <div>Failed / Blocked by User: <strong style="color: var(--danger);">${failed}</strong></div>
+        <div>Already Received (skipped, no duplicate): <strong>${skipped}</strong></div>
+      `;
+    } else {
+      broadcastStatusBox.innerHTML = `
+        <div style="color: var(--accent); font-weight: 800; margin-bottom: 6px;">⏳ Broadcast in Progress (Cron-Job.org Queue Active)...</div>
+        <div>Total Users: <strong>${total}</strong> | Remaining: <strong>${remaining}</strong></div>
+        <div>Successfully Sent So Far: <strong style="color: var(--success);">${sent}</strong></div>
+        <div>Failed / Blocked: <strong style="color: var(--danger);">${failed}</strong> | Skipped: <strong>${skipped}</strong></div>
+        <div style="margin-top: 8px; font-size: 12px; color: var(--text-dim);">
+          ✅ <i>Queued in database! Even if you close this page, <strong>Cron-Job.org</strong> will automatically finish sending to all remaining users in the background.</i>
+        </div>
+      `;
+    }
+  }
+
   sendBroadcastBtn.addEventListener("click", async function(){
     var msg = (document.getElementById("broadcastMsg").value || "").trim();
     var photo = (document.getElementById("broadcastPhoto").value || "").trim();
@@ -1607,12 +1636,12 @@
     var bUrl = (document.getElementById("broadcastBtnUrl").value || "").trim();
 
     if (!msg) { alert("Please type a broadcast message."); return; }
-    if (!confirm("Start broadcast to ALL registered users? This might take a minute depending on user count.")) return;
+    if (!confirm("Start broadcast to ALL registered users? Large user bases will also be processed automatically via Cron-Job.org.")) return;
 
     sendBroadcastBtn.disabled = true;
-    sendBroadcastBtn.innerHTML = "<span>⏳ Sending Broadcast in Background...</span>";
+    sendBroadcastBtn.innerHTML = "<span>⏳ Sending Broadcast...</span>";
     broadcastStatusBox.style.display = "block";
-    broadcastStatusBox.innerHTML = "Broadcasting messages to Telegram users via bot...";
+    broadcastStatusBox.innerHTML = "Starting broadcast & queuing for Cron-Job.org...";
 
     try {
       var res = await apiAdmin("POST", null, {
@@ -1623,18 +1652,34 @@
         buttonUrl: bUrl
       });
 
-      if (res.ok) {
-        broadcastStatusBox.innerHTML = `
-          <div style="color: var(--success); font-weight: 800; margin-bottom: 6px;">🎉 Broadcast Complete!</div>
-          <div>Total Users: <strong>${res.totalUsers}</strong></div>
-          <div>Successfully Sent: <strong style="color: var(--accent);">${res.sentCount}</strong></div>
-          <div>Failed / Blocked by User: <strong style="color: var(--danger);">${res.failCount}</strong></div>
-          <div>Already Received (skipped, no duplicate): <strong>${res.skippedCount || 0}</strong></div>
-        `;
-        showToast("📢 Broadcast completed!");
+      if (res && res.ok) {
+        if (res.completed) {
+          renderBroadcastProgress(res, true);
+          showToast("📢 Broadcast completed!");
+        } else {
+          renderBroadcastProgress(res, false);
+          showToast("⏳ Broadcast queued & running!");
+
+          // Continue stepping batches automatically while Admin keeps the panel open
+          while (res && res.ok && !res.completed && res.active !== false) {
+            await new Promise(function(r) { setTimeout(r, 1000); });
+            res = await apiAdmin("POST", null, { action: "broadcast_step" });
+            if (res && res.ok) {
+              if (res.completed || res.active === false) {
+                renderBroadcastProgress(res, true);
+                showToast("📢 Broadcast completed!");
+                break;
+              } else {
+                renderBroadcastProgress(res, false);
+              }
+            } else {
+              break;
+            }
+          }
+        }
       }
     } catch(e) {
-      broadcastStatusBox.innerHTML = `<span style="color: var(--danger);">Broadcast error: ${e.message}</span>`;
+      broadcastStatusBox.innerHTML = `<span style="color: var(--danger);">Broadcast notice: ${e.message} (Remaining users will still be delivered automatically by Cron-Job.org!)</span>`;
     } finally {
       sendBroadcastBtn.disabled = false;
       sendBroadcastBtn.innerHTML = "<span>📢 Send Broadcast to All Users</span>";
