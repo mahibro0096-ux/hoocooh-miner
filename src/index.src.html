@@ -9,7 +9,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="https://sad.adsgram.ai/js/sad.min.js"></script>
 <style>
   :root {
     --bg: #eff5f5;
@@ -1256,11 +1255,6 @@
   .ad-mission-task {
     display: block;
     width: 100%;
-    --adsgram-task-font-size: 14px;
-    --adsgram-task-icon-size: 44px;
-    --adsgram-task-icon-border-radius: 14px;
-    --adsgram-task-icon-title-gap: 12px;
-    --adsgram-task-button-width: 82px;
   }
   .ad-mission-reward {
     font-size: 13px;
@@ -5376,7 +5370,7 @@
   }
 
   /* ===================================================
-     ADSGRAM S2S "PLEASE WAIT" VERIFICATION MODAL
+     AD S2S "PLEASE WAIT" VERIFICATION MODAL
      =================================================== */
   .s2s-modal-overlay {
     position: fixed;
@@ -6767,7 +6761,7 @@
       </div>
     </div>
 
-    <!-- Ad Missions Section (Dynamic Auto-Sizing Adsgram Task Box) -->
+    <!-- Ad Missions Section (Task Box) -->
     <div class="ad-missions-container" id="adMissionsCard">
       <div class="ad-missions-header">
         <div class="ad-missions-title">🎬 Ad Missions</div>
@@ -7886,14 +7880,14 @@
 
   </div>
 
-  <!-- Adsgram Server-to-Server (S2S) "PLEASE WAIT" Verification Overlay -->
+  <!-- Ad Server-to-Server (S2S) "PLEASE WAIT" Verification Overlay -->
   <div class="s2s-modal-overlay" id="s2sWaitingModal">
     <div class="s2s-modal-card">
       <div class="s2s-spinner-ring">
         <div class="s2s-spinner-inner">⏳</div>
       </div>
       <h2 class="s2s-big-title">PLEASE WAIT</h2>
-      <p class="s2s-main-desc" id="s2sModalDesc">Verifying ad view with Adsgram ad network...</p>
+      <p class="s2s-main-desc" id="s2sModalDesc">Verifying ad view with ad network...</p>
       
       <div class="s2s-status-pill">
         <span class="s2s-live-dot" id="s2sLiveDot"></span>
@@ -8961,12 +8955,14 @@
 
       // S2S PLEASE WAIT Modal
       s2s_wait_title: "PLEASE WAIT",
-      s2s_wait_desc: "Verifying ad view with Adsgram ad network...",
+      s2s_wait_desc: "Verifying ad view with ad network...",
       s2s_status_awaiting: "Awaiting server confirmation...",
       s2s_status_confirmed: "✅ Server confirmed! Crediting reward...",
       s2s_wait_note: "Please do not close this window. Your reward will be credited automatically as soon as the ad network confirms.",
 
       // Withdraw Modal
+      withdraw_update_title: "System Update in Progress",
+      withdraw_update_desc: "The system is being updated. The update will be completed within 24 hours.",
       withdraw_step1_title: "Watch Ad to Withdraw",
       withdraw_step1_sub: "Watch a short ad completely to authorize your withdrawal. This helps us prevent bot abuse.",
       withdraw_step1_btn: "▶ Watch Ad & Continue",
@@ -9164,12 +9160,14 @@
 
       // S2S PLEASE WAIT Modal
       s2s_wait_title: "ПОЖАЛУЙСТА, ЖДИТЕ",
-      s2s_wait_desc: "Проверка просмотра рекламы в сети Adsgram...",
+      s2s_wait_desc: "Проверка просмотра рекламы в сети...",
       s2s_status_awaiting: "Ожидание подтверждения сервера...",
       s2s_status_confirmed: "✅ Сервер подтвердил! Начисление награды...",
       s2s_wait_note: "Пожалуйста, не закрывайте окно. Награда зачислится автоматически сразу после подтверждения.",
 
       // Withdraw Modal
+      withdraw_update_title: "Обновление системы",
+      withdraw_update_desc: "Система обновляется. Обновление будет завершено в течение 24 часов.",
       withdraw_step1_title: "Смотрите рекламу для вывода",
       withdraw_step1_sub: "Посмотрите рекламу полностью для подтверждения вывода. Это защищает от ботов.",
       withdraw_step1_btn: "▶ Смотреть и продолжить",
@@ -9367,12 +9365,14 @@
 
       // S2S PLEASE WAIT Modal
       s2s_wait_title: "يرجى الانتظار",
-      s2s_wait_desc: "جارٍ التحقق من مشاهدة الإعلان مع شبكة Adsgram...",
+      s2s_wait_desc: "جارٍ التحقق من مشاهدة الإعلان مع شبكة الإعلانات...",
       s2s_status_awaiting: "في انتظار تأكيد الخادم...",
       s2s_status_confirmed: "✅ تم تأكيد الخادم! جارٍ إضافة المكافأة...",
       s2s_wait_note: "يرجى عدم إغلاق هذه النافذة. ستتم إضافة مكافأتك تلقائياً فور تأكيد شبكة الإعلانات.",
 
       // Withdraw Modal
+      withdraw_update_title: "تحديث النظام قيد التنفيذ",
+      withdraw_update_desc: "يتم تحديث النظام حاليًا. سيتم الانتهاء من التحديث خلال 24 ساعة.",
       withdraw_step1_title: "شاهد إعلاناً للسحب",
       withdraw_step1_sub: "شاهد إعلاناً كاملاً لتفويض عملية السحب. هذا يساعدنا على منع استخدام البوتات.",
       withdraw_step1_btn: "▶ شاهد الإعلان وتابع",
@@ -11089,14 +11089,14 @@
   var pendingCaptchaToken = null;
   var adPlaybackTimer = null;
 
-  // Adsgram S2S "PLEASE WAIT" Modal Elements & Helpers
+  // S2S "PLEASE WAIT" Modal Elements & Helpers
   var s2sWaitingModal = document.getElementById("s2sWaitingModal");
   var s2sStatusText = document.getElementById("s2sStatusText");
   var s2sModalDesc = document.getElementById("s2sModalDesc");
   var s2sLiveDot = document.getElementById("s2sLiveDot");
 
   function openS2sWaitingModal(desc, status) {
-    if (s2sModalDesc) s2sModalDesc.textContent = desc || "Verifying ad view with Adsgram ad network...";
+    if (s2sModalDesc) s2sModalDesc.textContent = desc || "Verifying ad view with ad network...";
     if (s2sStatusText) s2sStatusText.textContent = status || "Awaiting server confirmation...";
     if (s2sLiveDot) {
       s2sLiveDot.style.background = "#10b981";
@@ -11118,7 +11118,7 @@
   }
 
   // ========================================================
-  // REAL ADSGRAM INTEGRATION (Block ID: int-52852)
+  // FULLSCREEN AD INTEGRATION
   // Fullscreen Ads with 9-Second Minimum Watch Enforcement:
   // - If user skips under 9s: show "❌ Ad was skipped! You must watch at least 9 seconds to receive the reward."
   // - If user watches >= 9s: open Security Puzzle Verification
@@ -11126,11 +11126,11 @@
   // ========================================================
   // ========================================================
   // GLOBAL AD BARRIER & MUTUAL EXCLUSION LOCK
-  // Ensures only 1 ad plays at a time (Adsgram).
+  // Ensures only 1 ad plays at a time.
   // No ad runs in the background while another is active!
   // ========================================================
   window.AdBarrier = {
-    activeAd: null, // "adsgram"
+    activeAd: null, // "fullscreen"
     lockTime: 0,
 
     acquire: function(name) {
@@ -11169,147 +11169,9 @@
   };
 
   // ========================================================
-  // ADSGRAM STARTUP TASK POPUP (Block ID: task-53272)  -- CURRENTLY DISABLED (see ADSGRAM_STARTUP_TASK_ENABLED below)
-  // EVERY time a user opens the mini app: as soon as the loading screen is
-  // finished (user lands on the home page) the AdsGram task card pops up
-  // ONCE for that app-open (state is in memory only, so it shows again on
-  // the next app-open).
-  // The card is pre-loaded in the background while the splash is showing, and
-  // is revealed the moment the loading screen is gone.
-  // - If AdsGram has no task to show (onBannerNotFound) or the SDK did not
-  //   load, nothing is shown and the app continues normally.
+  // AD MISSIONS SYSTEM (Under 24h Maintenance)
   // ========================================================
-  var ADSGRAM_STARTUP_TASK_BLOCK_ID = "task-53272";
-  var adsgramStartupTaskStarted = false;
-  var adsgramStartupTaskOverlay = null;
-
-  function adsgramLoadingFinished() {
-    var ls = document.getElementById("appLoadingScreen");
-    return !ls || window.getComputedStyle(ls).display === "none";
-  }
-
-  function closeAdsgramStartupTask() {
-    var ov = adsgramStartupTaskOverlay;
-    if (!ov) return;
-    adsgramStartupTaskOverlay = null;
-    ov.classList.remove("agst-show");
-    setTimeout(function() {
-      if (ov.parentNode) ov.parentNode.removeChild(ov);
-    }, 260);
-  }
-
-  function showAdsgramStartupTask() {
-    if (adsgramStartupTaskOverlay) return;
-
-    if (!document.getElementById("adsgramStartupTaskStyle")) {
-      var st = document.createElement("style");
-      st.id = "adsgramStartupTaskStyle";
-      st.textContent =
-        "#adsgramStartupTaskOverlay{position:fixed;inset:0;z-index:99999990;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;background:rgba(5,10,16,0.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .25s ease,visibility .25s ease;}" +
-        "#adsgramStartupTaskOverlay.agst-show{opacity:1;visibility:visible;pointer-events:auto;}" +
-        "#adsgramStartupTaskOverlay .agst-card{position:relative;width:100%;max-width:360px;box-sizing:border-box;padding:34px 16px 16px;border-radius:20px;background:var(--card-bg,#fff);color:var(--text,#0e2029);border:1px solid var(--border,rgba(14,32,41,0.07));box-shadow:0 18px 44px rgba(0,0,0,0.38);}" +
-        "#adsgramStartupTaskOverlay .agst-label{position:absolute;top:11px;left:16px;font-size:10px;font-weight:800;letter-spacing:.9px;text-transform:uppercase;color:var(--text-dim,#778d99);}" +
-        "#adsgramStartupTaskOverlay .agst-close{position:absolute;top:6px;right:8px;width:30px;height:30px;border:none;border-radius:50%;background:rgba(127,127,127,0.18);color:inherit;font-size:14px;line-height:30px;text-align:center;cursor:pointer;padding:0;}" +
-        "#adsgramStartupTaskOverlay adsgram-task{display:block;width:100%;min-height:24px;}" +
-        "#adsgramStartupTaskOverlay .agst-btn{display:inline-block;padding:7px 16px;border-radius:12px;background:var(--accent,#20b8a3);color:#fff;font-weight:800;font-size:13px;cursor:pointer;}" +
-        "#adsgramStartupTaskOverlay .agst-btn-done{opacity:.65;cursor:default;}";
-      document.head.appendChild(st);
-    }
-
-    var ov = document.createElement("div");
-    ov.id = "adsgramStartupTaskOverlay";
-    ov.innerHTML =
-      '<div class="agst-card">' +
-        '<div class="agst-label">Sponsored</div>' +
-        '<button type="button" class="agst-close" aria-label="Close">\u2715</button>' +
-        '<adsgram-task data-block-id="' + ADSGRAM_STARTUP_TASK_BLOCK_ID + '" class="agst-task">' +
-          '<div slot="button" class="agst-btn">Go</div>' +
-          '<div slot="claim" class="agst-btn">Claim</div>' +
-          '<div slot="done" class="agst-btn agst-btn-done">Done \u2713</div>' +
-        '</adsgram-task>' +
-      '</div>';
-    document.body.appendChild(ov);
-    adsgramStartupTaskOverlay = ov;
-
-    var taskEl = ov.querySelector("adsgram-task");
-    var settled = false;
-    var poll = null;
-
-    function abortShow(why, force) {
-      if (settled && !force) return;
-      settled = true;
-      if (poll) clearInterval(poll);
-      console.warn("[AdsgramTask] Not shown:", why);
-      if (adsgramStartupTaskOverlay === ov) adsgramStartupTaskOverlay = null;
-      if (ov.parentNode) ov.parentNode.removeChild(ov);
-    }
-
-    ov.querySelector(".agst-close").addEventListener("click", closeAdsgramStartupTask);
-    ov.addEventListener("click", function(e) {
-      if (e.target === ov) closeAdsgramStartupTask();
-    });
-
-    taskEl.addEventListener("onBannerNotFound", function() { abortShow("no task available (onBannerNotFound)", true); });
-    taskEl.addEventListener("onError", function() { abortShow("AdsGram reported an error (onError)", true); });
-    taskEl.addEventListener("reward", function(e) {
-      console.log("[AdsgramTask] Task completed. blockId:", ADSGRAM_STARTUP_TASK_BLOCK_ID, e && e.detail);
-      setTimeout(closeAdsgramStartupTask, 1500);
-    });
-
-    // Reveal the popup only when (1) the task card has really rendered (no empty card flash)
-    // AND (2) the loading screen is finished, i.e. the user has reached the home page.
-    var waited = 0;
-    var rendered = false;
-    poll = setInterval(function() {
-      if (settled) { clearInterval(poll); return; }
-      waited += 150;
-      if (!rendered) {
-        if (taskEl.getBoundingClientRect().height > 24) {
-          rendered = true;
-        } else if (waited >= 7000) {
-          abortShow("task card did not render in time");
-          return;
-        }
-      }
-      if (rendered && adsgramLoadingFinished()) {
-        settled = true;
-        clearInterval(poll);
-        if (adsgramStartupTaskOverlay === ov) ov.classList.add("agst-show");
-      }
-    }, 150);
-  }
-
-  function initAdsgramStartupTask() {
-    if (adsgramStartupTaskStarted) return;
-    adsgramStartupTaskStarted = true;
-
-    var sdkWaitMs = 0;
-    (function waitForSdk() {
-      if (window.customElements && window.customElements.get("adsgram-task")) {
-        showAdsgramStartupTask();
-      } else if (sdkWaitMs < 10000) {
-        sdkWaitMs += 500;
-        setTimeout(waitForSdk, 500);
-      } else {
-        console.warn("[AdsgramTask] SDK component not available, skipping startup popup");
-      }
-    })();
-  }
-
-  // The Task popup (task-53272) is kept in the code but currently DISABLED.
-  // Set ADSGRAM_STARTUP_TASK_ENABLED = true to turn it on again.
-  var ADSGRAM_STARTUP_TASK_ENABLED = false;
-  if (ADSGRAM_STARTUP_TASK_ENABLED) {
-    initAdsgramStartupTask();
-  }
-
-  // ========================================================
-  // AD MISSIONS SYSTEM (Adsgram Task Ad blockId: task-53272)
-  // Dynamic Auto-Sizing Box, Real Adsgram Campaign Details,
-  // Admin-Configurable Coin Reward, Live Balance Updates,
-  // Empty State: "No ad mission available right now"
-  // ========================================================
-  var AD_MISSION_BLOCK_IDS = ["task-53272"];
+  var AD_MISSION_BLOCK_IDS = [];
   var adMissionsInitialized = false;
   var adMissionRewardAmount = 20;
 
@@ -11337,44 +11199,14 @@
   }
 
   // ========================================================
-  // REAL ADSGRAM INTEGRATION
-  // Main Interstitial Block: int-52852 (Earn, Mining, Daily Check-in, Withdraw)
-  // Spin Ticket Block: 53118 (Lucky Wheel Spin Tickets)
-  // Protected with AdBarrier to ensure no ad overlap
+  // FULLSCREEN AD MAINTENANCE HANDLER
   // ========================================================
-  var ADSGRAM_MAIN_BLOCK_ID = "int-52852";
-  var ADSGRAM_SPIN_BLOCK_ID = "53118";
-  var adsgramControllers = {};
-
-  function getAdsgramController(blockId) {
-    var bid = String(blockId || ADSGRAM_MAIN_BLOCK_ID);
-    if (!adsgramControllers[bid] && window.Adsgram) {
-      try {
-        adsgramControllers[bid] = window.Adsgram.init({ blockId: bid });
-      } catch (e) {
-        console.warn("Adsgram init error for " + bid + ":", e);
-      }
-    }
-    return adsgramControllers[bid];
-  }
-
-  function playAdsgramFullscreenAd(onWatchedSuccess, onSkippedOrFailed) {
+  function playFullscreenAd(onWatchedSuccess, onSkippedOrFailed) {
     showFeatureUpdateNotice();
     if (typeof onSkippedOrFailed === "function") {
       onSkippedOrFailed("maintenance");
     }
   }
-
-  // ========================================================
-  // ADSGRAM STARTUP INTERSTITIAL (Disabled during 24h system update)
-  // ========================================================
-  function initAdsgramStartupInterstitial() {
-    // Disabled during update
-    return;
-  }
-
-  // Start at app open (disabled during update)
-  initAdsgramStartupInterstitial();
 
   function updateWatchSheetView1() {
     var watched = Number(user.adsWatchedToday) || 0;
@@ -11476,7 +11308,7 @@
   // Shared Mining Collect Function (Synchronized for Home and Mining tabs)
   // Flow requested by user:
   // 1. Click collect -> Button shows "Verifying..."
-  // 2. In "Verifying..." state, push AdsGram Ad (must watch >= 9s)
+  // 2. In "Verifying..." state, push Ad (must watch >= 9s)
   // 3. Puzzle captcha verification
   // 4. Claim reward, credit balance, and turn miner ON (2-hour timer)
   function triggerMiningCollect() {
@@ -13533,11 +13365,11 @@
       showToast("🔒 Vault Sealed! Mine " + Math.ceil(remaining).toLocaleString() + " more HOOCOOH to withdraw.");
       return;
     }
-    // Directly advance to Step 2 (Important Notice -> Wallet address) to bypass ad
-    setWithdrawStep(2);
+    // Start at Step 1: Watch Ad & Continue
+    setWithdrawStep(1);
     if (withdrawAdActionBtn) {
       withdrawAdActionBtn.disabled = false;
-      withdrawAdActionBtn.innerHTML = '<span>▶ Continue</span>';
+      withdrawAdActionBtn.innerHTML = '<span>' + (typeof t === "function" ? t("withdraw_step1_btn") : "▶ Watch Ad & Continue") + '</span>';
     }
     if (withdrawAmountInput) withdrawAmountInput.value = "";
 
@@ -13613,10 +13445,10 @@
     });
   }
 
-  // Step 1: Watch Ad & Continue -> directly moves to Step 2 without ad
+  // Step 1: Watch Ad & Continue -> shows system update notice (24h maintenance)
   if (withdrawAdActionBtn) {
     withdrawAdActionBtn.addEventListener("click", function() {
-      setWithdrawStep(2);
+      showFeatureUpdateNotice(t("withdraw_update_title"), t("withdraw_update_desc"));
     });
   }
 
