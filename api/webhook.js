@@ -1749,12 +1749,10 @@ module.exports = async (req, res) => {
       // Regular Users: Send Server Maintenance Notification
       const photoUrl = `${baseUrl}/assets/welcome_banner.jpg?v=4`;
       const maintMsg = 
-        `⚙️ <b>Server Maintenance in Progress | সার্ভারে কাজ চলছে</b>\n\n` +
-        `সার্ভারে আপগ্রেডের কাজ চলার কারণে সাময়িকভাবে <b>২–৩ ঘণ্টার</b> জন্য বট ও অ্যাপ অফ থাকবে। কাজ শেষ হওয়া মাত্রই বট পুনরায় সচল হয়ে যাবে।\n\n` +
-        `We are currently performing scheduled server infrastructure maintenance. The bot will be temporarily offline for <b>2–3 hours</b> and will return online shortly.\n\n` +
-        `🛡️ <b>সকল ডাটা সম্পূর্ণ নিরাপদ (100% Safe):</b>\n` +
-        `আপনার কয়েন ব্যালেন্স, টাস্ক বা স্ট্রিক হিস্ট্রি কোনো কিছুই ডিলিট হবে না—সবকিছু ডাটাবেজে সুরক্ষিত আছে।\n` +
-        `All your coin balances, task rewards, and streak data are safely stored in the cloud database!`;
+        `⚙️ <b>Server Maintenance in Progress</b>\n\n` +
+        `Our servers are currently undergoing scheduled maintenance and system optimization. The bot and mini app are temporarily paused for <b>2–3 hours</b> and will return online shortly.\n\n` +
+        `🛡️ <b>100% Data Safety Guaranteed:</b>\n` +
+        `All your coin balances, task rewards, and streak data are safely encrypted in our database. Nothing will be reset or lost!`;
 
       await sendTelegramMsg(botToken, chatId, maintMsg, {
         photoBuffer: welcomePhotoBuf,
@@ -1770,8 +1768,8 @@ module.exports = async (req, res) => {
             ],
             [
               {
-                text: "📢 Official Channel Updates",
-                url: "https://t.me/hoocoohminer"
+                text: "📢 Payment Channel & Proof Logs",
+                url: "https://t.me/hoocoohpaylogs"
               }
             ]
           ]
@@ -1785,13 +1783,13 @@ module.exports = async (req, res) => {
     // All other non-command messages from regular users during maintenance
     if (!isAdmin && chatId) {
       const quickNotice = 
-        `⚙️ <b>Server Maintenance Underway | সার্ভারে কাজ চলছে</b>\n\n` +
-        `সার্ভার আপগ্রেডের কাজ চলার কারণে বট সাময়িকভাবে ২–৩ ঘণ্টার জন্য অফ রয়েছে। আপনার ব্যালেন্স ও ডাটা ১০০% সুরক্ষিত আছে।`;
+        `⚙️ <b>Server Maintenance Underway</b>\n\n` +
+        `The system is currently paused for 2–3 hours for scheduled infrastructure upgrades. All user data and balances are 100% safe!`;
       await sendTelegramMsg(botToken, chatId, quickNotice, {
         reply_markup: {
           inline_keyboard: [
             [{ text: "🛠️ Check Server Status", web_app: { url: `${baseUrl}/index.html` } }],
-            [{ text: "📢 Official Channel Updates", url: "https://t.me/hoocoohminer" }]
+            [{ text: "📢 Payment Channel & Proof Logs", url: "https://t.me/hoocoohpaylogs" }]
           ]
         }
       });

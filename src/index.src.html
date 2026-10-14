@@ -244,29 +244,35 @@
   /* ===================================================
      FULL PAGE SERVER MAINTENANCE SCREEN (ACTIVE)
      =================================================== */
+  #app {
+    display: none !important;
+  }
+  #loadingScreen {
+    display: none !important;
+  }
   .server-maintenance-overlay {
     position: fixed;
     inset: 0;
     z-index: 9999999;
-    background: radial-gradient(circle at 50% 15%, rgba(14, 165, 233, 0.15) 0%, rgba(7, 11, 20, 0.98) 70%, #050811 100%);
+    background: #070b14;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
-    padding: 24px 18px 40px;
+    justify-content: center;
+    padding: 24px 18px;
     box-sizing: border-box;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
     color: #f8fafc;
     -webkit-overflow-scrolling: touch;
   }
   .maint-container {
     width: 100%;
-    max-width: 440px;
+    max-width: 420px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 18px;
+    gap: 16px;
     margin: auto 0;
   }
   .maint-hud-badge {
@@ -294,12 +300,14 @@
   }
   .maint-visual-wrap {
     position: relative;
-    width: 120px;
-    height: 120px;
+    width: 110px;
+    height: 110px;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 6px 0;
+    margin: 4px 0;
+    cursor: default;
+    user-select: none;
   }
   .maint-orbit-ring {
     position: absolute;
@@ -324,9 +332,9 @@
     to { transform: rotate(0deg); }
   }
   .maint-core-icon {
-    width: 86px;
-    height: 86px;
-    border-radius: 24px;
+    width: 80px;
+    height: 80px;
+    border-radius: 22px;
     background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95));
     border: 1.5px solid rgba(14, 165, 233, 0.4);
     display: flex;
@@ -348,57 +356,48 @@
     text-align: center;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
   }
-  .maint-title-bn {
-    font-size: 22px;
+  .maint-title-en-big {
+    font-size: 24px;
     font-weight: 800;
     color: #ffffff;
-    letter-spacing: -0.3px;
-    line-height: 1.3;
+    letter-spacing: -0.4px;
+    line-height: 1.25;
     margin: 0;
   }
-  .maint-title-en {
-    font-size: 13.5px;
+  .maint-sub-en {
+    font-size: 13px;
     font-weight: 600;
     color: #94a3b8;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
+    letter-spacing: 0.4px;
     margin: 0;
   }
   .maint-desc-card {
     background: rgba(15, 23, 42, 0.75);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 18px;
-    padding: 16px 18px;
+    border-radius: 16px;
+    padding: 14px 16px;
     backdrop-filter: blur(12px);
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
     box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
     width: 100%;
     box-sizing: border-box;
   }
-  .maint-msg-bn {
-    font-size: 14.5px;
+  .maint-msg-en-main {
+    font-size: 13.5px;
     line-height: 1.55;
-    color: #f1f5f9;
+    color: #cbd5e1;
     font-weight: 500;
     text-align: center;
-  }
-  .maint-msg-en {
-    font-size: 12.5px;
-    line-height: 1.5;
-    color: #94a3b8;
-    text-align: center;
-    border-top: 1px dashed rgba(255, 255, 255, 0.08);
-    padding-top: 10px;
   }
   .maint-timer-card {
     background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(180, 83, 9, 0.05));
     border: 1px solid rgba(245, 158, 11, 0.3);
-    border-radius: 16px;
-    padding: 14px 18px;
+    border-radius: 14px;
+    padding: 12px 16px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -419,9 +418,9 @@
     text-transform: uppercase;
   }
   .maint-timer-lbl .t-main {
-    font-size: 12.5px;
+    font-size: 12px;
     font-weight: 600;
-    color: #cbd5e1;
+    color: #94a3b8;
   }
   .maint-timer-val {
     font-family: 'Space Grotesk', monospace;
@@ -435,7 +434,7 @@
     background: rgba(16, 185, 129, 0.08);
     border: 1px solid rgba(16, 185, 129, 0.25);
     border-radius: 14px;
-    padding: 12px 14px;
+    padding: 11px 14px;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -443,7 +442,7 @@
     box-sizing: border-box;
   }
   .maint-safe-icon {
-    font-size: 22px;
+    font-size: 20px;
     flex-shrink: 0;
   }
   .maint-safe-text {
@@ -453,13 +452,13 @@
     text-align: left;
   }
   .maint-safe-title {
-    font-size: 12.5px;
+    font-size: 12px;
     font-weight: 800;
     color: #34d399;
     letter-spacing: 0.3px;
   }
   .maint-safe-sub {
-    font-size: 11.5px;
+    font-size: 11px;
     color: #a7f3d0;
     line-height: 1.4;
   }
@@ -467,17 +466,17 @@
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 7px;
   }
   .maint-status-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 14px;
+    padding: 9px 13px;
     background: rgba(15, 23, 42, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 12px;
-    font-size: 12px;
+    border-radius: 11px;
+    font-size: 11.5px;
   }
   .maint-status-row .lbl {
     color: #94a3b8;
@@ -499,9 +498,9 @@
     padding: 13px;
     background: linear-gradient(135deg, #0284c7, #0369a1);
     color: #ffffff;
-    font-size: 14px;
+    font-size: 13.5px;
     font-weight: 800;
-    border-radius: 14px;
+    border-radius: 13px;
     text-decoration: none;
     border: none;
     cursor: pointer;
@@ -511,27 +510,6 @@
   }
   .maint-btn-channel:active {
     transform: scale(0.98);
-  }
-  .maint-btn-admin {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 9px 18px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 100px;
-    color: #94a3b8;
-    font-size: 12px;
-    font-weight: 600;
-    text-decoration: none;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .maint-btn-admin:hover {
-    color: #38bdf8;
-    border-color: rgba(56, 189, 248, 0.4);
-    background: rgba(56, 189, 248, 0.08);
   }
 
   /* ===================================================
@@ -7269,11 +7247,11 @@
     </div>
 
     <!-- Holographic Server / Core Graphic -->
-    <div class="maint-visual-wrap">
+    <div class="maint-visual-wrap" id="maintSecretAdminTrigger" title="System Node">
       <div class="maint-orbit-ring"></div>
       <div class="maint-orbit-ring-2"></div>
       <div class="maint-core-icon">
-        <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
           <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
           <line x1="6" y1="6" x2="6.01" y2="6"></line>
@@ -7284,19 +7262,16 @@
       </div>
     </div>
 
-    <!-- Main Headings -->
+    <!-- Main Headings (English Only) -->
     <div class="maint-text-center">
-      <h1 class="maint-title-bn">সার্ভারে কাজ চলছে</h1>
-      <p class="maint-title-en">Server Maintenance & Upgrade Underway</p>
+      <h1 class="maint-title-en-big">Server Maintenance</h1>
+      <p class="maint-sub-en">Scheduled Infrastructure Upgrade Underway</p>
     </div>
 
     <!-- Primary Notice Card -->
     <div class="maint-desc-card">
-      <div class="maint-msg-bn">
-        সার্ভারে আপগ্রেডের কাজ চলার কারণে সাময়িকভাবে <strong>২–৩ ঘণ্টার</strong> জন্য বট ও মিনি অ্যাপ অফ থাকবে। কাজ সম্পূর্ণ হওয়া মাত্রই বট পুনরায় সচল হয়ে যাবে।
-      </div>
-      <div class="maint-msg-en">
-        We are currently upgrading server infrastructure. The bot and mining platform are temporarily paused for <strong>2–3 hours</strong> and will resume automatically.
+      <div class="maint-msg-en-main">
+        Our servers are currently undergoing scheduled maintenance and system optimization. The bot and mini app are temporarily paused for <strong>2–3 hours</strong> and will resume automatically.
       </div>
     </div>
 
@@ -7304,44 +7279,35 @@
     <div class="maint-timer-card">
       <div class="maint-timer-lbl">
         <span class="t-sub">⏳ ESTIMATED DOWNTIME</span>
-        <span class="t-main">আনুমানিক সময় বাকি</span>
+        <span class="t-main">Time Remaining</span>
       </div>
       <div class="maint-timer-val" id="maintCountdownClock">02:30:00</div>
     </div>
 
-    <!-- 100% Data Safety & Anti-Deletion Guarantee -->
+    <!-- 100% Data Safety Guarantee -->
     <div class="maint-safe-banner">
       <span class="maint-safe-icon">🛡️</span>
       <div class="maint-safe-text">
-        <span class="maint-safe-title">সকল ডাটা ১০০% সুরক্ষিত (Zero Data Loss)</span>
-        <span class="maint-safe-sub">কারোর কয়েন ব্যালেন্স, টাস্ক বা স্ট্রিক হিস্ট্রি ডিলিট হবে না—সবকিছু ক্লাউড ডাটাবেজে সম্পূর্ণ সেভ রয়েছে।</span>
+        <span class="maint-safe-title">100% Data Safety Guaranteed</span>
+        <span class="maint-safe-sub">All coin balances, completed tasks, and streak progress are securely encrypted in our database. Nothing will be reset or lost.</span>
       </div>
     </div>
 
     <!-- Real-time Diagnostics List -->
     <div class="maint-status-list">
       <div class="maint-status-row">
-        <span class="lbl"><span>🗄️</span> Database & Balance Vault</span>
+        <span class="lbl"><span>🗄️</span> Database & Vault</span>
         <span class="val ok">🔒 100% Encrypted & Safe</span>
       </div>
       <div class="maint-status-row">
         <span class="lbl"><span>⚙️</span> System Architecture</span>
-        <span class="val progress">Upgrading (94%)</span>
-      </div>
-      <div class="maint-status-row">
-        <span class="lbl"><span>⚡</span> Mining Engine</span>
-        <span class="val ok">Standby / Resuming Soon</span>
+        <span class="val progress">Upgrading (95%)</span>
       </div>
     </div>
 
-    <!-- Community Updates Button -->
-    <a href="https://t.me/hoocoohminer" target="_blank" class="maint-btn-channel" id="maintChannelBtn">
-      <span>📢 Join Official Channel for Live Updates</span>
-    </a>
-
-    <!-- Admin Panel Access Button -->
-    <a href="admin.html" class="maint-btn-admin" id="maintAdminBtn">
-      <span>🛡️ Open Admin Panel (Broadcast & Manage)</span>
+    <!-- Official Payment Channel Button -->
+    <a href="https://t.me/hoocoohpaylogs" target="_blank" class="maint-btn-channel" id="maintChannelBtn">
+      <span>📢 View Payment Channel & Proof Logs</span>
     </a>
 
   </div>
@@ -9106,6 +9072,25 @@
     }
     tick();
     setInterval(tick, 1000);
+
+    // Secret Admin Gesture (Tap 5 times to open admin panel - invisible to regular users)
+    var triggerEl = document.getElementById("maintSecretAdminTrigger");
+    if (triggerEl) {
+      var tapCount = 0;
+      var lastTap = 0;
+      triggerEl.addEventListener("click", function() {
+        var now = Date.now();
+        if (now - lastTap < 900) {
+          tapCount++;
+        } else {
+          tapCount = 1;
+        }
+        lastTap = now;
+        if (tapCount >= 5) {
+          window.location.href = "admin.html";
+        }
+      });
+    }
   })();
 
   // Telegram WebApp Setup
