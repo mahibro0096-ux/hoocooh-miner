@@ -9,14 +9,6 @@ const { purgeExpiredBannedUsers } = require("../lib/userHelper");
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET_KEY || "hoocooh_admin_2026";
 
-let cachedWelcomePhotoBuf = null;
-try {
-  const p = path.join(process.cwd(), "public/assets/welcome_banner.jpg");
-  if (fs.existsSync(p)) {
-    cachedWelcomePhotoBuf = fs.readFileSync(p);
-  }
-} catch(e){}
-
 function escapeHtml(text) {
   if (!text) return "";
   return String(text)
@@ -71,24 +63,6 @@ async function sendTelegramMsg(botToken, chatId, text, options = {}) {
       basePayload.reply_markup = options.reply_markup;
     }
 
-    // Fast path: If photoFileId is provided, Telegram serves it from CDN in ~50ms
-    if (options.photoFileId) {
-      try {
-        const photoPayload = Object.assign({}, basePayload, {
-          photo: options.photoFileId,
-          caption: text
-        });
-        const res = await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(photoPayload)
-        });
-        const data = await res.json();
-        if (data && data.ok) return data;
-        console.warn("sendPhoto with fileId failed, falling back to buffer:", data);
-      } catch (err) {}
-    }
-
     // If photoBuffer is provided, send as multipart photo
     if (options.photoBuffer) {
       try {
@@ -108,13 +82,7 @@ async function sendTelegramMsg(botToken, chatId, text, options = {}) {
           body: formData
         });
         const data = await res.json();
-        if (data && data.ok) {
-          if (data.result && data.result.photo && data.result.photo.length > 0) {
-            const fid = data.result.photo[data.result.photo.length - 1].file_id;
-            global._welcomeBannerFileId = fid;
-          }
-          return data;
-        }
+        if (data && data.ok) return data;
         console.warn("sendPhoto buffer was not ok, falling back to sendMessage:", data);
       } catch (photoErr) {
         console.warn("sendPhoto buffer error, falling back to sendMessage:", photoErr.message);
@@ -286,7 +254,23 @@ async function handleAdminApproveWithdrawal(db, botToken, wid, baseUrl) {
   const tonVal = w.tonAmount !== undefined ? Number(w.tonAmount) : Number(((w.usdtAmount || 0) * (0.019 / 0.03)).toFixed(4));
   let finalTx = "";
 
-  const autoPayRes = await dispatchTonPayout(w.walletAddress, tonVal, `HOOCOOH Payout UID ${w.telegramId}`);
+  // ATOMIC CLAIM BEFORE PAYING: PENDING -> PROCESSING. Only one request can win it, so a double tap on
+  // the Approve button / Telegram callback retry can never send the real TON payout twice.
+  const claimPayoutRes = await withdrawalsCol.updateOne(
+    { ...wQuery, status: "PENDING" },
+    { $set: { status: "PROCESSING", processingAt: now } }
+  );
+  if (!claimPayoutRes || claimPayoutRes.modifiedCount === 0) {
+    return { ok: false, message: "Already processed or being processed right now." };
+  }
+
+  let autoPayRes;
+  try {
+    autoPayRes = await dispatchTonPayout(w.walletAddress, tonVal, `HOOCOOH Payout UID ${w.telegramId}`);
+  } catch (payErr) {
+    try { await withdrawalsCol.updateOne({ ...wQuery, status: "PROCESSING" }, { $set: { status: "PENDING" }, $unset: { processingAt: "" } }); } catch (e) {}
+    return { ok: false, message: `Auto-pay error: ${payErr && payErr.message ? payErr.message : payErr}` };
+  }
   if (autoPayRes && autoPayRes.isConfigured && autoPayRes.success) {
     finalTx = autoPayRes.txHash;
   } else {
@@ -294,7 +278,7 @@ async function handleAdminApproveWithdrawal(db, botToken, wid, baseUrl) {
   }
 
   const approveUpdateRes = await withdrawalsCol.updateOne(
-    { ...wQuery, status: "PENDING" },
+    { ...wQuery, status: "PROCESSING" },
     {
       $set: {
         status: "APPROVED",
@@ -843,12 +827,19 @@ module.exports = async (req, res) => {
       }
     }
 
-    // Cron trigger for 2-hour mining reminders: /api/webhook?cron=mining_reminder or ?action=cron_mining
-    if (action === "cron_mining" || action === "mining_reminder" || (req.query && (req.query.cron === "mining_reminder" || req.query.cron === "mining"))) {
+    // Cron trigger for 2-hour mining reminders & broadcast queue: /api/webhook?cron=mining_reminder or ?cron=broadcast
+    const isCronWebhook =
+      action === "cron_mining" ||
+      action === "mining_reminder" ||
+      action === "cron_broadcast" ||
+      action === "broadcast" ||
+      (req.query && (req.query.cron === "mining_reminder" || req.query.cron === "mining" || req.query.cron === "broadcast" || req.query.cron === "true")) ||
+      (req.headers && req.headers["user-agent"] && req.headers["user-agent"].includes("cron-job.org"));
+    if (isCronWebhook) {
       try {
         const db = await getDb();
         const result = await processMiningReminders(db, botToken, baseUrl);
-        res.status(200).json({ ok: true, task: "mining_reminder", ...result });
+        res.status(200).json({ ok: true, task: "cron_worker", ...result });
         return;
       } catch (err) {
         res.status(500).json({ ok: false, error: err.message });
@@ -1302,90 +1293,6 @@ module.exports = async (req, res) => {
     const command = firstWord.split("@")[0]; // removes bot username e.g. /admin@mybot -> /admin
 
     // ----------------------------------------------------
-    // Command: /start (High Priority - Instant User Welcome)
-    // ----------------------------------------------------
-    if (command === "/start") {
-      let userLang = "en";
-      let hasSelected = false;
-      let db = null;
-      try {
-        db = await getDb();
-        if (db) {
-          const u = await db.collection("users").findOne({ telegramId: senderId });
-          if (u) {
-            if (u.isBanned) {
-              const banMsg = 
-                `🚫 <b>Access Denied: Account Suspended</b>\n\n` +
-                `Your account has been permanently suspended due to security violation or automated script tampering.\n\n` +
-                `<i>Reason: ${escapeHtml(u.banReason || "Security violation detected")}</i>`;
-              await sendTelegramMsg(botToken, chatId, banMsg);
-              res.status(200).json({ ok: true, banned: true });
-              return;
-            }
-            if (u.language) userLang = u.language;
-            if (u.languageSelected === true) hasSelected = true;
-          }
-        }
-      } catch(e){}
-
-      let appUrl = `${baseUrl}/index.html?lang=${userLang}`;
-      if (!hasSelected) {
-        appUrl += `&needLang=1`;
-      }
-      const startParam = parts[1] || "";
-      if (startParam) {
-        appUrl += `&tgWebAppStartParam=${encodeURIComponent(startParam)}`;
-        if (db) {
-          (async () => {
-            try {
-              const inviterId = String(startParam).replace(/^ref_/, "").trim();
-              if (inviterId && /^\d+$/.test(inviterId) && String(inviterId) !== String(senderId)) {
-                const inviter = await db.collection("users").findOne({
-                  $or: [{ telegramId: inviterId }, { telegramId: Number(inviterId) }]
-                });
-                if (inviter && String(inviter.telegramId) !== String(senderId)) {
-                  await db.collection("users").updateOne(
-                    { telegramId: String(senderId), referredBy: { $in: [null, undefined] } },
-                    { $set: { referredBy: String(inviter.telegramId) } }
-                  );
-                }
-              }
-            } catch(refErr){}
-          })();
-        }
-      }
-
-      const photoUrl = `${baseUrl}/assets/welcome_banner.jpg?v=4`;
-      const langDict = WELCOME_MESSAGES[userLang] || WELCOME_MESSAGES.en;
-
-      await sendTelegramMsg(botToken, chatId, langDict.text, {
-        photoFileId: global._welcomeBannerFileId,
-        photoBuffer: cachedWelcomePhotoBuf,
-        photoMime: "image/jpeg",
-        photoUrl: photoUrl,
-        reply_markup: {
-          inline_keyboard: [
-            [
-              {
-                text: langDict.btnStart,
-                web_app: { url: appUrl }
-              }
-            ],
-            [
-              {
-                text: langDict.btnLang,
-                callback_data: "choose_lang"
-              }
-            ]
-          ]
-        }
-      });
-
-      res.status(200).json({ ok: true, sent: true });
-      return;
-    }
-
-    // ----------------------------------------------------
     // Command: /admin
     // ----------------------------------------------------
     if (command === "/admin") {
@@ -1744,6 +1651,152 @@ module.exports = async (req, res) => {
           return;
         }
       }
+    }
+
+    // ----------------------------------------------------
+    // Command: /start
+    // ----------------------------------------------------
+    if (command === "/start") {
+      let userLang = "en";
+      let hasSelected = false;
+      let db = null;
+      let u = null;
+      try {
+        db = await getDb();
+        if (db) {
+          u = await db.collection("users").findOne({
+            $or: [{ telegramId: String(senderId) }, { telegramId: Number(senderId) }]
+          });
+          if (u) {
+            if (u.isBanned) {
+              const banMsg = 
+                `🚫 <b>Access Denied: Account Suspended</b>\n\n` +
+                `Your account has been permanently suspended due to security violation or automated script tampering.\n\n` +
+                `<i>Reason: ${escapeHtml(u.banReason || "Security violation detected")}</i>`;
+              await sendTelegramMsg(botToken, chatId, banMsg);
+              res.status(200).json({ ok: true, banned: true });
+              return;
+            }
+            if (u.language) userLang = u.language;
+            if (u.languageSelected === true) hasSelected = true;
+          }
+        }
+      } catch(e){}
+
+      let appUrl = `${baseUrl}/index.html?lang=${userLang}`;
+      if (!hasSelected) {
+        appUrl += `&needLang=1`;
+      }
+      const startParam = parts[1] || "";
+      if (startParam) {
+        appUrl += `&tgWebAppStartParam=${encodeURIComponent(startParam)}`;
+        try {
+          if (db) {
+            const inviterId = String(startParam).replace(/^ref_/, "").trim();
+            if (inviterId && /^\d+$/.test(inviterId) && String(inviterId) !== String(senderId)) {
+              const inviter = await db.collection("users").findOne({
+                $or: [{ telegramId: inviterId }, { telegramId: Number(inviterId) }]
+              });
+              if (inviter && String(inviter.telegramId) !== String(senderId)) {
+                await db.collection("users").updateOne(
+                  { telegramId: String(senderId), referredBy: { $in: [null, undefined] } },
+                  { $set: { referredBy: String(inviter.telegramId) } }
+                );
+              }
+            }
+          }
+        } catch(refErr){}
+      }
+
+      let welcomePhotoBuf = null;
+      try {
+        const p = path.join(process.cwd(), "public/assets/welcome_banner.jpg");
+        if (fs.existsSync(p)) {
+          welcomePhotoBuf = fs.readFileSync(p);
+        }
+      } catch(e){}
+
+      if (isAdmin) {
+        // Admin gets the full Admin Control Center & Admin Panel
+        const adminUrl = `${baseUrl}/admin.html`;
+        const adminReplyText = 
+          `🛡️ <b>HOOCOOH Admin Control Center</b>\n\n` +
+          `Welcome, <b>${escapeHtml(firstName)}</b> (ID: <code>${senderId}</code>)!\n\n` +
+          `⚙️ <i>Server Maintenance is currently ACTIVE for regular users.</i>\n` +
+          `You have full access to broadcast messages, check withdrawals, and manage users:`;
+
+        await sendTelegramMsg(botToken, chatId, adminReplyText, {
+          reply_markup: {
+            inline_keyboard: [
+              [
+                { text: "🛡️ Open Admin Panel", web_app: { url: adminUrl } },
+                { text: "💸 Withdraw", callback_data: "adm_wd_page_0" }
+              ],
+              [
+                { text: "👥 Check User Referrals", callback_data: "adm_ref_prompt" },
+                { text: "📋 Tasks", callback_data: "adm_tasks_page_0" }
+              ],
+              [
+                { text: "🛠️ View Maintenance Screen", web_app: { url: appUrl } }
+              ]
+            ]
+          }
+        });
+        res.status(200).json({ ok: true, admin: true });
+        return;
+      }
+
+      // Regular Users: Send Server Maintenance Notification
+      const photoUrl = `${baseUrl}/assets/welcome_banner.jpg?v=4`;
+      const maintMsg = 
+        `⚙️ <b>Server Maintenance in Progress | সার্ভারে কাজ চলছে</b>\n\n` +
+        `সার্ভারে আপগ্রেডের কাজ চলার কারণে সাময়িকভাবে <b>২–৩ ঘণ্টার</b> জন্য বট ও অ্যাপ অফ থাকবে। কাজ শেষ হওয়া মাত্রই বট পুনরায় সচল হয়ে যাবে।\n\n` +
+        `We are currently performing scheduled server infrastructure maintenance. The bot will be temporarily offline for <b>2–3 hours</b> and will return online shortly.\n\n` +
+        `🛡️ <b>সকল ডাটা সম্পূর্ণ নিরাপদ (100% Safe):</b>\n` +
+        `আপনার কয়েন ব্যালেন্স, টাস্ক বা স্ট্রিক হিস্ট্রি কোনো কিছুই ডিলিট হবে না—সবকিছু ডাটাবেজে সুরক্ষিত আছে।\n` +
+        `All your coin balances, task rewards, and streak data are safely stored in the cloud database!`;
+
+      await sendTelegramMsg(botToken, chatId, maintMsg, {
+        photoBuffer: welcomePhotoBuf,
+        photoMime: "image/jpeg",
+        photoUrl: photoUrl,
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "🛠️ Check Server Status",
+                web_app: { url: appUrl }
+              }
+            ],
+            [
+              {
+                text: "📢 Official Channel Updates",
+                url: "https://t.me/hoocoohminer"
+              }
+            ]
+          ]
+        }
+      });
+
+      res.status(200).json({ ok: true, sent: true });
+      return;
+    }
+
+    // All other non-command messages from regular users during maintenance
+    if (!isAdmin && chatId) {
+      const quickNotice = 
+        `⚙️ <b>Server Maintenance Underway | সার্ভারে কাজ চলছে</b>\n\n` +
+        `সার্ভার আপগ্রেডের কাজ চলার কারণে বট সাময়িকভাবে ২–৩ ঘণ্টার জন্য অফ রয়েছে। আপনার ব্যালেন্স ও ডাটা ১০০% সুরক্ষিত আছে।`;
+      await sendTelegramMsg(botToken, chatId, quickNotice, {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "🛠️ Check Server Status", web_app: { url: `${baseUrl}/index.html` } }],
+            [{ text: "📢 Official Channel Updates", url: "https://t.me/hoocoohminer" }]
+          ]
+        }
+      });
+      res.status(200).send("OK");
+      return;
     }
 
     // All other messages - return 200 OK

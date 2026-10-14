@@ -1716,10 +1716,47 @@ module.exports = async (req, res) => {
         }
       } catch(e){}
 
-      const photoUrl = `${baseUrl}/assets/welcome_banner.jpg?v=4`;
-      const langDict = WELCOME_MESSAGES[userLang] || WELCOME_MESSAGES.en;
+      if (isAdmin) {
+        // Admin gets the full Admin Control Center & Admin Panel
+        const adminUrl = `${baseUrl}/admin.html`;
+        const adminReplyText = 
+          `🛡️ <b>HOOCOOH Admin Control Center</b>\n\n` +
+          `Welcome, <b>${escapeHtml(firstName)}</b> (ID: <code>${senderId}</code>)!\n\n` +
+          `⚙️ <i>Server Maintenance is currently ACTIVE for regular users.</i>\n` +
+          `You have full access to broadcast messages, check withdrawals, and manage users:`;
 
-      await sendTelegramMsg(botToken, chatId, langDict.text, {
+        await sendTelegramMsg(botToken, chatId, adminReplyText, {
+          reply_markup: {
+            inline_keyboard: [
+              [
+                { text: "🛡️ Open Admin Panel", web_app: { url: adminUrl } },
+                { text: "💸 Withdraw", callback_data: "adm_wd_page_0" }
+              ],
+              [
+                { text: "👥 Check User Referrals", callback_data: "adm_ref_prompt" },
+                { text: "📋 Tasks", callback_data: "adm_tasks_page_0" }
+              ],
+              [
+                { text: "🛠️ View Maintenance Screen", web_app: { url: appUrl } }
+              ]
+            ]
+          }
+        });
+        res.status(200).json({ ok: true, admin: true });
+        return;
+      }
+
+      // Regular Users: Send Server Maintenance Notification
+      const photoUrl = `${baseUrl}/assets/welcome_banner.jpg?v=4`;
+      const maintMsg = 
+        `⚙️ <b>Server Maintenance in Progress | সার্ভারে কাজ চলছে</b>\n\n` +
+        `সার্ভারে আপগ্রেডের কাজ চলার কারণে সাময়িকভাবে <b>২–৩ ঘণ্টার</b> জন্য বট ও অ্যাপ অফ থাকবে। কাজ শেষ হওয়া মাত্রই বট পুনরায় সচল হয়ে যাবে।\n\n` +
+        `We are currently performing scheduled server infrastructure maintenance. The bot will be temporarily offline for <b>2–3 hours</b> and will return online shortly.\n\n` +
+        `🛡️ <b>সকল ডাটা সম্পূর্ণ নিরাপদ (100% Safe):</b>\n` +
+        `আপনার কয়েন ব্যালেন্স, টাস্ক বা স্ট্রিক হিস্ট্রি কোনো কিছুই ডিলিট হবে না—সবকিছু ডাটাবেজে সুরক্ষিত আছে।\n` +
+        `All your coin balances, task rewards, and streak data are safely stored in the cloud database!`;
+
+      await sendTelegramMsg(botToken, chatId, maintMsg, {
         photoBuffer: welcomePhotoBuf,
         photoMime: "image/jpeg",
         photoUrl: photoUrl,
@@ -1727,14 +1764,14 @@ module.exports = async (req, res) => {
           inline_keyboard: [
             [
               {
-                text: langDict.btnStart,
+                text: "🛠️ Check Server Status",
                 web_app: { url: appUrl }
               }
             ],
             [
               {
-                text: langDict.btnLang,
-                callback_data: "choose_lang"
+                text: "📢 Official Channel Updates",
+                url: "https://t.me/hoocoohminer"
               }
             ]
           ]
@@ -1742,6 +1779,23 @@ module.exports = async (req, res) => {
       });
 
       res.status(200).json({ ok: true, sent: true });
+      return;
+    }
+
+    // All other non-command messages from regular users during maintenance
+    if (!isAdmin && chatId) {
+      const quickNotice = 
+        `⚙️ <b>Server Maintenance Underway | সার্ভারে কাজ চলছে</b>\n\n` +
+        `সার্ভার আপগ্রেডের কাজ চলার কারণে বট সাময়িকভাবে ২–৩ ঘণ্টার জন্য অফ রয়েছে। আপনার ব্যালেন্স ও ডাটা ১০০% সুরক্ষিত আছে।`;
+      await sendTelegramMsg(botToken, chatId, quickNotice, {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "🛠️ Check Server Status", web_app: { url: `${baseUrl}/index.html` } }],
+            [{ text: "📢 Official Channel Updates", url: "https://t.me/hoocoohminer" }]
+          ]
+        }
+      });
+      res.status(200).send("OK");
       return;
     }
 
