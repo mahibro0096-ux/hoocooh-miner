@@ -1,7 +1,7 @@
 const { getDb } = require("../lib/mongodb");
 const { validateInitData } = require("../lib/telegramAuth");
 const { findOrCreateUser, findUserById } = require("../lib/userHelper");
-const { mineIsReady, dailyStatus, MINE_INTERVAL_MS, LEVEL_NAMES, getMultiplierForLevel } = require("../lib/gameLogic");
+const { mineIsReady, dailyStatus, MINE_INTERVAL_MS, LEVEL_NAMES, getMultiplierForLevel, MAX_TAP_ENERGY, ENERGY_RECHARGE_RATE_MS, calculateCurrentEnergy, MINE_REWARD } = require("../lib/gameLogic");
 const { generateVerificationImage } = require("../lib/verificationImage");
 const { notifyInviterReferralSuccess } = require("../lib/miningReminder");
 const { createActionToken } = require("../lib/actionSigner");
@@ -150,17 +150,20 @@ module.exports = async (req, res) => {
       // Verification: Request 4-digit verification code image
       if (action === "request_code" || action === "request_verification_code") {
         const now = Date.now();
+        const forceResend = Boolean(req.body && req.body.force);
         const codesCol = db.collection("user_verification_codes");
 
-        // Duplicate suppression: if a code was created within the last 20 seconds, reuse it and don't re-send
+        // Duplicate suppression: skip if an auto-request already delivered a code within the last 10 seconds and force is not set
         const recentCode = await codesCol.findOne(
-          { userId: telegramId, used: false },
+          { userId: telegramId, used: false, delivered: true, expiresAt: { $gt: now } },
           { sort: { createdAt: -1 } }
         );
-        if (recentCode && (now - recentCode.createdAt < 20000)) {
+        if (!forceResend && recentCode && (now - recentCode.createdAt < 10000)) {
           const botUser = await fetchBotUsername(process.env.TELEGRAM_BOT_TOKEN);
           res.status(200).json({
             ok: true,
+            delivered: true,
+            needsBotStart: false,
             expiresAt: recentCode.expiresAt,
             validitySeconds: Math.max(0, Math.floor((recentCode.expiresAt - now) / 1000)),
             botUsername: `@${botUser}`,
@@ -173,28 +176,15 @@ module.exports = async (req, res) => {
         const codeStr = String(randomCode);
         const expiresAt = now + (2 * 60 * 1000); // 2 minutes
 
-        await codesCol.updateMany(
-          { userId: telegramId, used: false },
-          { $set: { used: true, reason: "superseded" } }
-        );
-
-        await codesCol.insertOne({
-          userId: telegramId,
-          code: codeStr,
-          createdAt: now,
-          createdAtDate: new Date(),
-          expiresAt,
-          used: false
-        });
-
         const captionText =
           `🔐 <b>HOOCOOH MINER · Verify It's you</b>\n\n` +
-          `Here is your secure 4-digit verification code:\n` +
+          `Here is your secure 4-digit verification code.\n` +
           `👉 <b>Check the image above!</b>\n\n` +
           `⏱ <b>Validity: 2 minutes</b>\n` +
           `<i>Enter this 4-digit code in the app to unlock access. Never share this code.</i>`;
 
         let sentSuccess = false;
+        let tgErrorDesc = "";
         try {
           const imageBuffer = generateVerificationImage(codeStr);
           const formData = new FormData();
@@ -209,43 +199,45 @@ module.exports = async (req, res) => {
             body: formData
           });
           const tgData = await tgRes.json();
-          sentSuccess = tgData && tgData.ok === true;
+          sentSuccess = Boolean(tgData && tgData.ok === true);
           if (!sentSuccess) {
+            tgErrorDesc = (tgData && tgData.description) || "";
             console.warn("sendPhoto by FormData failed:", tgData);
           }
         } catch (photoErr) {
           console.warn("sendPhoto exception:", photoErr.message);
         }
 
-        // Fallback: send text message if sendPhoto fails
-        if (!sentSuccess) {
-          try {
-            await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                chat_id: telegramId,
-                parse_mode: "HTML",
-                text:
-                  `🔐 <b>HOOCOOH MINER · Verify It's you</b>\n\n` +
-                  `Your 4-digit verification code: <code>${codeStr}</code>\n\n` +
-                  `⏱ <b>Validity: 2 minutes</b>\n` +
-                  `<i>Enter this 4-digit code in the app to unlock access.</i>`
-              })
-            });
-            sentSuccess = true;
-          } catch (msgErr) {
-            console.error("sendMessage fallback error:", msgErr.message);
-          }
+        if (sentSuccess) {
+          // Expire any old expired codes, keep recent unexpired ones valid in case user reads an earlier image
+          await codesCol.updateMany(
+            { userId: telegramId, used: false, expiresAt: { $lte: now } },
+            { $set: { used: true, reason: "expired" } }
+          );
+
+          await codesCol.insertOne({
+            userId: telegramId,
+            code: codeStr,
+            createdAt: now,
+            createdAtDate: new Date(),
+            expiresAt,
+            used: false,
+            delivered: true
+          });
         }
 
         const botUser = await fetchBotUsername(process.env.TELEGRAM_BOT_TOKEN);
         res.status(200).json({
           ok: true,
+          delivered: sentSuccess,
+          needsBotStart: !sentSuccess,
+          tgError: tgErrorDesc,
           expiresAt,
           validitySeconds: 120,
           botUsername: `@${botUser}`,
-          message: "A 4-digit code was sent to your Telegram bot."
+          message: sentSuccess
+            ? "A 4-digit code image was sent to your Telegram bot."
+            : "Please allow message permission to receive your verification code."
         });
         return;
       }
@@ -258,26 +250,36 @@ module.exports = async (req, res) => {
           return;
         }
 
+        const now = Date.now();
         const codesCol = db.collection("user_verification_codes");
-        const activeRecord = await codesCol.findOne(
-          { userId: telegramId, used: false },
+
+        // Look for a matching unused code for this user first (in case 2 codes were sent within 2 mins)
+        let activeRecord = await codesCol.findOne(
+          { userId: telegramId, code: cleanCode, used: false },
           { sort: { createdAt: -1 } }
         );
 
         if (!activeRecord) {
-          res.status(400).json({ error: "No active verification code found. Please request a new code." });
+          const latestAny = await codesCol.findOne(
+            { userId: telegramId, used: false },
+            { sort: { createdAt: -1 } }
+          );
+          if (!latestAny) {
+            res.status(400).json({ error: "No active verification code found. Please tap 'Resend Code to Bot'." });
+            return;
+          }
+          if (now > latestAny.expiresAt) {
+            await codesCol.updateOne({ _id: latestAny._id }, { $set: { used: true, reason: "expired" } });
+            res.status(400).json({ error: "Verification code has expired (2 minutes limit). Please request a new code." });
+            return;
+          }
+          res.status(400).json({ error: "Incorrect verification code! Check the image in @hoocoohmine_bot and try again." });
           return;
         }
 
-        const now = Date.now();
         if (now > activeRecord.expiresAt) {
           await codesCol.updateOne({ _id: activeRecord._id }, { $set: { used: true, reason: "expired" } });
           res.status(400).json({ error: "Verification code has expired (2 minutes limit). Please request a new code." });
-          return;
-        }
-
-        if (activeRecord.code !== cleanCode) {
-          res.status(400).json({ error: "Incorrect verification code! Check the image in @hoocoohmine_bot and try again." });
           return;
         }
 
@@ -287,6 +289,12 @@ module.exports = async (req, res) => {
           { _id: activeRecord._id, used: false },
           { $set: { used: true, verifiedAt: now } }
         );
+        // Mark any other unused codes for this user as superseded now that they verified
+        await codesCol.updateMany(
+          { userId: telegramId, used: false },
+          { $set: { used: true, reason: "superseded" } }
+        ).catch(() => {});
+
         if (!burnCodeRes || burnCodeRes.modifiedCount === 0) {
           const freshUser = await users.findOne({ _id: user._id });
           res.status(200).json({
@@ -558,6 +566,11 @@ module.exports = async (req, res) => {
       totalDailyEarned: user.totalDailyEarned || 0,
       mineReady: mineIsReady(user.lastMineCollectedAt),
       mineIntervalMs: MINE_INTERVAL_MS,
+      mineReward: MINE_REWARD,
+      energy: calculateCurrentEnergy(user, now),
+      maxEnergy: MAX_TAP_ENERGY,
+      energyRechargeRateMs: ENERGY_RECHARGE_RATE_MS,
+      lastEnergySyncAt: user.lastEnergySyncAt || user.lastMineCollectedAt || (now - MINE_INTERVAL_MS),
       dailyStatusNow: dailyStatus(user.lastCheckinAt),
       adsWatchedToday: watchedToday,
       adsEarnedToday: earnedToday,

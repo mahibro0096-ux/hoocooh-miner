@@ -473,6 +473,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
   .mine-glow {
     position: absolute;
@@ -481,6 +486,7 @@
     border-radius: 50%;
     background: radial-gradient(circle, var(--accent-glow) 0%, rgba(32, 184, 163, 0) 70%);
     pointer-events: none;
+    transition: transform 0.15s ease-out, opacity 0.15s ease-out;
   }
   .mine-img {
     width: 170px;
@@ -488,6 +494,137 @@
     object-fit: contain;
     filter: drop-shadow(0 12px 28px var(--accent-glow));
     animation: floatLogo 3.6s ease-in-out infinite;
+    pointer-events: none;
+    transition: transform 0.08s ease-out, filter 0.08s ease-out;
+  }
+  .mine-visual-wrap:active .mine-img,
+  .mine-visual-wrap.tap-active .mine-img {
+    transform: scale(0.92) !important;
+    filter: drop-shadow(0 4px 16px rgba(245, 158, 11, 0.8)) !important;
+  }
+  .mine-visual-wrap:active .mine-glow,
+  .mine-visual-wrap.tap-active .mine-glow {
+    transform: scale(1.18);
+    opacity: 0.9;
+  }
+  .miner-hero-wrap {
+    position: relative;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .miner-hero-wrap:active .miner-hero-img,
+  .miner-hero-wrap.tap-active .miner-hero-img {
+    transform: scale(0.92) !important;
+    transition: transform 0.08s ease-out;
+  }
+  .tap-floating-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+    z-index: 99;
+  }
+  .tap-floater {
+    position: absolute;
+    font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+    font-weight: 900;
+    font-size: 25px;
+    color: #f59e0b;
+    pointer-events: none;
+    user-select: none;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), 0 0 16px rgba(245, 158, 11, 0.7);
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    animation: tapFloatAnim 0.85s cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
+  }
+  @keyframes tapFloatAnim {
+    0% {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(0.9) translateY(0);
+    }
+    40% {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1.25) translateY(-32px);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.85) translateY(-75px);
+    }
+  }
+  .tap-energy-card {
+    width: calc(100% - 32px);
+    max-width: 290px;
+    margin: 10px auto 6px;
+    padding: 9px 14px;
+    background: #f8fafc;
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    border-radius: 14px;
+    box-sizing: border-box;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  }
+  .tap-energy-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: 'Outfit', sans-serif;
+    margin-bottom: 6px;
+  }
+  .tap-energy-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 800;
+    color: #64748b;
+    letter-spacing: 0.5px;
+  }
+  .tap-energy-icon {
+    color: #f59e0b;
+    font-size: 14px;
+    animation: boltPulse 1.8s ease-in-out infinite;
+  }
+  @keyframes boltPulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 0.8; }
+  }
+  .tap-energy-val {
+    font-size: 13px;
+    font-weight: 800;
+    color: #334155;
+    font-family: 'Outfit', sans-serif;
+  }
+  .tap-energy-val strong {
+    color: #0d9488;
+    font-size: 15px;
+    font-weight: 900;
+  }
+  .tap-energy-bar-bg {
+    width: 100%;
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 100px;
+    overflow: hidden;
+  }
+  .tap-energy-bar-fill {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, #0d9488, #14b8a6, #f59e0b);
+    border-radius: 100px;
+    transition: width 0.2s ease-out;
+  }
+  .tap-energy-hint {
+    margin-top: 5px;
+    font-size: 10.5px;
+    color: #94a3b8;
+    text-align: center;
+    font-weight: 600;
   }
   @keyframes floatLogo {
     0%, 100% { transform: translateY(0px) rotate(0deg); }
@@ -6607,9 +6744,10 @@
       </div>
 
       <!-- 3D Logo positioned directly under status pill, matching Nautilus layout -->
-      <div class="mine-visual-wrap">
+      <div class="mine-visual-wrap" id="homeMineVisualWrap">
         <div class="mine-glow" id="homeMineGlow"></div>
         <img src="assets/logo.webp" alt="HOOCOOH Mining" class="mine-img" id="homeMineImg">
+        <div class="tap-floating-container" id="homeTapFloatingContainer"></div>
       </div>
 
       <!-- Level Badge Pill: LV.1 Starter -->
@@ -6618,6 +6756,23 @@
           <span class="lvl-tag" id="minerLvlTag">LV.1</span>
           <span class="lvl-name" id="minerLvlName">Starter</span>
         </div>
+      </div>
+
+      <!-- Energy Card: 50 / 50 Tap-to-Mine -->
+      <div class="tap-energy-card" id="homeTapEnergyCard">
+        <div class="tap-energy-header">
+          <span class="tap-energy-label">
+            <span class="tap-energy-icon">⚡</span>
+            <span id="tapEnergyLbl">ENERGY</span>
+          </span>
+          <span class="tap-energy-val">
+            <strong id="tapEnergyCurrent">50</strong> / <span id="tapEnergyMax">50</span>
+          </span>
+        </div>
+        <div class="tap-energy-bar-bg">
+          <div class="tap-energy-bar-fill" id="tapEnergyFill" style="width: 100%;"></div>
+        </div>
+        <div class="tap-energy-hint" id="tapEnergyHint">⚡ Tap Miner Core to Mine · Max 50 / 2h</div>
       </div>
 
       <!-- In-Progress / Charging State (media_1791210582153.png) -->
@@ -6630,7 +6785,7 @@
       <div class="mining-ready-view" id="mineReadyView" style="display: none;">
         <div class="mining-complete-text" id="mineTitle">MINING COMPLETE!</div>
         <div class="mining-reward-big" id="mineReward">
-          <span id="mineRewardAmount">+80</span>
+          <span id="mineRewardAmount">+50</span>
           <img src="assets/logo.webp" alt="Coin" class="mine-reward-coin-icon">
         </div>
       </div>
@@ -6815,9 +6970,10 @@
         </div>
 
         <!-- 3D Miner Hero Visual with Glowing Aura -->
-        <div class="miner-hero-wrap">
+        <div class="miner-hero-wrap" id="mHeroWrap">
           <div class="miner-glow-aura" id="mGlowAura"></div>
           <img src="assets/miner_lvl1.webp" alt="Miner Core" class="miner-hero-img" id="mHeroImg" width="130" height="130" style="width: 130px; height: 130px; max-width: 130px; max-height: 130px; object-fit: contain; display: block;">
+          <div class="tap-floating-container" id="mTapFloatingContainer"></div>
         </div>
 
         <!-- Level Pill Badge: Lv.1 Starter -->
@@ -6852,7 +7008,7 @@
 
         <!-- Reward Amount Row -->
         <div class="miner-reward-amount-row">
-          <span class="plus-num" id="mRewardNum">+80</span>
+          <span class="plus-num" id="mRewardNum">+50</span>
           <img src="assets/miner_lvl1.webp" class="miner-coin-mini" id="mCoinMiniImg" alt="Coin">
         </div>
 
@@ -8770,6 +8926,11 @@
     minerLevel: cachedMinerLevel,
     mineReady: true,
     mineIntervalMs: 2 * 60 * 60 * 1000,
+    mineReward: 50,
+    energy: 50,
+    maxEnergy: 50,
+    energyRechargeRateMs: 144000,
+    lastEnergySyncAt: null,
     lastMineCollectedAt: null,
     dailyCycle: 1,
     dailyDayIndex: 0,
@@ -8860,6 +9021,10 @@
       reward_ready: "REWARD READY!",
       ready_to_collect: "Ready to collect",
       collect_hoocooh: "Collect HOOCOOH",
+      energy_title: "ENERGY",
+      energy_recharging: "Energy Empty · Recharging...",
+      energy_empty: "Energy empty! Recharging... (Max 50 / 2h)",
+      tap_to_mine_hint: "Tap Miner Core to Mine · Max 50 / 2h",
 
       // Daily Bonus Card
       daily_bonus_title: "Daily Bonus",
@@ -9067,6 +9232,10 @@
       reward_ready: "НАГРАДА ГОТОВА!",
       ready_to_collect: "Готово к сбору",
       collect_hoocooh: "Собрать HOOCOOH",
+      energy_title: "ЭНЕРГИЯ",
+      energy_recharging: "Восстановление...",
+      energy_empty: "Энергия закончилась! Восстановление... (Макс 50 / 2ч)",
+      tap_to_mine_hint: "Нажимайте на ядро · Макс 50 / 2ч",
 
       // Daily Bonus Card
       daily_bonus_title: "Ежедневный бонус",
@@ -9274,6 +9443,10 @@
       reward_ready: "المكافأة جاهزة!",
       ready_to_collect: "جاهز للجمع",
       collect_hoocooh: "جمع HOOCOOH",
+      energy_title: "الطاقة",
+      energy_recharging: "جارٍ الشحن...",
+      energy_empty: "نفدت الطاقة! جارٍ الشحن... (50 كحد أقصى / ساعتان)",
+      tap_to_mine_hint: "انقر على النواة للتعدين · 50 كحد أقصى / ساعتان",
 
       // Daily Bonus Card
       daily_bonus_title: "مكافأة يومية",
@@ -9506,6 +9679,8 @@
     if (nextYield) nextYield.textContent = t("next_yield_in");
     var mineTitle = document.getElementById("mineTitle");
     if (mineTitle) mineTitle.textContent = t("mining_complete");
+    var tapEnergyLbl = document.getElementById("tapEnergyLbl");
+    if (tapEnergyLbl) tapEnergyLbl.textContent = t("energy_title");
 
     // Daily Bonus Card
     var dTitle = document.querySelector(".daily-card .d-title");
@@ -10304,6 +10479,208 @@
     });
   }
 
+  // ==========================================
+  // Interactive Tap-to-Mine Engine
+  // Max 50 Coins per 2 Hours (1 Tap = 1 HOOCOOH)
+  // ==========================================
+  function getCurrentEnergy() {
+    var now = Date.now();
+    var maxE = Number(user.maxEnergy) || 50;
+    var rate = Number(user.energyRechargeRateMs) || 144000;
+    var lastSync = user.lastEnergySyncAt || user.lastMineCollectedAt;
+    if (!lastSync) return maxE;
+    var stored = (typeof user.energy === "number") ? user.energy : maxE;
+    var elapsed = Math.max(0, now - Number(lastSync));
+    var recovered = Math.floor(elapsed / rate);
+    return Math.min(maxE, Math.max(0, stored + recovered));
+  }
+
+  function updateEnergyUI() {
+    var current = getCurrentEnergy();
+    var maxE = Number(user.maxEnergy) || 50;
+    var pct = Math.min(100, Math.max(0, (current / maxE) * 100));
+
+    var currentEl = document.getElementById("tapEnergyCurrent");
+    var maxEl = document.getElementById("tapEnergyMax");
+    var fillEl = document.getElementById("tapEnergyFill");
+    var hintEl = document.getElementById("tapEnergyHint");
+
+    if (currentEl) currentEl.textContent = current;
+    if (maxEl) maxEl.textContent = maxE;
+    if (fillEl) fillEl.style.width = pct + "%";
+    if (hintEl) {
+      if (current <= 0) {
+        hintEl.textContent = "⏳ " + (t("energy_recharging") || "Energy Empty · Recharging...");
+        hintEl.style.color = "#f59e0b";
+      } else {
+        hintEl.textContent = "⚡ " + (t("tap_to_mine_hint") || "Tap Miner Core to Mine · Max 50 / 2h");
+        hintEl.style.color = "#94a3b8";
+      }
+    }
+  }
+
+  function spawnTapFloater(wrapEl, clientX, clientY, text) {
+    if (!wrapEl) return;
+    var rect = wrapEl.getBoundingClientRect();
+    var x, y;
+    if (typeof clientX === "number" && typeof clientY === "number" && clientX > 0 && clientY > 0) {
+      x = clientX - rect.left;
+      y = clientY - rect.top;
+    } else {
+      x = rect.width / 2 + (Math.random() * 40 - 20);
+      y = rect.height / 2 + (Math.random() * 40 - 20);
+    }
+    var floater = document.createElement("div");
+    floater.className = "tap-floater";
+    floater.style.left = x + "px";
+    floater.style.top = y + "px";
+    floater.textContent = (text || "+1");
+    wrapEl.appendChild(floater);
+    setTimeout(function() {
+      if (floater.parentNode) floater.parentNode.removeChild(floater);
+    }, 850);
+  }
+
+  function triggerMinerSquish(wrapEl) {
+    if (!wrapEl) return;
+    wrapEl.classList.add("tap-active");
+    clearTimeout(wrapEl._squishTimeout);
+    wrapEl._squishTimeout = setTimeout(function() {
+      wrapEl.classList.remove("tap-active");
+    }, 100);
+  }
+
+  var pendingTapsCount = 0;
+  var tapSyncDebounceTimer = null;
+  var isTapSyncInProgress = false;
+
+  function flushPendingTaps() {
+    if (pendingTapsCount <= 0 || isTapSyncInProgress) return;
+    var tapsToSend = pendingTapsCount;
+    pendingTapsCount = 0;
+    isTapSyncInProgress = true;
+
+    fetch("/api/tap", {
+      method: "POST",
+      headers: getClientHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ taps: tapsToSend })
+    }).then(function(r) {
+      if (r.status === 404) {
+        return fetch("/api/tap.js", {
+          method: "POST",
+          headers: getClientHeaders({ "Content-Type": "application/json" }),
+          body: JSON.stringify({ taps: tapsToSend })
+        });
+      }
+      return r;
+    }).then(handleResponse).then(function(res) {
+      isTapSyncInProgress = false;
+      if (res.ok && res.data) {
+        if (typeof res.data.balance === "number") {
+          user.balance = res.data.balance;
+        }
+        if (typeof res.data.energy === "number") {
+          user.energy = res.data.energy;
+        }
+        if (res.data.lastEnergySyncAt) {
+          user.lastEnergySyncAt = res.data.lastEnergySyncAt;
+        }
+        renderBalance();
+        updateEnergyUI();
+      }
+      if (pendingTapsCount > 0) {
+        queueTapSync();
+      }
+    }).catch(function(err) {
+      isTapSyncInProgress = false;
+      console.warn("Tap sync failed:", err);
+    });
+  }
+
+  function queueTapSync() {
+    clearTimeout(tapSyncDebounceTimer);
+    if (pendingTapsCount >= 15) {
+      flushPendingTaps();
+    } else {
+      tapSyncDebounceTimer = setTimeout(flushPendingTaps, 1200);
+    }
+  }
+
+  function handleCoreTap(wrapEl, touchPoints) {
+    var currentE = getCurrentEnergy();
+    if (currentE <= 0) {
+      if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
+        try { window.Telegram.WebApp.HapticFeedback.notificationOccurred("warning"); } catch(e){}
+      }
+      showToast(t("energy_empty") || "Energy empty! Recharging... (Max 50 / 2h)");
+      updateEnergyUI();
+      return;
+    }
+
+    var tapsToProcess = Math.min(touchPoints.length || 1, currentE);
+    if (tapsToProcess <= 0) return;
+
+    var now = Date.now();
+    var rate = Number(user.energyRechargeRateMs) || 144000;
+    var lastSync = user.lastEnergySyncAt || user.lastMineCollectedAt;
+    var remainder = lastSync ? ((now - Number(lastSync)) % rate) : 0;
+
+    user.energy = currentE - tapsToProcess;
+    user.lastEnergySyncAt = now - remainder;
+    user.balance = (Number(user.balance) || 0) + tapsToProcess;
+    pendingTapsCount += tapsToProcess;
+
+    triggerMinerSquish(wrapEl);
+
+    for (var i = 0; i < tapsToProcess; i++) {
+      var pt = touchPoints[i] || {};
+      spawnTapFloater(wrapEl, pt.clientX, pt.clientY, "+1");
+    }
+
+    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
+      try { window.Telegram.WebApp.HapticFeedback.impactOccurred("medium"); } catch(e){}
+    }
+
+    renderBalance();
+    updateEnergyUI();
+    queueTapSync();
+  }
+
+  function setupTapToMineListeners() {
+    var wraps = [
+      document.getElementById("homeMineVisualWrap"),
+      document.getElementById("mHeroWrap") || document.querySelector(".miner-hero-wrap")
+    ];
+
+    wraps.forEach(function(wrap) {
+      if (!wrap || wrap._tapListenerAttached) return;
+      wrap._tapListenerAttached = true;
+
+      wrap.addEventListener("touchstart", function(e) {
+        e.preventDefault();
+        var points = [];
+        if (e.changedTouches && e.changedTouches.length) {
+          for (var i = 0; i < e.changedTouches.length; i++) {
+            points.push({ clientX: e.changedTouches[i].clientX, clientY: e.changedTouches[i].clientY });
+          }
+        }
+        handleCoreTap(wrap, points);
+      }, { passive: false });
+
+      wrap.addEventListener("click", function(e) {
+        if (e.detail === 0) return;
+        handleCoreTap(wrap, [{ clientX: e.clientX, clientY: e.clientY }]);
+      });
+    });
+
+    window.addEventListener("visibilitychange", function() {
+      if (document.visibilityState === "hidden") {
+        flushPendingTaps();
+      }
+    });
+    window.addEventListener("pagehide", flushPendingTaps);
+  }
+
   function renderMining() {
     var now = Date.now();
     var interval = Number(user.mineIntervalMs) || (2 * 60 * 60 * 1000);
@@ -10313,12 +10690,15 @@
     var currentLvl = Math.max(1, Math.min(10, user.minerLevel || user.level || 1));
     var lvlName = getLevelName(currentLvl);
     var mult = LEVEL_MULTIPLIERS[currentLvl - 1] || 1.0;
-    var reward = Math.round(80 * mult);
+    var baseMineReward = Number(user.mineReward) || 50;
+    var reward = Math.round(baseMineReward * mult);
     var currentLogo = getLevelLogo(currentLvl);
 
     var elapsed = lastCollected ? (now - lastCollected) : interval;
     var progressPercent = ready ? 100 : Math.min(100, Math.max(0, Math.floor((elapsed / interval) * 100)));
     var remaining = Math.max(0, interval - (now - lastCollected));
+
+    updateEnergyUI();
 
     // 1. Home Tab Mining Card (matched to Nautilus media_1791210582153.png)
     var pill = document.getElementById("statusPill");
@@ -11318,6 +11698,7 @@
     renderAds();
     renderInvite();
     renderWallet();
+    setupTapToMineListeners();
   }
 
   // Initial immediate render so there is zero stuck loading
@@ -11379,6 +11760,12 @@
         }
         user.balance = res.data.balance;
         user.lastMineCollectedAt = res.data.lastMineCollectedAt;
+        if (typeof res.data.energy === "number") {
+          user.energy = res.data.energy;
+        } else {
+          user.energy = 0;
+        }
+        user.lastEnergySyncAt = res.data.lastMineCollectedAt;
         if (res.data.minerLevel) {
           user.minerLevel = res.data.minerLevel;
           user.level = res.data.minerLevel;

@@ -1,7 +1,7 @@
 const { getDb } = require("../lib/mongodb");
 const { validateInitData } = require("../lib/telegramAuth");
 const { findOrCreateUser, findUserById } = require("../lib/userHelper");
-const { mineIsReady, dailyStatus, MINE_INTERVAL_MS, LEVEL_NAMES, getMultiplierForLevel } = require("../lib/gameLogic");
+const { mineIsReady, dailyStatus, MINE_INTERVAL_MS, LEVEL_NAMES, getMultiplierForLevel, MAX_TAP_ENERGY, ENERGY_RECHARGE_RATE_MS, calculateCurrentEnergy, MINE_REWARD } = require("../lib/gameLogic");
 const { generateVerificationImage } = require("../lib/verificationImage");
 const { notifyInviterReferralSuccess } = require("../lib/miningReminder");
 const { createActionToken } = require("../lib/actionSigner");
@@ -566,6 +566,11 @@ module.exports = async (req, res) => {
       totalDailyEarned: user.totalDailyEarned || 0,
       mineReady: mineIsReady(user.lastMineCollectedAt),
       mineIntervalMs: MINE_INTERVAL_MS,
+      mineReward: MINE_REWARD,
+      energy: calculateCurrentEnergy(user, now),
+      maxEnergy: MAX_TAP_ENERGY,
+      energyRechargeRateMs: ENERGY_RECHARGE_RATE_MS,
+      lastEnergySyncAt: user.lastEnergySyncAt || user.lastMineCollectedAt || (now - MINE_INTERVAL_MS),
       dailyStatusNow: dailyStatus(user.lastCheckinAt),
       adsWatchedToday: watchedToday,
       adsEarnedToday: earnedToday,
