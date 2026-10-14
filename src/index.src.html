@@ -8913,6 +8913,8 @@
       // Ad Missions
       ad_missions_title: "🎬 Ad Missions",
       ad_missions_empty: "No ad mission available right now",
+      sponsor_mission_title: "Special Ad Mission",
+      mission_go_btn: "GO",
       claim_reward: "Claim Reward",
 
       // Lucky Wheel / Spin Modal
@@ -9118,6 +9120,8 @@
       // Ad Missions
       ad_missions_title: "🎬 Рекламные миссии",
       ad_missions_empty: "Сейчас нет доступных рекламных миссий",
+      sponsor_mission_title: "Специальная рекламная миссия",
+      mission_go_btn: "ВПЕРЕД",
       claim_reward: "Забрать награду",
 
       // Lucky Wheel / Spin Modal
@@ -9323,6 +9327,8 @@
       // Ad Missions
       ad_missions_title: "🎬 مهام الإعلانات",
       ad_missions_empty: "لا توجد مهام إعلانية متاحة الآن",
+      sponsor_mission_title: "مهمة إعلانية خاصة",
+      mission_go_btn: "انطلق",
       claim_reward: "المطالبة بالمكافأة",
 
       // Lucky Wheel / Spin Modal
@@ -9542,7 +9548,8 @@
     var watchCardTitle = document.querySelector(".watch-card-title");
     if (watchCardTitle) watchCardTitle.textContent = t("watch_earn_title");
     var watchCardSub = document.querySelector(".watch-card-sub");
-    if (watchCardSub) watchCardSub.innerHTML = '🛠️ ' + t("feature_update_desc");
+    var curRew = window.WATCH_AD_REWARD || (user && user.watchAdReward) || 10;
+    if (watchCardSub) watchCardSub.innerHTML = t("watch_earn_sub").replace(/\+?15/g, "+" + curRew);
     var watchProgLbl = document.querySelector(".watch-progress-label-row span:first-child");
     if (watchProgLbl) watchProgLbl.textContent = t("daily_progress");
     var watchStatLbl1 = document.querySelector(".watch-stats-grid .watch-stat-box:nth-child(1) .lbl");
@@ -9550,8 +9557,9 @@
     var watchStatLbl2 = document.querySelector(".watch-stats-grid .watch-stat-box:nth-child(2) .lbl");
     if (watchStatLbl2) watchStatLbl2.textContent = t("earned_today");
     var watchAdBtnSpan = document.querySelector("#watchAdBtn span");
-    if (watchAdBtnSpan) {
-      watchAdBtnSpan.textContent = '🛠️ ' + t("feature_update_title") + ' · 24h';
+    var realWatchBtn = document.getElementById("watchAdBtn");
+    if (watchAdBtnSpan && realWatchBtn && !realWatchBtn.disabled) {
+      watchAdBtnSpan.textContent = t("watch_btn").replace(/\+?15/g, "+" + curRew);
     }
 
     var spinBadge = document.querySelector(".spin-card-badge");
@@ -9578,6 +9586,7 @@
     // Ad Missions
     var adMissionsTitle = document.querySelector(".ad-missions-title");
     if (adMissionsTitle) adMissionsTitle.textContent = t("ad_missions_title");
+    if (typeof renderAdMissions === "function") renderAdMissions();
 
     // Lucky Wheel Modal
     var spinModalTitle = document.querySelector("#spinWheelModal .modal-title");
@@ -9598,13 +9607,13 @@
     var getTicketCards = document.querySelectorAll(".get-ticket-card");
     if (getTicketCards[0]) {
       var t1Title = getTicketCards[0].querySelector(".ticket-card-title");
-      if (t1Title) t1Title.textContent = t("feature_update_title");
+      if (t1Title) t1Title.textContent = t("watch_ads_tickets_title");
       var t1Sub = getTicketCards[0].querySelector(".ticket-card-sub");
-      if (t1Sub) t1Sub.textContent = t("feature_update_desc");
+      if (t1Sub) t1Sub.textContent = t("watch_ads_tickets_sub");
     }
     var watchSpinBtn = document.getElementById("watchSpinAdActionBtn");
     if (watchSpinBtn) {
-      watchSpinBtn.innerHTML = '<span>🛠️ ' + t("feature_update_title") + ' · 24h</span>';
+      watchSpinBtn.innerHTML = '<span>' + t("watch_ad_ticket_btn") + '</span>';
     }
     if (getTicketCards[1]) {
       var t2Title = getTicketCards[1].querySelector(".ticket-card-title");
@@ -10661,7 +10670,12 @@
     if (!btn) return;
 
     btn.disabled = false;
-    btn.innerHTML = '<span>🛠️ ' + t("feature_update_title") + ' · 24h</span>';
+    var curVal = window.WATCH_AD_REWARD || (user && user.watchAdReward) || 10;
+    if (typeof t === "function" && t("watch_btn")) {
+      btn.innerHTML = '<span>' + t("watch_btn").replace(/\+?15/g, "+" + curVal) + '</span>';
+    } else {
+      btn.innerHTML = '<span>▶ Watch Ad (+' + curVal + ' HOOCOOH Coins)</span>';
+    }
   }
 
   // ===================================================
@@ -11183,14 +11197,18 @@
     var container = document.getElementById("adMissionsBody");
     if (!container) return;
     container.innerHTML =
-      '<div class="ad-mission-update-card" style="background:var(--sub-box-bg);border:1px dashed rgba(245, 158, 11, 0.4);border-radius:18px;padding:18px 14px;text-align:center;cursor:pointer;">' +
-        '<div style="font-size:26px;margin-bottom:6px;">🛠️</div>' +
-        '<div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px;">' + t("feature_update_title") + '</div>' +
-        '<div style="font-size:11.5px;color:var(--text-dim);line-height:1.45;margin-bottom:10px;">' + t("ad_missions_updating") + '</div>' +
-        '<button type="button" style="background:linear-gradient(135deg, #ffd700, #f59e0b);color:#000;border:none;border-radius:100px;font-size:11px;font-weight:800;padding:6px 16px;cursor:pointer;">' + t("feature_update_btn") + '</button>' +
+      '<div class="ad-mission-card" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;width:100%;">' +
+        '<div style="display:flex;align-items:center;gap:12px;">' +
+          '<div style="font-size:26px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:rgba(20,184,166,0.1);border-radius:12px;">🎬</div>' +
+          '<div>' +
+            '<div style="font-size:13.5px;font-weight:800;color:var(--text);">' + (typeof t === "function" ? t("sponsor_mission_title") : "Special Ad Mission") + '</div>' +
+            '<div class="ad-mission-reward">+' + adMissionRewardAmount + ' Coins</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="ad-mission-btn">' + (typeof t === "function" ? t("mission_go_btn") : "GO") + '</div>' +
       '</div>';
 
-    var card = container.querySelector(".ad-mission-update-card");
+    var card = container.querySelector(".ad-mission-card");
     if (card) {
       card.addEventListener("click", function() {
         showFeatureUpdateNotice();
@@ -11588,7 +11606,7 @@
 
         if (watchSpinAdActionBtn) {
           watchSpinAdActionBtn.disabled = false;
-          watchSpinAdActionBtn.innerHTML = '<span>🛠️ ' + t("feature_update_title") + ' · 24h</span>';
+          watchSpinAdActionBtn.innerHTML = '<span>' + (typeof t === "function" ? t("watch_ad_ticket_btn") : "🎬 Watch Ad (+1 Ticket)") + '</span>';
         }
 
         if (spinAdsResetCountdown && sp.nextResetMs > 0 && watched >= maxAds) {
