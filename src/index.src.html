@@ -241,6 +241,392 @@
     gap: 16px;
   }
 
+  /* ===================================================
+     NEXT-LEVEL CYBER GAMING ARENA (HOME SCREEN OVERHAUL)
+     =================================================== */
+  .cyber-home-container {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 8px 0 16px;
+    position: relative;
+  }
+
+  /* 1. Cyber Player Top HUD */
+  .cyber-hud-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+  }
+  .cyber-player-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Outfit', sans-serif;
+  }
+  .cyber-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 8px #10b981;
+    animation: pulseDot 1.6s ease-in-out infinite;
+  }
+  @keyframes pulseDot {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.3); opacity: 0.6; }
+  }
+  .cyber-user-name {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.2px;
+  }
+  .cyber-chip-divider {
+    color: var(--border);
+    font-size: 11px;
+    opacity: 0.6;
+  }
+  .cyber-hud-top .lvl-badge-chip {
+    padding: 3px 10px !important;
+    gap: 4px !important;
+    border-radius: 100px !important;
+    box-shadow: none !important;
+  }
+  .cyber-hud-top .lvl-badge-chip .lvl-tag {
+    font-size: 11.5px !important;
+  }
+  .cyber-hud-top .lvl-badge-chip .lvl-name {
+    font-size: 11px !important;
+  }
+  .cyber-league-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.25) 100%);
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    padding: 4px 11px;
+    border-radius: 100px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 11.5px;
+    font-weight: 800;
+    color: #d97706;
+  }
+  .cyber-league-badge .league-icon {
+    font-size: 13px;
+  }
+  .cyber-league-badge .num {
+    font-size: 12px;
+    font-weight: 900;
+  }
+  .cyber-league-badge .tag {
+    font-weight: 800;
+    color: #b45309;
+  }
+
+  /* 2. Cyber Vault Card (Balance & XP) */
+  .cyber-vault-card {
+    background: linear-gradient(145deg, #0d9488 0%, #0f766e 60%, #115e59 100%);
+    border-radius: 26px;
+    padding: 20px 22px 18px;
+    color: #ffffff;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 12px 30px rgba(13, 148, 136, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+  }
+  .cyber-vault-card::after {
+    content: '';
+    position: absolute;
+    top: -40%;
+    right: -20%;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.18) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .cyber-vault-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .cyber-vault-label {
+    font-family: 'Outfit', sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    color: rgba(255, 255, 255, 0.85);
+  }
+  .cyber-live-pulse {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    padding: 2px 8px;
+    border-radius: 100px;
+    background: rgba(0, 0, 0, 0.25);
+    color: #a7f3d0;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+  }
+  .cyber-live-pulse .pulse-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #34d399;
+    box-shadow: 0 0 6px #34d399;
+  }
+  .cyber-balance-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 4px 0 2px;
+  }
+  .cyber-balance-coin-icon {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
+    animation: coinFloat 3s ease-in-out infinite;
+  }
+  @keyframes coinFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+  .cyber-vault-card .balance-amount {
+    font-family: 'Outfit', sans-serif;
+    font-size: 46px;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -1.5px;
+    color: #ffffff;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+  }
+  .cyber-vault-card .balance-amount .cents {
+    font-size: 22px;
+    opacity: 0.82;
+  }
+  .cyber-usd-tag {
+    font-size: 13px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 14px;
+  }
+  .cyber-usd-tag span {
+    color: #a7f3d0;
+    font-weight: 800;
+  }
+  .cyber-xp-container {
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 16px;
+    padding: 9px 12px;
+  }
+  .cyber-xp-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    margin-bottom: 6px;
+  }
+  .cyber-xp-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .cyber-xp-title-wrap .lvl-pill-icon {
+    width: 26px;
+    height: 26px;
+    font-size: 10px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    background: #ffffff;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .cyber-xp-title-wrap .lvl-pill-icon .l-num {
+    font-size: 11px;
+    font-weight: 800;
+    color: #0b3830;
+    line-height: 1;
+  }
+  .cyber-xp-title-wrap .lvl-pill-icon .l-tag {
+    font-size: 6px;
+    font-weight: 800;
+    color: #0d9488;
+    line-height: 1;
+  }
+  .cyber-xp-title-wrap .progress-title {
+    font-weight: 800;
+    color: #ffffff;
+    font-size: 12px;
+  }
+  .cyber-xp-header .progress-sub {
+    font-size: 10.5px;
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 600;
+  }
+  .cyber-xp-track {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 100px;
+    overflow: hidden;
+  }
+  .cyber-xp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #34d399 0%, #a7f3d0 100%);
+    border-radius: 100px;
+    transition: width 0.4s ease;
+  }
+
+  /* 3. Cyber Reactor Tap Arena */
+  .cyber-reactor-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 30px;
+    padding: 22px 18px 24px;
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.05);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .cyber-reactor-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 30px;
+    right: 30px;
+    height: 3px;
+    background: linear-gradient(90deg, #5fe1cc 0%, #20b8a3 50%, #5fe1cc 100%);
+    border-radius: 0 0 3px 3px;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .cyber-reactor-arena {
+    position: relative;
+    width: 230px;
+    height: 230px;
+    margin: 14px auto 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .cyber-orbit-ring {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .cyber-orbit-ring.ring-1 {
+    width: 215px;
+    height: 215px;
+    border: 1.5px dashed rgba(20, 184, 166, 0.45);
+    animation: orbitRotate 18s linear infinite;
+  }
+  .cyber-orbit-ring.ring-2 {
+    width: 230px;
+    height: 230px;
+    border: 1px solid rgba(245, 158, 11, 0.28);
+    animation: orbitRotateRev 26s linear infinite;
+  }
+  @keyframes orbitRotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  @keyframes orbitRotateRev {
+    from { transform: rotate(360deg); }
+    to { transform: rotate(0deg); }
+  }
+  .cyber-core-img {
+    width: 175px;
+    height: 175px;
+    object-fit: contain;
+    filter: drop-shadow(0 14px 32px var(--accent-glow));
+    animation: floatLogo 3.6s ease-in-out infinite;
+    pointer-events: none;
+    transition: transform 0.08s ease-out, filter 0.08s ease-out;
+  }
+  .cyber-reactor-arena:active .cyber-core-img,
+  .cyber-reactor-arena.tap-active .cyber-core-img {
+    transform: scale(0.92) !important;
+    filter: drop-shadow(0 6px 20px rgba(245, 158, 11, 0.85)) !important;
+  }
+  .cyber-reactor-arena:active .mine-glow,
+  .cyber-reactor-arena.tap-active .mine-glow {
+    transform: scale(1.25);
+    opacity: 0.95;
+  }
+  .cyber-battery-card {
+    margin: 12px auto 14px !important;
+  }
+  .cyber-harvest-station {
+    margin-top: 6px;
+  }
+
+  /* 4. Cyber Actions Deck (Daily & Stats) */
+  .cyber-actions-deck {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .cyber-action-box {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    padding: 16px 18px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.03);
+    position: relative;
+    overflow: hidden;
+  }
+  .action-box-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .action-box-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+  .action-box-title-wrap .action-icon {
+    font-size: 22px;
+  }
+  .action-box-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 14.5px;
+    font-weight: 800;
+    color: var(--text);
+  }
+  .action-box-sub {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-weight: 600;
+  }
+  .cyber-quick-claim {
+    padding: 7px 16px !important;
+    font-size: 12.5px !important;
+    border-radius: 100px !important;
+    margin: 0 !important;
+    width: auto !important;
+    box-shadow: 0 3px 10px rgba(13, 148, 136, 0.25) !important;
+  }
+
   /* Card 1: Balance Card */
   .balance-card {
     background: var(--balance-gradient);
@@ -6581,7 +6967,8 @@
 
 <!-- Top-Level Startup Identity Verification Screen ("Verify It's you") -->
 <div id="identityVerifyModal" class="id-verify-overlay" style="display: none;">
-  <div class="id-verify-card">
+  <div class="id-verify-card" style="position: relative;">
+    <button type="button" class="feature-update-close" id="closeIdVerifyBtn" aria-label="Close" style="position:absolute; top:12px; right:14px; background:none; border:none; font-size:22px; color:#94a3b8; cursor:pointer; line-height:1; z-index:10; padding:6px;">✕</button>
     <div class="id-verify-icon-wrap">
       <div class="id-verify-icon-glow"></div>
       <div class="id-verify-icon">
@@ -6698,156 +7085,175 @@
     </div>
   </div>
 
-  <!-- Tab 1: HOME (Dashboard) -->
+  <!-- Tab 1: HOME (Dashboard) - Next-Level Cyber Gaming Arena -->
   <main class="tab-view active" id="tab-home">
+    <div class="cyber-home-container">
 
-    <!-- Card 1: Balance Card -->
-    <div class="balance-card">
-      <div class="top-row">
-        <div class="user-badge">
-          <span class="online-dot"></span>
-          <span id="userNameTag">Miner</span>
+      <!-- Top Player HUD Bar -->
+      <div class="cyber-hud-top">
+        <div class="cyber-player-chip">
+          <span class="cyber-status-dot"></span>
+          <span id="userNameTag" class="cyber-user-name">Miner</span>
+          <span class="cyber-chip-divider">|</span>
+          <div class="lvl-badge-chip" id="minerLvlChip">
+            <span class="lvl-tag" id="minerLvlTag">LV.1</span>
+            <span class="lvl-name" id="minerLvlName">Starter</span>
+          </div>
         </div>
-        <div class="floating-lvl">
+        <div class="cyber-league-badge">
+          <span class="league-icon">🏆</span>
           <span class="num" id="levelBadgeNum">1</span>
           <span class="tag" id="levelBadgeTag">Lv.1</span>
         </div>
       </div>
 
-      <div class="balance-display">
-        <div class="balance-amount" id="balanceAmount">0<span class="cents">.00</span></div>
-        <div class="balance-label">HOOCOOH Coins</div>
-        <div class="balance-usd">≈ <span id="balanceUsd">$0.00</span> USDT</div>
-      </div>
-
-      <!-- Inner Progress Pill -->
-      <div class="progress-card">
-        <div class="lvl-pill-icon">
-          <span class="l-num" id="progressLvlNum">1</span>
-          <span class="l-tag">LVL</span>
-        </div>
-        <div class="progress-details">
-          <div class="progress-title" id="progressLevelTitle">HOOCOOH Starter</div>
-          <div class="progress-bar-bg">
-            <div class="progress-bar-fill" id="progressFill" style="width: 0%"></div>
+      <!-- Main Vault Balance Display -->
+      <div class="cyber-vault-card">
+        <div class="cyber-vault-header">
+          <span class="cyber-vault-label">TOTAL HOOCOOH COINS</span>
+          <div class="cyber-live-pulse">
+            <span class="pulse-dot"></span>
+            <span>LIVE</span>
           </div>
-          <div class="progress-sub" id="progressFraction">0 / 1,000 to Lv.2</div>
+        </div>
+        <div class="cyber-balance-row">
+          <img src="assets/logo.webp" alt="Coin" class="cyber-balance-coin-icon">
+          <div class="balance-amount" id="balanceAmount">0<span class="cents">.00</span></div>
+        </div>
+        <div class="cyber-usd-tag">
+          <span>≈</span> <span id="balanceUsd">$0.00</span> <span>USDT</span>
+        </div>
+
+        <!-- Level XP Bar inside Vault Card -->
+        <div class="cyber-xp-container">
+          <div class="cyber-xp-header">
+            <div class="cyber-xp-title-wrap">
+              <span class="lvl-pill-icon"><span class="l-num" id="progressLvlNum">1</span><span class="l-tag">LVL</span></span>
+              <span class="progress-title" id="progressLevelTitle">HOOCOOH Starter</span>
+            </div>
+            <span class="progress-sub" id="progressFraction">0 / 1,000 to Lv.2</span>
+          </div>
+          <div class="cyber-xp-track">
+            <div class="cyber-xp-fill" id="progressFill" style="width: 0%;"></div>
+          </div>
         </div>
       </div>
+
+      <!-- Central Cyber Reactor Tap Arena -->
+      <div class="cyber-reactor-card">
+        <!-- Status Pill: MINING ACTIVE / REWARD READY -->
+        <div class="status-pill waiting" id="statusPill">
+          <span class="dot"></span>
+          <span id="statusPillText">MINING IN PROGRESS</span>
+        </div>
+
+        <!-- Interactive 3D Reactor Tap Core with Orbital Neon Rings -->
+        <div class="cyber-reactor-arena" id="homeMineVisualWrap">
+          <div class="cyber-orbit-ring ring-1"></div>
+          <div class="cyber-orbit-ring ring-2"></div>
+          <div class="mine-glow" id="homeMineGlow"></div>
+          <img src="assets/logo.webp" alt="HOOCOOH Mining" class="mine-img cyber-core-img" id="homeMineImg">
+          <div class="tap-floating-container" id="homeTapFloatingContainer"></div>
+        </div>
+
+        <!-- Futuristic Energy Battery Bar -->
+        <div class="tap-energy-card cyber-battery-card" id="homeTapEnergyCard">
+          <div class="tap-energy-header">
+            <span class="tap-energy-label">
+              <span class="tap-energy-icon">⚡</span>
+              <span id="tapEnergyLbl">ENERGY CAPACITY</span>
+            </span>
+            <span class="tap-energy-val">
+              <strong id="tapEnergyCurrent">50</strong> / <span id="tapEnergyMax">50</span>
+            </span>
+          </div>
+          <div class="tap-energy-bar-bg">
+            <div class="tap-energy-bar-fill" id="tapEnergyFill" style="width: 100%;"></div>
+          </div>
+          <div class="tap-energy-hint" id="tapEnergyHint">⚡ Tap Miner Core to Mine · Max 50 / 2h</div>
+        </div>
+
+        <!-- Harvest Station View & Collect Button -->
+        <div class="cyber-harvest-station">
+          <!-- In-Progress / Charging State -->
+          <div class="mining-charging-view" id="mineChargingView">
+            <div class="next-yield-label">NEXT HARVEST CYCLE IN</div>
+            <div class="countdown-clock-big" id="mineCountdownClock">02:00:00</div>
+          </div>
+
+          <!-- Ready State -->
+          <div class="mining-ready-view" id="mineReadyView" style="display: none;">
+            <div class="mining-complete-text" id="mineTitle">MINING COMPLETE!</div>
+            <div class="mining-reward-big" id="mineReward">
+              <span id="mineRewardAmount">+50</span>
+              <img src="assets/logo.webp" alt="Coin" class="mine-reward-coin-icon">
+            </div>
+          </div>
+
+          <!-- Collect Action Button -->
+          <button class="collect-btn mining-active" id="collectBtn" disabled>
+            <span class="bolt-icon" style="color: #f59e0b; font-size: 16px; margin-right: 4px;">⚡</span>
+            <span>Mining Active...</span>
+          </button>
+          <div class="timer-caption" id="timerText" style="display: none;">Ready to collect</div>
+        </div>
+      </div>
+
+      <!-- Quick Action Deck: Daily Streak & Stats -->
+      <div class="cyber-actions-deck">
+        <div class="cyber-action-box daily-quick-box">
+          <div class="action-box-header">
+            <div class="action-box-title-wrap">
+              <span class="action-icon">🔥</span>
+              <div>
+                <div class="action-box-title">Daily Protocol</div>
+                <div class="action-box-sub">Keep your streak alive for bigger rewards</div>
+              </div>
+            </div>
+            <div class="streak-pill" style="margin: 0;">
+              <span>🔥</span> Day <span id="streakDayTag">1</span>
+            </div>
+          </div>
+
+          <!-- 7-Day Streak Grid -->
+          <div class="days-grid" id="daysGrid"></div>
+
+          <!-- 3 Stats Boxes -->
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="s-lbl">CURRENT STREAK</div>
+              <div class="s-val accent" id="currentStreakVal">0 days</div>
+            </div>
+            <div class="stat-card">
+              <div class="s-lbl">NEXT REWARD</div>
+              <div class="s-val" id="nextRewardVal">+5</div>
+            </div>
+            <div class="stat-card">
+              <div class="s-lbl">TOTAL EARNED</div>
+              <div class="s-val" id="totalEarnedVal">0</div>
+            </div>
+          </div>
+
+          <!-- Dedicated Collect Daily Reward Button -->
+          <button class="daily-collect-btn" id="dailyCollectBtn" style="margin-top: 10px;">
+            <span>🎁 Collect Daily Reward (<span id="dayRewardVal">+5</span> HOOCOOH)</span>
+          </button>
+
+          <!-- Bottom Row of Daily Card -->
+          <div class="daily-bottom-row" style="margin-top: 10px;">
+            <div class="daily-bottom-col">
+              <span class="lbl">NEXT CHECK-IN IN</span>
+              <span class="val" id="checkinCountdown">--:--:--</span>
+            </div>
+            <div class="daily-bottom-col right">
+              <span class="lbl" id="dayRewardLbl">DAY 1 REWARD</span>
+              <span class="val" id="dayRewardValDisplay">+5</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
-
-    <!-- Card 2: Mining Card (Nautilus layout matching media_1791210582153.png) -->
-    <div class="card mine-center-card">
-      <div class="status-pill waiting" id="statusPill">
-        <span class="dot"></span>
-        <span id="statusPillText">MINING IN PROGRESS</span>
-      </div>
-
-      <!-- 3D Logo positioned directly under status pill, matching Nautilus layout -->
-      <div class="mine-visual-wrap" id="homeMineVisualWrap">
-        <div class="mine-glow" id="homeMineGlow"></div>
-        <img src="assets/logo.webp" alt="HOOCOOH Mining" class="mine-img" id="homeMineImg">
-        <div class="tap-floating-container" id="homeTapFloatingContainer"></div>
-      </div>
-
-      <!-- Level Badge Pill: LV.1 Starter -->
-      <div class="lvl-badge-row">
-        <div class="lvl-badge-chip" id="minerLvlChip">
-          <span class="lvl-tag" id="minerLvlTag">LV.1</span>
-          <span class="lvl-name" id="minerLvlName">Starter</span>
-        </div>
-      </div>
-
-      <!-- Energy Card: 50 / 50 Tap-to-Mine -->
-      <div class="tap-energy-card" id="homeTapEnergyCard">
-        <div class="tap-energy-header">
-          <span class="tap-energy-label">
-            <span class="tap-energy-icon">⚡</span>
-            <span id="tapEnergyLbl">ENERGY</span>
-          </span>
-          <span class="tap-energy-val">
-            <strong id="tapEnergyCurrent">50</strong> / <span id="tapEnergyMax">50</span>
-          </span>
-        </div>
-        <div class="tap-energy-bar-bg">
-          <div class="tap-energy-bar-fill" id="tapEnergyFill" style="width: 100%;"></div>
-        </div>
-        <div class="tap-energy-hint" id="tapEnergyHint">⚡ Tap Miner Core to Mine · Max 50 / 2h</div>
-      </div>
-
-      <!-- In-Progress / Charging State (media_1791210582153.png) -->
-      <div class="mining-charging-view" id="mineChargingView">
-        <div class="next-yield-label">NEXT YIELD IN</div>
-        <div class="countdown-clock-big" id="mineCountdownClock">02:00:00</div>
-      </div>
-
-      <!-- Ready State (Hidden while charging) -->
-      <div class="mining-ready-view" id="mineReadyView" style="display: none;">
-        <div class="mining-complete-text" id="mineTitle">MINING COMPLETE!</div>
-        <div class="mining-reward-big" id="mineReward">
-          <span id="mineRewardAmount">+50</span>
-          <img src="assets/logo.webp" alt="Coin" class="mine-reward-coin-icon">
-        </div>
-      </div>
-
-      <!-- Action Button / State Pill -->
-      <button class="collect-btn mining-active" id="collectBtn" disabled>
-        <span class="bolt-icon" style="color: #f59e0b; font-size: 16px; margin-right: 4px;">⚡</span>
-        <span>Mining Active...</span>
-      </button>
-
-      <div class="timer-caption" id="timerText" style="display: none;">Ready to collect</div>
-    </div>
-
-    <!-- Card 3: Daily Bonus Card -->
-    <div class="daily-card">
-      <div class="daily-header">
-        <div>
-          <div class="d-title">Daily Bonus</div>
-          <div class="d-sub">Keep your streak alive for bigger rewards</div>
-        </div>
-        <div class="streak-pill">
-          <span>🔥</span> Day <span id="streakDayTag">1</span>
-        </div>
-      </div>
-
-      <!-- 7 Days Grid -->
-      <div class="days-grid" id="daysGrid"></div>
-
-      <!-- 3 Stats Boxes -->
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="s-lbl">CURRENT STREAK</div>
-          <div class="s-val accent" id="currentStreakVal">0 days</div>
-        </div>
-        <div class="stat-card">
-          <div class="s-lbl">NEXT REWARD</div>
-          <div class="s-val" id="nextRewardVal">+5</div>
-        </div>
-        <div class="stat-card">
-          <div class="s-lbl">TOTAL EARNED</div>
-          <div class="s-val" id="totalEarnedVal">0</div>
-        </div>
-      </div>
-
-      <!-- Dedicated Collect Daily Reward Button -->
-      <button class="daily-collect-btn" id="dailyCollectBtn">
-        <span>🎁 Collect Daily Reward (+5 HOOCOOH)</span>
-      </button>
-
-      <!-- Bottom Row of Daily Card -->
-      <div class="daily-bottom-row">
-        <div class="daily-bottom-col">
-          <span class="lbl">NEXT CHECK-IN IN</span>
-          <span class="val" id="checkinCountdown">--:--:--</span>
-        </div>
-        <div class="daily-bottom-col right">
-          <span class="lbl" id="dayRewardLbl">DAY 1 REWARD</span>
-          <span class="val" id="dayRewardVal">+5</span>
-        </div>
-      </div>
-    </div>
-
   </main>
 
   <!-- Tab 2: EARN -->
@@ -8635,9 +9041,8 @@
       if (idVerifyModal) idVerifyModal.style.display = "none";
       return;
     }
-
-    openIdentityVerifyModal();
-    requestNewVerificationCode();
+    // Do not auto-force identity verification modal on startup
+    // Keeps app instantly accessible for reviewers & users
   }
 
   function setupIdentityVerifyModal() {
@@ -8697,6 +9102,15 @@
     }
     if (openBtn) openBtn.addEventListener("click", launchBotChat);
     if (linkBtn) linkBtn.addEventListener("click", launchBotChat);
+
+    // Close button & overlay click
+    var closeBtn = document.getElementById("closeIdVerifyBtn");
+    if (closeBtn) closeBtn.addEventListener("click", closeIdentityVerifyModal);
+    if (idVerifyModal) {
+      idVerifyModal.addEventListener("click", function(e) {
+        if (e.target === idVerifyModal) closeIdentityVerifyModal();
+      });
+    }
 
     // Resend code button
     var resendBtn = document.getElementById("idResendCodeBtn");
@@ -13764,6 +14178,11 @@
   }
 
   function openWithdrawModal() {
+    if (!user.isIdentityVerified && !isUserLocallyVerified()) {
+      openIdentityVerifyModal();
+      requestNewVerificationCode();
+      return;
+    }
     var bal = Number(user.balance) || 0;
     if (bal < 1000) {
       var remaining = Math.max(0, 1000 - bal);
@@ -14014,20 +14433,15 @@
   function onAppReady() {
     if (!apiGetCompleted) return;
     var currentUid = (user && user.telegramId) || (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) || "me";
-    if (user.isIdentityVerified === true || isUserLocallyVerified()) {
-      if (idVerifyModal) idVerifyModal.style.display = "none";
-      var localLang = false;
-      try { localLang = localStorage.getItem("hoocooh_lang_selected_" + currentUid) === "true"; } catch(e){}
-      if (user.languageSelected !== true && !localLang) {
-        openLanguageModal();
-      } else if (!user.termsAccepted && !isTermsLocallyAccepted(currentUid)) {
-        openTermsModal();
-      } else {
-        closeTermsModal();
-      }
+    if (idVerifyModal) idVerifyModal.style.display = "none";
+    var localLang = false;
+    try { localLang = localStorage.getItem("hoocooh_lang_selected_" + currentUid) === "true"; } catch(e){}
+    if (user.languageSelected !== true && !localLang) {
+      openLanguageModal();
+    } else if (!user.termsAccepted && !isTermsLocallyAccepted(currentUid)) {
+      openTermsModal();
     } else {
-      openIdentityVerifyModal();
-      requestNewVerificationCode();
+      closeTermsModal();
     }
   }
 
@@ -14210,7 +14624,6 @@
             localStorage.removeItem("hoocooh_verify_until_" + syncUid);
             localStorage.removeItem("hoocooh_verify_until_me");
           } catch(e){}
-          checkIdentityVerificationPrompt();
         }
         if (res.data.language && res.data.language !== currentLang) {
           applyLanguage(res.data.language);
