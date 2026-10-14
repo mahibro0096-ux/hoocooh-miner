@@ -5927,6 +5927,178 @@
     filter: brightness(0.95);
   }
 
+  /* ========================================================
+     FEATURE UPDATE / MAINTENANCE NOTICE MODAL (24H UPDATE)
+     ======================================================== */
+  .feature-update-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(5, 7, 13, 0.88);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
+  }
+  .feature-update-box {
+    background: var(--card-bg, #0f131f);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    border-radius: 24px;
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), 0 0 32px rgba(245, 158, 11, 0.15);
+    overflow: hidden;
+    position: relative;
+    animation: fuPopIn 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes fuPopIn {
+    from { transform: scale(0.92); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .feature-update-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: var(--text, #fff);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700;
+    z-index: 2;
+  }
+  .feature-update-header {
+    padding: 24px 20px 14px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, rgba(245, 158, 11, 0.1) 0%, transparent 100%);
+  }
+  .feature-update-icon-wrap {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .feature-update-icon-glow {
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(245, 158, 11, 0.45) 0%, transparent 70%);
+    animation: fuPulseGlow 2s infinite ease-in-out;
+  }
+  @keyframes fuPulseGlow {
+    0%, 100% { opacity: 0.5; transform: scale(0.95); }
+    50% { opacity: 0.95; transform: scale(1.1); }
+  }
+  .feature-update-icon {
+    position: relative;
+    font-size: 32px;
+  }
+  .feature-update-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 800;
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    padding: 3px 10px;
+    border-radius: 100px;
+    letter-spacing: 0.8px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+  .feature-update-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text, #fff);
+    margin: 0 0 6px;
+    letter-spacing: -0.3px;
+  }
+  .feature-update-desc {
+    font-size: 12.5px;
+    color: var(--text-dim, #94a3b8);
+    line-height: 1.45;
+    margin: 0;
+  }
+  .feature-update-active-box {
+    padding: 16px 18px;
+    background: rgba(255, 255, 255, 0.02);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .feature-active-title {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+    color: var(--text-dim, #94a3b8);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .feature-active-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .feature-active-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    border-radius: 12px;
+    padding: 9px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text, #f8fafc);
+  }
+  .feature-active-item .active-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 8px #10b981;
+    flex-shrink: 0;
+  }
+  .feature-update-footer {
+    padding: 14px 18px 18px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--card-bg, #0b0e17);
+  }
+  .feature-update-btn {
+    width: 100%;
+    padding: 13px;
+    background: linear-gradient(135deg, #ffd700 0%, #f59e0b 100%);
+    color: #000;
+    border: none;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(245, 158, 11, 0.3);
+    transition: transform 0.15s ease, filter 0.15s ease;
+  }
+  .feature-update-btn:active {
+    transform: scale(0.98);
+  }
+
   /* ==========================================
      IDENTITY VERIFICATION MODAL ("Verify It's you")
      ========================================== */
@@ -7921,6 +8093,48 @@
     </div>
   </div>
 
+  <!-- Feature Update / Maintenance Notice Modal (24h Update) -->
+  <div id="featureUpdateModal" class="feature-update-overlay" style="display: none;">
+    <div class="feature-update-box">
+      <button type="button" class="feature-update-close" id="closeFeatureUpdateModalBtn" aria-label="Close">✕</button>
+      <div class="feature-update-header">
+        <div class="feature-update-icon-wrap">
+          <div class="feature-update-icon-glow"></div>
+          <div class="feature-update-icon">🛠️</div>
+        </div>
+        <div class="feature-update-badge" id="featureUpdateBadgeTxt">SYSTEM UPDATE · 24H</div>
+        <h3 class="feature-update-title" id="featureUpdateTitleTxt">System Update in Progress</h3>
+        <p class="feature-update-desc" id="featureUpdateDescTxt">
+          The app is currently undergoing scheduled system updates. This feature is temporarily paused and will be back in 24 hours.
+        </p>
+      </div>
+
+      <div class="feature-update-active-box">
+        <div class="feature-active-title" id="featureUpdateActiveTitleTxt">Active Features (Available Now)</div>
+        <div class="feature-active-list">
+          <div class="feature-active-item">
+            <span class="active-dot"></span>
+            <span id="featureUpdateMinerTxt">⛏️ Miner: 100% Active &amp; Earning</span>
+          </div>
+          <div class="feature-active-item">
+            <span class="active-dot"></span>
+            <span id="featureUpdateStreakTxt">🔥 7-Day Streak: Daily Bonus Active</span>
+          </div>
+          <div class="feature-active-item">
+            <span class="active-dot"></span>
+            <span id="featureUpdateTasksTxt">📋 Tasks: Social &amp; Partner Tasks Active</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature-update-footer">
+        <button type="button" id="confirmFeatureUpdateBtn" class="feature-update-btn">
+          <span id="featureUpdateBtnTxt">Understood</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
 
   <!-- Toast Element -->
   <div class="toast" id="toast"></div>
@@ -7990,6 +8204,53 @@
         data = { error: text || ("Server error (" + r.status + ")") };
       }
       return { ok: r.ok, status: r.status, data: data };
+    });
+  }
+
+  // ==========================================
+  // FEATURE UPDATE / 24H MAINTENANCE NOTICE
+  // ==========================================
+  var featureUpdateModal = document.getElementById("featureUpdateModal");
+  var closeFeatureUpdateModalBtn = document.getElementById("closeFeatureUpdateModalBtn");
+  var confirmFeatureUpdateBtn = document.getElementById("confirmFeatureUpdateBtn");
+
+  function showFeatureUpdateNotice(customTitle, customDesc) {
+    if (typeof applyLanguage === "function" && typeof currentLang !== "undefined") {
+      try { applyLanguage(currentLang); } catch(e){}
+    }
+    if (featureUpdateModal) {
+      if (customTitle) {
+        var tEl = document.getElementById("featureUpdateTitleTxt");
+        if (tEl) tEl.textContent = customTitle;
+      }
+      if (customDesc) {
+        var dEl = document.getElementById("featureUpdateDescTxt");
+        if (dEl) dEl.textContent = customDesc;
+      }
+      featureUpdateModal.style.display = "flex";
+    } else {
+      var toastMsg = (typeof t === "function") ? t("feature_update_toast") : "🛠️ The app is being updated. This feature will be back in 24 hours.";
+      showToast(toastMsg);
+    }
+  }
+
+  function closeFeatureUpdateNotice() {
+    if (featureUpdateModal) {
+      featureUpdateModal.style.display = "none";
+    }
+  }
+
+  if (closeFeatureUpdateModalBtn) {
+    closeFeatureUpdateModalBtn.addEventListener("click", closeFeatureUpdateNotice);
+  }
+  if (confirmFeatureUpdateBtn) {
+    confirmFeatureUpdateBtn.addEventListener("click", closeFeatureUpdateNotice);
+  }
+  if (featureUpdateModal) {
+    featureUpdateModal.addEventListener("click", function(e) {
+      if (e.target === featureUpdateModal) {
+        closeFeatureUpdateNotice();
+      }
     });
   }
 
@@ -8771,7 +9032,19 @@
 
       // Banned Screen
       banned_title: "Your account has been suspended",
-      banned_desc: "Your account has been permanently restricted by administration for violating terms of service. You can no longer access HOOCOOH Miner."
+      banned_desc: "Your account has been permanently restricted by administration for violating terms of service. You can no longer access HOOCOOH Miner.",
+
+      // Feature Under Update Notice (Temporary Ad Replacement)
+      feature_update_title: "System Update in Progress",
+      feature_update_desc: "The app is currently undergoing scheduled system updates. This feature is temporarily paused and will be back in 24 hours.",
+      feature_update_active_title: "Active Features (Available Now)",
+      feature_update_miner: "⛏️ Miner: 100% Active & Earning",
+      feature_update_streak: "🔥 7-Day Streak: Daily Bonus Active",
+      feature_update_tasks: "📋 Tasks: Social & Partner Tasks Active",
+      feature_update_btn: "Understood",
+      feature_update_badge: "SYSTEM UPDATE · 24H",
+      feature_update_toast: "🛠️ The app is being updated. This feature will be back in 24 hours.",
+      ad_missions_updating: "🛠️ System update in progress. Ad missions will be back in 24 hours."
     },
 
     ru: {
@@ -8962,7 +9235,19 @@
 
       // Banned Screen
       banned_title: "Ваш аккаунт заблокирован",
-      banned_desc: "Ваш аккаунт был заблокирован администрацией за нарушение правил. Доступ к HOOCOOH Miner ограничен."
+      banned_desc: "Ваш аккаунт был заблокирован администрацией за нарушение правил. Доступ к HOOCOOH Miner ограничен.",
+
+      // Feature Under Update Notice (Temporary Ad Replacement)
+      feature_update_title: "Обновление системы",
+      feature_update_desc: "В приложении ведутся плановые технические работы. Эта функция временно приостановлена и вернется через 24 часа.",
+      feature_update_active_title: "Активные разделы (Работают сейчас)",
+      feature_update_miner: "⛏️ Майнинг: 100% активен и приносит доход",
+      feature_update_streak: "🔥 Серия 7 дней: Ежедневный бонус активен",
+      feature_update_tasks: "📋 Задания: Партнерские задания активны",
+      feature_update_btn: "Понятно",
+      feature_update_badge: "ОБНОВЛЕНИЕ · 24Ч",
+      feature_update_toast: "🛠️ Приложение обновляется. Эта функция вернется через 24 часа.",
+      ad_missions_updating: "🛠️ Ведется обновление системы. Рекламные миссии вернутся через 24 часа."
     },
 
     ar: {
@@ -9153,7 +9438,19 @@
 
       // Banned Screen
       banned_title: "تم تعليق حسابك",
-      banned_desc: "تم تقييد حسابك بشكل دائم من قِبل الإدارة لانتهاك شروط الخدمة. لم يعد بإمكانك الوصول إلى HOOCOOH Miner."
+      banned_desc: "تم تقييد حسابك بشكل دائم من قِبل الإدارة لانتهاك شروط الخدمة. لم يعد بإمكانك الوصول إلى HOOCOOH Miner.",
+
+      // Feature Under Update Notice (Temporary Ad Replacement)
+      feature_update_title: "تحديث النظام قيد التنفيذ",
+      feature_update_desc: "يخضع التطبيق حاليًا لتحديثات مجدولة في النظام. تم إيقاف هذه الميزة مؤقتًا وستعود بعد 24 ساعة.",
+      feature_update_active_title: "الأقسام النشطة (متاحة الآن)",
+      feature_update_miner: "⛏️ التعدين: نشط بنسبة 100% وجاهز للربح",
+      feature_update_streak: "🔥 سلسلة الـ 7 أيام: المكافأة اليومية نشطة",
+      feature_update_tasks: "📋 المهام: مهام الشركاء نشطة",
+      feature_update_btn: "فهمت",
+      feature_update_badge: "تحديث النظام · 24 ساعة",
+      feature_update_toast: "🛠️ يتم تحديث التطبيق. ستكون هذه الميزة متاحة بعد 24 ساعة.",
+      ad_missions_updating: "🛠️ تحديث النظام قيد التنفيذ. ستعود مهام الإعلانات بعد 24 ساعة."
     }
   };
 
@@ -9244,9 +9541,8 @@
 
     var watchCardTitle = document.querySelector(".watch-card-title");
     if (watchCardTitle) watchCardTitle.textContent = t("watch_earn_title");
-    var curRew = window.WATCH_AD_REWARD || (user && user.watchAdReward) || 10;
     var watchCardSub = document.querySelector(".watch-card-sub");
-    if (watchCardSub) watchCardSub.innerHTML = t("watch_earn_sub").replace(/\+?15/g, "+" + curRew);
+    if (watchCardSub) watchCardSub.innerHTML = '🛠️ ' + t("feature_update_desc");
     var watchProgLbl = document.querySelector(".watch-progress-label-row span:first-child");
     if (watchProgLbl) watchProgLbl.textContent = t("daily_progress");
     var watchStatLbl1 = document.querySelector(".watch-stats-grid .watch-stat-box:nth-child(1) .lbl");
@@ -9254,9 +9550,8 @@
     var watchStatLbl2 = document.querySelector(".watch-stats-grid .watch-stat-box:nth-child(2) .lbl");
     if (watchStatLbl2) watchStatLbl2.textContent = t("earned_today");
     var watchAdBtnSpan = document.querySelector("#watchAdBtn span");
-    var realWatchBtn = document.getElementById("watchAdBtn");
-    if (watchAdBtnSpan && realWatchBtn && !realWatchBtn.disabled) {
-      watchAdBtnSpan.textContent = t("watch_btn").replace(/\+?15/g, "+" + curRew);
+    if (watchAdBtnSpan) {
+      watchAdBtnSpan.textContent = '🛠️ ' + t("feature_update_title") + ' · 24h';
     }
 
     var spinBadge = document.querySelector(".spin-card-badge");
@@ -9303,9 +9598,13 @@
     var getTicketCards = document.querySelectorAll(".get-ticket-card");
     if (getTicketCards[0]) {
       var t1Title = getTicketCards[0].querySelector(".ticket-card-title");
-      if (t1Title) t1Title.textContent = t("watch_ads_tickets_title");
+      if (t1Title) t1Title.textContent = t("feature_update_title");
       var t1Sub = getTicketCards[0].querySelector(".ticket-card-sub");
-      if (t1Sub) t1Sub.textContent = t("watch_ads_tickets_sub");
+      if (t1Sub) t1Sub.textContent = t("feature_update_desc");
+    }
+    var watchSpinBtn = document.getElementById("watchSpinAdActionBtn");
+    if (watchSpinBtn) {
+      watchSpinBtn.innerHTML = '<span>🛠️ ' + t("feature_update_title") + ' · 24h</span>';
     }
     if (getTicketCards[1]) {
       var t2Title = getTicketCards[1].querySelector(".ticket-card-title");
@@ -9400,6 +9699,24 @@
     if (tmSub) tmSub.textContent = t("terms_subtitle");
     var tmAgreeBtn = document.querySelector("#agreeTermsBtn span");
     if (tmAgreeBtn) tmAgreeBtn.textContent = t("terms_accept_btn");
+
+    // Feature Update Modal
+    var fuBadge = document.getElementById("featureUpdateBadgeTxt");
+    if (fuBadge) fuBadge.textContent = t("feature_update_badge");
+    var fuTitle = document.getElementById("featureUpdateTitleTxt");
+    if (fuTitle) fuTitle.textContent = t("feature_update_title");
+    var fuDesc = document.getElementById("featureUpdateDescTxt");
+    if (fuDesc) fuDesc.textContent = t("feature_update_desc");
+    var fuActTitle = document.getElementById("featureUpdateActiveTitleTxt");
+    if (fuActTitle) fuActTitle.textContent = t("feature_update_active_title");
+    var fuMiner = document.getElementById("featureUpdateMinerTxt");
+    if (fuMiner) fuMiner.textContent = t("feature_update_miner");
+    var fuStreak = document.getElementById("featureUpdateStreakTxt");
+    if (fuStreak) fuStreak.textContent = t("feature_update_streak");
+    var fuTasks = document.getElementById("featureUpdateTasksTxt");
+    if (fuTasks) fuTasks.textContent = t("feature_update_tasks");
+    var fuBtn = document.getElementById("featureUpdateBtnTxt");
+    if (fuBtn) fuBtn.textContent = t("feature_update_btn");
 
     // Invite Tab
     var invNetStrip = document.querySelector(".invite-network-strip span:first-child");
@@ -10343,34 +10660,8 @@
     var btn = document.getElementById("watchAdBtn");
     if (!btn) return;
 
-    var curReward = window.WATCH_AD_REWARD || (user && user.watchAdReward) || 10;
-    var btnDefaultHtml = (typeof t === "function" && t("watch_btn")) 
-      ? ('<span>' + t("watch_btn").replace(/\+?15/g, "+" + curReward) + '</span>')
-      : ('<span>▶ Watch Ad (+' + curReward + ' HOOCOOH Coins)</span>');
-
-    var now = Date.now();
-    var cycleStart = user.adsCycleStartedAt ? Number(user.adsCycleStartedAt) : 0;
-    var CYCLE_MS = 24 * 60 * 60 * 1000;
-
-    // Check if 10 ads reached and still in 24h cooldown
-    if (watched >= maxAds && cycleStart && (now - cycleStart < CYCLE_MS)) {
-      btn.disabled = true;
-      var remainingCooldown = CYCLE_MS - (now - cycleStart);
-      btn.innerHTML = '<span>⏳ ' + t("next_in") + ' ' + formatDuration(remainingCooldown) + '</span>';
-    } else if (watched >= maxAds && (!cycleStart || (now - cycleStart >= CYCLE_MS))) {
-      user.adsWatchedToday = 0;
-      user.adsEarnedToday = 0;
-      user.adsCycleStartedAt = null;
-      btn.disabled = false;
-      btn.innerHTML = btnDefaultHtml;
-      if (countEl) countEl.textContent = "0";
-      if (fillEl) fillEl.style.width = "0%";
-      if (remEl) remEl.textContent = "10";
-      if (earnedEl) earnedEl.textContent = "0";
-    } else {
-      btn.disabled = false;
-      btn.innerHTML = btnDefaultHtml;
-    }
+    btn.disabled = false;
+    btn.innerHTML = '<span>🛠️ ' + t("feature_update_title") + ' · 24h</span>';
   }
 
   // ===================================================
@@ -11022,128 +11313,27 @@
   var adMissionsInitialized = false;
   var adMissionRewardAmount = 20;
 
-  function initAdMissions(force) {
-    var container = document.getElementById("adMissionsBody");
-    if (!container) return;
-    if (adMissionsInitialized && !force) return;
-    adMissionsInitialized = true;
-
-    // Fetch latest app settings (coin reward) from /api/ads
-    fetch("/api/ads", {
-      headers: {
-        "x-telegram-init-data": (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) ? window.Telegram.WebApp.initData : ""
-      }
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data && typeof data.adMissionReward === "number" && data.adMissionReward > 0) {
-        adMissionRewardAmount = data.adMissionReward;
-        var rewBadges = document.querySelectorAll(".ad-mission-reward");
-        rewBadges.forEach(function(el) {
-          el.textContent = "+" + adMissionRewardAmount + " Coins";
-        });
-      }
-      if (!container.querySelector("adsgram-task")) {
-        renderAdMissions();
-      }
-    })
-    .catch(function() {
-      if (!container.querySelector("adsgram-task")) {
-        renderAdMissions();
-      }
-    });
+  function initAdMissions() {
+    renderAdMissions();
   }
 
   function renderAdMissions() {
     var container = document.getElementById("adMissionsBody");
     if (!container) return;
-    container.innerHTML = "";
+    container.innerHTML =
+      '<div class="ad-mission-update-card" style="background:var(--sub-box-bg);border:1px dashed rgba(245, 158, 11, 0.4);border-radius:18px;padding:18px 14px;text-align:center;cursor:pointer;">' +
+        '<div style="font-size:26px;margin-bottom:6px;">🛠️</div>' +
+        '<div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px;">' + t("feature_update_title") + '</div>' +
+        '<div style="font-size:11.5px;color:var(--text-dim);line-height:1.45;margin-bottom:10px;">' + t("ad_missions_updating") + '</div>' +
+        '<button type="button" style="background:linear-gradient(135deg, #ffd700, #f59e0b);color:#000;border:none;border-radius:100px;font-size:11px;font-weight:800;padding:6px 16px;cursor:pointer;">' + t("feature_update_btn") + '</button>' +
+      '</div>';
 
-    var activeCount = 0;
-    var evaluatedCount = 0;
-
-    function checkEmptyNotice() {
-      if (evaluatedCount >= AD_MISSION_BLOCK_IDS.length && activeCount === 0) {
-        container.innerHTML = '<div class="ad-missions-empty">' + t("ad_missions_empty") + '</div>';
-      }
-    }
-
-    AD_MISSION_BLOCK_IDS.forEach(function(blockId) {
-      var card = document.createElement("div");
-      card.className = "ad-mission-card";
-      card.id = "adMissionCard_" + blockId.replace(/[^a-zA-Z0-9]/g, "_");
-
-      var taskEl = document.createElement("adsgram-task");
-      taskEl.setAttribute("data-block-id", blockId);
-      taskEl.className = "ad-mission-task";
-
-      taskEl.innerHTML =
-        '<div slot="reward" class="ad-mission-reward">+' + adMissionRewardAmount + ' Coins</div>' +
-        '<div slot="button" class="ad-mission-btn">GO</div>' +
-        '<div slot="claim" class="ad-mission-btn ad-mission-btn-claim">CLAIM</div>' +
-        '<div slot="done" class="ad-mission-btn ad-mission-btn-done">DONE ✓</div>';
-
-      card.appendChild(taskEl);
-      container.appendChild(card);
-
-      var settled = false;
-
-      function handleNotFound() {
-        if (settled) return;
-        settled = true;
-        evaluatedCount++;
-        if (card.parentNode) card.parentNode.removeChild(card);
-        checkEmptyNotice();
-      }
-
-      taskEl.addEventListener("onBannerNotFound", handleNotFound);
-      taskEl.addEventListener("onError", handleNotFound);
-
-      taskEl.addEventListener("reward", async function(e) {
-        console.log("[AdMission] Reward emitted for block:", blockId, e && e.detail);
-        try {
-          var res = await fetch("/api/ads", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-telegram-init-data": (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) ? window.Telegram.WebApp.initData : ""
-            },
-            body: JSON.stringify({ action: "claim_ad_mission" })
-          });
-          var data = await res.json();
-          if (data && data.ok) {
-            if (typeof data.newBalance === "number") {
-              if (window.user) window.user.balance = data.newBalance;
-              renderBalance();
-            }
-            showToast("🎉 Ad Mission completed! +" + (data.reward || adMissionRewardAmount) + " Coins added!");
-          } else {
-            showToast(data.error || "Could not claim reward");
-          }
-        } catch(err) {
-          console.error("[AdMission] Claim error:", err);
-        }
+    var card = container.querySelector(".ad-mission-update-card");
+    if (card) {
+      card.addEventListener("click", function() {
+        showFeatureUpdateNotice();
       });
-
-      // Poll up to 5 seconds to detect if Adsgram task banner rendered
-      var pollCount = 0;
-      var poll = setInterval(function() {
-        if (settled) {
-          clearInterval(poll);
-          return;
-        }
-        pollCount++;
-        if (taskEl.getBoundingClientRect().height > 24) {
-          settled = true;
-          activeCount++;
-          evaluatedCount++;
-          clearInterval(poll);
-        } else if (pollCount >= 35) { // ~5 seconds timeout
-          clearInterval(poll);
-          handleNotFound();
-        }
-      }, 150);
-    });
+    }
   }
 
   // ========================================================
@@ -11168,166 +11358,22 @@
     return adsgramControllers[bid];
   }
 
-  function playAdsgramFullscreenAd(onWatchedSuccess, onSkippedOrFailed, minWatchSeconds, customBlockId) {
-    var minSec = (typeof minWatchSeconds === "number" && minWatchSeconds > 0) ? minWatchSeconds : 9;
-    var minMs = minSec * 1000;
-    var targetBlockId = String(customBlockId || ADSGRAM_MAIN_BLOCK_ID);
-
-    if (!window.AdBarrier.acquire("adsgram")) {
-      showToast("⚠️ Another ad is currently active. Please wait.");
-      if (typeof onSkippedOrFailed === "function") onSkippedOrFailed("barrier_busy");
-      return;
+  function playAdsgramFullscreenAd(onWatchedSuccess, onSkippedOrFailed) {
+    showFeatureUpdateNotice();
+    if (typeof onSkippedOrFailed === "function") {
+      onSkippedOrFailed("maintenance");
     }
-
-    var controller = getAdsgramController(targetBlockId);
-    if (!controller && window.Adsgram) {
-      try {
-        controller = window.Adsgram.init({ blockId: targetBlockId });
-        adsgramControllers[targetBlockId] = controller;
-      } catch(e){}
-    }
-
-    if (!controller) {
-      window.AdBarrier.release("adsgram");
-      showToast("⏳ Ad network is initializing... Please try again in a few seconds.");
-      if (typeof onSkippedOrFailed === "function") onSkippedOrFailed("controller_unavailable");
-      return;
-    }
-
-    var adStartTime = Date.now();
-    controller.show().then(function(result) {
-      window.AdBarrier.release("adsgram");
-      var elapsedMs = Date.now() - adStartTime;
-
-      if (elapsedMs < minMs) {
-        if (minSec === 4) {
-          showToast("⚠️ Ad skipped! You must watch at least 4 seconds to proceed with withdrawal.");
-        } else if (minSec === 5) {
-          showToast("❌ Ad was skipped! You must watch at least 5 seconds to receive your ticket.");
-        } else {
-          showToast("❌ Ad was skipped! You must watch at least " + minSec + " seconds to receive the reward.");
-        }
-        if (typeof onSkippedOrFailed === "function") onSkippedOrFailed("skipped_under_" + minSec + "s");
-        return;
-      }
-
-      console.log("[Adsgram] Ad completed successfully. blockId:", targetBlockId, "elapsedMs:", elapsedMs, "result:", result);
-      if (typeof onWatchedSuccess === "function") {
-        onWatchedSuccess(result, elapsedMs);
-      }
-    }).catch(function(err) {
-      window.AdBarrier.release("adsgram");
-      var elapsedMs = Date.now() - adStartTime;
-      console.warn("[Adsgram] Ad catch/error, elapsedMs:", elapsedMs, "err:", err);
-
-      if (elapsedMs >= minMs) {
-        if (err && (err.done === true || err.state === "destroy" || (typeof err.description === "string" && err.description.indexOf("viewed to the end") !== -1))) {
-          console.log("[Adsgram] Completed after " + elapsedMs + "ms:", err);
-          if (typeof onWatchedSuccess === "function") {
-            onWatchedSuccess(err, elapsedMs);
-          }
-          return;
-        }
-      }
-
-      if (elapsedMs < minMs) {
-        if (minSec === 4) {
-          showToast("⚠️ Ad skipped! You must watch at least 4 seconds to proceed with withdrawal.");
-        } else if (minSec === 5) {
-          showToast("❌ Ad was skipped! You must watch at least 5 seconds to receive your ticket.");
-        } else {
-          showToast("❌ Ad was skipped! You must watch at least " + minSec + " seconds to receive the reward.");
-        }
-        if (typeof onSkippedOrFailed === "function") onSkippedOrFailed("skipped_under_" + minSec + "s");
-      } else {
-        var isSkip = false;
-        if (err && (err.state === "skip" || (err.description && String(err.description).toLowerCase().indexOf("skip") !== -1))) {
-          isSkip = true;
-        }
-
-        if (isSkip) {
-          showToast("⚠️ Ad was skipped! Please finish watching the ad.");
-          if (typeof onSkippedOrFailed === "function") onSkippedOrFailed("skipped");
-        } else {
-          var errDesc = (err && err.description) ? err.description : "Ad closed or not finished";
-          showToast("❌ " + errDesc);
-          if (typeof onSkippedOrFailed === "function") onSkippedOrFailed(err);
-        }
-      }
-    });
   }
 
   // ========================================================
-  // ADSGRAM STARTUP INTERSTITIAL (int ad)
-  // EVERY time a user opens the mini app: as soon as the loading screen is
-  // finished (user lands on the home page) the AdsGram interstitial plays
-  // ONCE for that app-open (state is in memory only, so it plays again on
-  // the next app-open).
-  // - Silent: no toast, no reward, no side effects on any other feature
-  // - Protected by AdBarrier (never overlaps another ad)
-  // - If the SDK is missing / no ad is available / user closes it, the app
-  //   simply continues normally.
-  // Change ADSGRAM_STARTUP_INT_BLOCK_ID to use a different interstitial block.
+  // ADSGRAM STARTUP INTERSTITIAL (Disabled during 24h system update)
   // ========================================================
-  var ADSGRAM_STARTUP_INT_BLOCK_ID = "int-52852";
-  var adsgramStartupIntStarted = false;
-
-  function appLoadingScreenFinished() {
-    var ls = document.getElementById("appLoadingScreen");
-    return !ls || window.getComputedStyle(ls).display === "none";
-  }
-
-  function playAdsgramStartupInterstitial() {
-    if (!window.AdBarrier.acquire("adsgram")) {
-      console.warn("[AdsgramStartup] Skipped: another ad is currently active");
-      return;
-    }
-    var controller = getAdsgramController(ADSGRAM_STARTUP_INT_BLOCK_ID);
-    if (!controller) {
-      window.AdBarrier.release("adsgram");
-      console.warn("[AdsgramStartup] Skipped: Adsgram controller unavailable");
-      return;
-    }
-    var startedAt = Date.now();
-    try {
-      controller.show().then(function(result) {
-        window.AdBarrier.release("adsgram");
-        console.log("[AdsgramStartup] Interstitial finished. blockId:", ADSGRAM_STARTUP_INT_BLOCK_ID, "elapsedMs:", Date.now() - startedAt, result);
-      }).catch(function(err) {
-        window.AdBarrier.release("adsgram");
-        console.log("[AdsgramStartup] Interstitial closed / not shown:", err);
-      });
-    } catch (e) {
-      window.AdBarrier.release("adsgram");
-      console.warn("[AdsgramStartup] show() error:", e);
-    }
-  }
-
   function initAdsgramStartupInterstitial() {
-    if (adsgramStartupIntStarted) return;
-    adsgramStartupIntStarted = true;
-
-    var totalWaitMs = 0;
-    var sdkWaitMs = 0;
-    (function waitForHome() {
-      if (appLoadingScreenFinished()) {
-        if (window.Adsgram) {
-          playAdsgramStartupInterstitial();
-          return;
-        }
-        sdkWaitMs += 300;
-        if (sdkWaitMs > 10000) {
-          console.warn("[AdsgramStartup] Adsgram SDK not available, skipping startup interstitial");
-          return;
-        }
-      }
-      totalWaitMs += 300;
-      if (totalWaitMs > 90000) return; // loading never finished -> give up
-      setTimeout(waitForHome, 300);
-    })();
+    // Disabled during update
+    return;
   }
 
-  // Start at app open; it waits by itself until the loading screen is finished
+  // Start at app open (disabled during update)
   initAdsgramStartupInterstitial();
 
   function updateWatchSheetView1() {
@@ -11379,216 +11425,18 @@
     sheetCancelBtn.addEventListener("click", closeWatchEarnFlowModal);
   }
 
-  // Earn Page "Watch Ad" Button -> Opens Image 1 Bottom Sheet
+  // Earn Page "Watch Ad" Button -> Shows 24h Update Notice
   var watchAdBtn = document.getElementById("watchAdBtn");
   if (watchAdBtn) {
     watchAdBtn.addEventListener("click", function() {
-      var watched = Number(user.adsWatchedToday) || 0;
-      var now = Date.now();
-      var cycleStart = user.adsCycleStartedAt ? Number(user.adsCycleStartedAt) : 0;
-      var CYCLE_MS = 24 * 60 * 60 * 1000;
-
-      if (watched >= 10 && cycleStart && (now - cycleStart < CYCLE_MS)) {
-        showToast("Daily limit of 10 ads reached! Next ads available in 24 hours.");
-        return;
-      }
-      openWatchEarnFlowModal();
+      showFeatureUpdateNotice();
     });
   }
 
-  // Image 1 Sheet Primary Button: "▶ Watch Ad & Earn" -> Plays AdsGram Fullscreen Ad -> Then Puzzle Verification
-  // One-ad-one-reward lock: stays held from the click until the reward claim finished (or failed),
-  // so double taps / re-opened sheet can never start a second claim for the same ad.
-  var _watchEarnBusy = false;
-  var _watchEarnBusyTimer = null;
-  function setWatchEarnBusy(v) {
-    _watchEarnBusy = v;
-    clearTimeout(_watchEarnBusyTimer);
-    if (v) _watchEarnBusyTimer = setTimeout(function() { _watchEarnBusy = false; }, 120000); // safety auto-release
-  }
+  // Image 1 Sheet Primary Button -> Shows 24h Update Notice
   if (sheetStartAdBtn) {
     sheetStartAdBtn.addEventListener("click", function() {
-      if (_watchEarnBusy) return;
-      var watched = Number(user.adsWatchedToday) || 0;
-      var now = Date.now();
-      var cycleStart = user.adsCycleStartedAt ? Number(user.adsCycleStartedAt) : 0;
-      var CYCLE_MS = 24 * 60 * 60 * 1000;
-
-      if (!cycleStart || (now - cycleStart >= CYCLE_MS)) {
-        watched = 0;
-      }
-
-      if (watched >= 10 && cycleStart && (now - cycleStart < CYCLE_MS)) {
-        showToast("Daily limit of 10 ads reached! Next ads available in 24 hours.");
-        return;
-      }
-
-      setWatchEarnBusy(true);
-      var _adCallbackFired = false;
-      sheetStartAdBtn.disabled = true;
-      sheetStartAdBtn.innerHTML = '<span>⏳ Playing Ad...</span>';
-
-      // First ad of the cycle is Reward Ad (53118) with S2S verification!
-      // Subsequent ads (2-10) are Interstitial Ads (int-52852)
-      var isFirstAdOfDay = (watched === 0);
-      var targetBlockId = isFirstAdOfDay ? ADSGRAM_SPIN_BLOCK_ID : ADSGRAM_MAIN_BLOCK_ID;
-
-      playAdsgramFullscreenAd(
-        function onWatchedSuccess(result, elapsedMs) {
-          if (_adCallbackFired) return; // never claim twice for one ad
-          _adCallbackFired = true;
-          // Watched at least 9 seconds! Close sheet
-          closeWatchEarnFlowModal();
-
-          // Puzzle Captcha: ONLY for Interstitial Ads (#3, #6, #9).
-          // Reward Ad (Ad #1) is completely FREE of puzzle because it is secured by Adsgram S2S!
-          var requiresCaptcha = !isFirstAdOfDay && ((watched + 1) % 3 === 0);
-
-          function claimAdReward(captchaToken, actualDurationMs, onComplete) {
-            var bodyPayload = {
-              watchDurationMs: actualDurationMs || 9200
-            };
-            if (captchaToken) bodyPayload.captchaToken = captchaToken;
-
-            fetch("/api/ads", {
-              method: "POST",
-              headers: getClientHeaders({ "Content-Type": "application/json" }),
-              body: JSON.stringify(bodyPayload)
-            }).then(function(r) {
-              if (r.status === 404) {
-                return fetch("/api/ads.js", {
-                  method: "POST",
-                  headers: getClientHeaders({ "Content-Type": "application/json" }),
-                  body: JSON.stringify(bodyPayload)
-                });
-              }
-              return r;
-            }).then(handleResponse).then(function(res) {
-              if (!res.ok) {
-                var err = (res.data && res.data.error) ? res.data.error : "Failed to claim reward";
-                showToast(err);
-                if (res.data && res.data.flagged) {
-                  user.isSuspicious = true;
-                  if (res.data.permanent) {
-                    user.permanentWarning = true;
-                    user.isFakeAdBypasser = true;
-                  }
-                  if (typeof res.data.correctBalance === "number") {
-                    user.balance = res.data.correctBalance;
-                    renderBalance();
-                  }
-                  alert("🚨 SECURITY WARNING:\n\n" + (res.data.error || "Ad view verification failed!"));
-                }
-                renderAds();
-                return;
-              }
-
-              // Successfully credited in DB & UI!
-              user.balance = res.data.newBalance;
-              user.adsWatchedToday = res.data.adsWatchedToday;
-              user.adsEarnedToday = res.data.adsEarnedToday;
-              user.adsCycleStartedAt = res.data.adsCycleStartedAt;
-
-              renderBalance();
-              renderAds();
-              if (tg && tg.HapticFeedback) {
-                try { tg.HapticFeedback.notificationOccurred("success"); } catch(e) {}
-              }
-              var credited = (res.data && res.data.reward) ? res.data.reward : (window.WATCH_AD_REWARD || 10);
-              showToast("🎉 +" + credited + " HOOCOOH Coins added to balance!");
-            }).catch(function(err) {
-              showToast("Network error. Please try again.");
-              renderAds();
-            }).then(function() {
-              setWatchEarnBusy(false);
-              if (typeof onComplete === "function") onComplete();
-            });
-          }
-
-          if (requiresCaptcha) {
-            window._watchCaptchaOpen = true;
-            window._watchEarnRelease = function() { setWatchEarnBusy(false); };
-            openSecurityCaptcha(function(verifiedCaptchaToken) {
-              window._watchCaptchaOpen = false;
-              setWatchEarnBusy(true);
-              claimAdReward(verifiedCaptchaToken, elapsedMs);
-            });
-          } else if (isFirstAdOfDay) {
-            // S2S REWARD AD CONFIRMATION WITH "PLEASE WAIT" OVERLAY
-            openS2sWaitingModal(
-              "Verifying ad view with Adsgram ad network...",
-              "Awaiting server confirmation..."
-            );
-
-            var pollAttempts = 0;
-            var maxPollAttempts = 12; // 12 * 1.5s = 18s total wait time
-            var pollTimer = null;
-            var s2sAdClaimInitiated = false;
-
-            function doPollS2s() {
-              if (s2sAdClaimInitiated) return;
-              pollAttempts++;
-              if (s2sStatusText) {
-                s2sStatusText.textContent = "Awaiting server confirmation (" + pollAttempts + "/" + maxPollAttempts + ")...";
-              }
-
-              fetch("/api/ads?action=check_s2s", {
-                headers: getClientHeaders()
-              }).then(function(r) {
-                if (r.status === 404) {
-                  return fetch("/api/ads.js?action=check_s2s", { headers: getClientHeaders() });
-                }
-                return r;
-              }).then(handleResponse).then(function(res) {
-                if (s2sAdClaimInitiated) return;
-                if (res && res.data && res.data.verified === true) {
-                  s2sAdClaimInitiated = true;
-                  // Adsgram S2S successfully verified on server!
-                  clearInterval(pollTimer);
-                  updateS2sWaitingModal("✅ Server confirmed! Crediting reward...", true);
-                  setTimeout(function() {
-                    claimAdReward(null, elapsedMs, function onFinish() {
-                      closeS2sWaitingModal();
-                    });
-                  }, 500);
-                  return;
-                }
-
-                if (pollAttempts >= maxPollAttempts) {
-                  clearInterval(pollTimer);
-                  closeS2sWaitingModal();
-                  setWatchEarnBusy(false);
-                  alert("⏳ Ad Network Latency:\n\nThe ad network server took longer than usual to confirm your ad view.\n\nPlease try watching again in a few moments. No penalties were applied.");
-                  renderAds();
-                }
-              }).catch(function(err) {
-                if (pollAttempts >= maxPollAttempts) {
-                  clearInterval(pollTimer);
-                  closeS2sWaitingModal();
-                  setWatchEarnBusy(false);
-                  showToast("Network issue while waiting for ad server.");
-                  renderAds();
-                }
-              });
-            }
-
-            pollTimer = setInterval(doPollS2s, 1500);
-            doPollS2s();
-          } else {
-            claimAdReward(null, elapsedMs);
-          }
-        },
-        function onSkippedOrFailed(reason, elapsedMs) {
-          setWatchEarnBusy(false);
-          sheetStartAdBtn.disabled = false;
-          sheetStartAdBtn.innerHTML = '<span>▶ Watch Ad & Earn</span>';
-          if (reason === "skipped_under_9s") {
-            showToast("❌ Ad was skipped under 9 seconds! You must watch at least 9 seconds.");
-          }
-        },
-        9, // 9-Second minimum watch rule
-        targetBlockId
-      );
+      showFeatureUpdateNotice();
     });
   }
 
@@ -11660,56 +11508,45 @@
       if (tabBtnTxt) tabBtnTxt.textContent = "Verifying...";
     }
 
-    // 2. Then: In "Verifying..." state, push AdsGram ad!
-    playAdsgramFullscreenAd(
-      function onWatchedSuccess() {
-        // 3. Ad watched >= 9s! Now open Puzzle Verification
-        openSecurityCaptcha(function onCaptchaSuccess(verifiedCaptchaToken) {
-          if (window._isMiningClaimLocked) return;
-          window._isMiningClaimLocked = true;
+    // Direct captcha verification (No ads!)
+    openSecurityCaptcha(function onCaptchaSuccess(verifiedCaptchaToken) {
+      if (window._isMiningClaimLocked) return;
+      window._isMiningClaimLocked = true;
 
-          // 4. INSTANT OPTIMISTIC LOCK & COUNTDOWN (Zero-delay timer appearance):
-          var prevLastCollected = user.lastMineCollectedAt;
-          user.lastMineCollectedAt = Date.now();
-          renderMining(); // Instantly activates countdown clock and disables buttons in 0ms!
+      // 3. INSTANT OPTIMISTIC LOCK & COUNTDOWN (Zero-delay timer appearance):
+      var prevLastCollected = user.lastMineCollectedAt;
+      user.lastMineCollectedAt = Date.now();
+      renderMining(); // Instantly activates countdown clock and disables buttons in 0ms!
 
-          apiCollect(verifiedCaptchaToken).then(function(res){
-            window._isMiningClaimLocked = false;
-            if (!res.ok) {
-              user.lastMineCollectedAt = prevLastCollected; // rollback on server error
-              var errText = (res.data && res.data.error) ? res.data.error : ("Error (" + res.status + ")");
-              showToast(errText);
-              renderMining();
-              return;
-            }
-            user.balance = res.data.balance;
-            user.lastMineCollectedAt = res.data.lastMineCollectedAt;
-            if (res.data.minerLevel) {
-              user.minerLevel = res.data.minerLevel;
-              user.level = res.data.minerLevel;
-              try { localStorage.setItem("hoocooh_miner_level", String(res.data.minerLevel)); } catch(e){}
-            }
-            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
-              try { window.Telegram.WebApp.HapticFeedback.notificationOccurred("success"); } catch(e){}
-            }
-            showToast("🎉 +" + res.data.reward + " HOOCOOH collected! Mining started.");
-            renderAll();
-          }).catch(function(err){
-            window._isMiningClaimLocked = false;
-            user.lastMineCollectedAt = prevLastCollected;
-            var msg = (err && err.message) ? err.message : "Connection failed";
-            showToast(msg);
-            renderMining();
-          });
-        });
-      },
-      function onSkippedOrFailed() {
+      apiCollect(verifiedCaptchaToken).then(function(res){
         window._isMiningClaimLocked = false;
-        // Skipped under 9 seconds or closed early: Miner will NOT turn on!
+        if (!res.ok) {
+          user.lastMineCollectedAt = prevLastCollected; // rollback on server error
+          var errText = (res.data && res.data.error) ? res.data.error : ("Error (" + res.status + ")");
+          showToast(errText);
+          renderMining();
+          return;
+        }
+        user.balance = res.data.balance;
+        user.lastMineCollectedAt = res.data.lastMineCollectedAt;
+        if (res.data.minerLevel) {
+          user.minerLevel = res.data.minerLevel;
+          user.level = res.data.minerLevel;
+          try { localStorage.setItem("hoocooh_miner_level", String(res.data.minerLevel)); } catch(e){}
+        }
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
+          try { window.Telegram.WebApp.HapticFeedback.notificationOccurred("success"); } catch(e){}
+        }
+        showToast("🎉 +" + res.data.reward + " HOOCOOH collected! Mining started.");
+        renderAll();
+      }).catch(function(err){
+        window._isMiningClaimLocked = false;
+        user.lastMineCollectedAt = prevLastCollected;
+        var msg = (err && err.message) ? err.message : "Connection failed";
+        showToast(msg);
         renderMining();
-      },
-      9 // 9-Second minimum watch rule
-    );
+      });
+    });
   }
 
   var homeCollectBtn = document.getElementById("collectBtn");
@@ -11767,7 +11604,7 @@
     });
   }
 
-  // Dedicated Collect Weekly / Daily Reward Action (Adsgram Ad -> Puzzle Captcha -> Reward Claim)
+  // Dedicated Collect Weekly / Daily Reward Action (Puzzle Captcha -> Reward Claim, no ads)
   var dailyBtn = document.getElementById("dailyCollectBtn");
   if (dailyBtn) {
     dailyBtn.addEventListener("click", function(){
@@ -11776,47 +11613,35 @@
       dailyBtn.disabled = true;
       dailyBtn.innerHTML = '<span>Claiming...</span>';
 
-      playAdsgramFullscreenAd(
-        function onWatchedSuccess() {
-          // Step 2: Ad watched! Now open Puzzle Captcha Verification
-          openSecurityCaptcha(function onCaptchaSuccess(verifiedCaptchaToken) {
-            dailyBtn.disabled = true;
-            dailyBtn.innerHTML = '<span>Claiming...</span>';
+      openSecurityCaptcha(function onCaptchaSuccess(verifiedCaptchaToken) {
+        dailyBtn.disabled = true;
+        dailyBtn.innerHTML = '<span>Claiming...</span>';
 
-            // Step 3: Puzzle solved! Claim reward
-            apiCheckin(verifiedCaptchaToken).then(function(res){
-              window._isCheckinLocked = false;
-              dailyBtn.disabled = false;
-              if (!res.ok) {
-                var errText = (res.data && res.data.error) ? res.data.error : ("Error (" + res.status + ")");
-                showToast(errText);
-                renderDaily();
-                return;
-              }
-              user.balance = res.data.balance;
-              user.dailyCycle = res.data.dailyCycle;
-              user.dailyDayIndex = res.data.dailyDayIndex;
-              user.lastCheckinAt = res.data.lastCheckinAt;
-              user.totalDailyEarned = res.data.totalDailyEarned;
-              if (res.data.level) user.level = res.data.level;
-              showToast("🎉 +" + res.data.reward + " HOOCOOH Bonus Reward claimed!");
-              renderAll();
-            }).catch(function(err){
-              window._isCheckinLocked = false;
-              dailyBtn.disabled = false;
-              var msg = (err && err.message) ? err.message : "Connection failed";
-              showToast(msg);
-              renderDaily();
-            });
-          });
-        },
-        function onAdFailed(err) {
+        apiCheckin(verifiedCaptchaToken).then(function(res){
           window._isCheckinLocked = false;
           dailyBtn.disabled = false;
+          if (!res.ok) {
+            var errText = (res.data && res.data.error) ? res.data.error : ("Error (" + res.status + ")");
+            showToast(errText);
+            renderDaily();
+            return;
+          }
+          user.balance = res.data.balance;
+          user.dailyCycle = res.data.dailyCycle;
+          user.dailyDayIndex = res.data.dailyDayIndex;
+          user.lastCheckinAt = res.data.lastCheckinAt;
+          user.totalDailyEarned = res.data.totalDailyEarned;
+          if (res.data.level) user.level = res.data.level;
+          showToast("🎉 +" + res.data.reward + " HOOCOOH Bonus Reward claimed!");
+          renderAll();
+        }).catch(function(err){
+          window._isCheckinLocked = false;
+          dailyBtn.disabled = false;
+          var msg = (err && err.message) ? err.message : "Connection failed";
+          showToast(msg);
           renderDaily();
-        },
-        9 // 9-second watch rule
-      );
+        });
+      });
     });
   }
 
@@ -11930,13 +11755,8 @@
         }
 
         if (watchSpinAdActionBtn) {
-          if (watched >= maxAds) {
-            watchSpinAdActionBtn.disabled = true;
-            watchSpinAdActionBtn.innerHTML = '<span>' + t("spin_limit_reached") + '</span>';
-          } else {
-            watchSpinAdActionBtn.disabled = false;
-            watchSpinAdActionBtn.innerHTML = '<span>' + t("watch_ad_ticket_btn") + '</span>';
-          }
+          watchSpinAdActionBtn.disabled = false;
+          watchSpinAdActionBtn.innerHTML = '<span>🛠️ ' + t("feature_update_title") + ' · 24h</span>';
         }
 
         if (spinAdsResetCountdown && sp.nextResetMs > 0 && watched >= maxAds) {
@@ -12081,146 +11901,10 @@
     });
   }
 
-  // WATCH AD FOR SPIN TICKET (Adsgram Ads - Block ID: 53118 - 5s minimum watch rule)
+  // WATCH AD FOR SPIN TICKET (Replaced with 24h Update Notice)
   if (watchSpinAdActionBtn) {
     watchSpinAdActionBtn.addEventListener("click", function() {
-      if (watchSpinAdActionBtn.disabled) return;
-      var spinWatchedToday = Number(user.spinAdsWatchedToday) || 0;
-      if (spinWatchedToday >= 6) {
-        showToast("Limit of 6 tickets reached! Next tickets available in 10 hours.");
-        return;
-      }
-
-      watchSpinAdActionBtn.disabled = true;
-      watchSpinAdActionBtn.textContent = "Loading Ad...";
-
-      playAdsgramFullscreenAd(
-        function onWatchedSuccess(res, elapsedMs) {
-          // Watched at least 5 seconds! Open S2S PLEASE WAIT Verification Modal
-          openS2sWaitingModal(
-            "Verifying spin ticket ad view with Adsgram ad network...",
-            "Awaiting server confirmation..."
-          );
-
-          var pollAttempts = 0;
-          var maxPollAttempts = 12; // 12 * 1.5s = 18s total wait time
-          var pollTimer = null;
-
-            var isClaimingSpinTicket = false;
-            function claimSpinTicket(onFinish) {
-              if (isClaimingSpinTicket) return;
-              isClaimingSpinTicket = true;
-              watchSpinAdActionBtn.textContent = "Claiming Ticket...";
-
-              fetch("/api/ads", {
-                method: "POST",
-                headers: getClientHeaders({ "Content-Type": "application/json" }),
-                body: JSON.stringify({
-                  action: "spin_watch_ad",
-                  watchDurationMs: elapsedMs || 5000,
-                  actionToken: currentActionTokens.spin_watch_ad
-                })
-              }).then(handleResponse).then(function(res) {
-                isClaimingSpinTicket = false;
-                watchSpinAdActionBtn.disabled = false;
-                watchSpinAdActionBtn.textContent = "🎬 Watch Ad (+1 Ticket)";
-                if (typeof onFinish === "function") onFinish();
-
-                if (!res.ok) {
-                  var err = (res.data && res.data.error) ? res.data.error : "Could not claim ticket";
-                  showToast(err);
-                  if (res.data && res.data.flagged) {
-                    user.isSuspicious = true;
-                    if (typeof res.data.correctTickets === "number") {
-                      currentSpinTickets = res.data.correctTickets;
-                      user.spinTickets = currentSpinTickets;
-                      if (spinTicketsCount) spinTicketsCount.textContent = currentSpinTickets;
-                    }
-                    alert("🚨 SECURITY WARNING:\n\nYou attempted to claim a spin ticket without verified ad view!\n\nThis unauthorized ticket has been revoked and your account has been RED-FLAGGED for fraud review.");
-                  }
-                  return;
-                }
-
-                if (res.data && res.data.newActionToken) {
-                  currentActionTokens.spin_watch_ad = res.data.newActionToken;
-                }
-
-                showToast("🎟️ +1 Spin Ticket received successfully!");
-                currentSpinTickets = Number(res.data.spinTickets || 0);
-                user.spinTickets = currentSpinTickets;
-                user.spinAdsWatchedToday = res.data.spinAdsWatchedToday;
-                if (spinTicketsCount) spinTicketsCount.textContent = currentSpinTickets;
-                loadSpinStatus();
-                if (tg && tg.HapticFeedback) {
-                  try { tg.HapticFeedback.notificationOccurred("success"); } catch(e){}
-                }
-              }).catch(function(err) {
-                isClaimingSpinTicket = false;
-                watchSpinAdActionBtn.disabled = false;
-                watchSpinAdActionBtn.textContent = "🎬 Watch Ad (+1 Ticket)";
-                if (typeof onFinish === "function") onFinish();
-                showToast(err.message || "Network issue");
-              });
-            }
-
-            var s2sSpinClaimInitiated = false;
-            function doPollS2sSpin() {
-              if (s2sSpinClaimInitiated) return;
-              pollAttempts++;
-              if (s2sStatusText) {
-                s2sStatusText.textContent = "Awaiting server confirmation (" + pollAttempts + "/" + maxPollAttempts + ")...";
-              }
-
-              fetch("/api/ads?action=check_s2s", {
-                headers: getClientHeaders()
-              }).then(function(r) {
-                if (r.status === 404) {
-                  return fetch("/api/ads.js?action=check_s2s", { headers: getClientHeaders() });
-                }
-                return r;
-              }).then(handleResponse).then(function(res) {
-                if (s2sSpinClaimInitiated) return;
-                if (res && res.data && res.data.verified === true) {
-                  s2sSpinClaimInitiated = true;
-                  // Adsgram S2S successfully verified on server!
-                  clearInterval(pollTimer);
-                  updateS2sWaitingModal("✅ Server confirmed! Crediting spin ticket...", true);
-                  setTimeout(function() {
-                    claimSpinTicket(function onFinish() {
-                      closeS2sWaitingModal();
-                    });
-                  }, 500);
-                  return;
-                }
-
-              if (pollAttempts >= maxPollAttempts) {
-                clearInterval(pollTimer);
-                closeS2sWaitingModal();
-                watchSpinAdActionBtn.disabled = false;
-                watchSpinAdActionBtn.textContent = "🎬 Watch Ad (+1 Ticket)";
-                alert("⏳ Ad Network Latency:\n\nThe ad network server took longer than usual to confirm your ad view.\n\nPlease try watching again in a few moments. No penalties were applied.");
-              }
-            }).catch(function(err) {
-              if (pollAttempts >= maxPollAttempts) {
-                clearInterval(pollTimer);
-                closeS2sWaitingModal();
-                watchSpinAdActionBtn.disabled = false;
-                watchSpinAdActionBtn.textContent = "🎬 Watch Ad (+1 Ticket)";
-                showToast("Network issue while waiting for ad server.");
-              }
-            });
-          }
-
-          pollTimer = setInterval(doPollS2sSpin, 1500);
-          doPollS2sSpin();
-        },
-        function onSkippedOrFailed() {
-          watchSpinAdActionBtn.disabled = false;
-          watchSpinAdActionBtn.textContent = "🎬 Watch Ad (+1 Ticket)";
-        },
-        5, // 5-Second minimum watch rule
-        ADSGRAM_SPIN_BLOCK_ID // Block ID: "53118"
-      );
+      showFeatureUpdateNotice();
     });
   }
 
@@ -13849,10 +13533,11 @@
       showToast("🔒 Vault Sealed! Mine " + Math.ceil(remaining).toLocaleString() + " more HOOCOOH to withdraw.");
       return;
     }
-    setWithdrawStep(1);
+    // Directly advance to Step 2 (Important Notice -> Wallet address) to bypass ad
+    setWithdrawStep(2);
     if (withdrawAdActionBtn) {
       withdrawAdActionBtn.disabled = false;
-      withdrawAdActionBtn.innerHTML = '<span>▶ Watch Ad & Continue</span>';
+      withdrawAdActionBtn.innerHTML = '<span>▶ Continue</span>';
     }
     if (withdrawAmountInput) withdrawAmountInput.value = "";
 
@@ -13928,28 +13613,10 @@
     });
   }
 
-  // Step 1: Watch Ad & Continue -> Plays AdsGram Fullscreen Ad -> transitions to Step 2
+  // Step 1: Watch Ad & Continue -> directly moves to Step 2 without ad
   if (withdrawAdActionBtn) {
     withdrawAdActionBtn.addEventListener("click", function() {
-      if (withdrawAdActionBtn.disabled) return;
-      withdrawAdActionBtn.disabled = true;
-      withdrawAdActionBtn.innerHTML = '<span>🎬 Playing Ad...</span>';
-
-      playAdsgramFullscreenAd(
-        function onWatchedSuccess() {
-          withdrawAdActionBtn.disabled = false;
-          withdrawAdActionBtn.innerHTML = '<span>▶ Watch Ad & Continue</span>';
-          setWithdrawStep(2);
-        },
-        function onSkippedOrFailed(reason) {
-          withdrawAdActionBtn.disabled = false;
-          withdrawAdActionBtn.innerHTML = '<span>▶ Watch Ad & Continue</span>';
-          if (reason === "skipped" || reason === "skipped_under_4s") {
-            showToast("⚠️ Ad skipped! You must watch at least 4 seconds to proceed with withdrawal.");
-          }
-        },
-        4 // 4-Second minimum watch rule for withdrawal
-      );
+      setWithdrawStep(2);
     });
   }
 
