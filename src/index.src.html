@@ -7271,17 +7271,8 @@
     <!-- Primary Notice Card -->
     <div class="maint-desc-card">
       <div class="maint-msg-en-main">
-        Our servers are currently undergoing scheduled maintenance and system optimization. The bot and mini app are temporarily paused for <strong>2–3 hours</strong> and will resume automatically.
+        Our servers are currently undergoing scheduled maintenance and system optimization. The bot and mini app are temporarily paused and will resume automatically once updates are complete.
       </div>
-    </div>
-
-    <!-- Live Estimated Countdown Timer -->
-    <div class="maint-timer-card">
-      <div class="maint-timer-lbl">
-        <span class="t-sub">⏳ ESTIMATED DOWNTIME</span>
-        <span class="t-main">Time Remaining</span>
-      </div>
-      <div class="maint-timer-val" id="maintCountdownClock">02:30:00</div>
     </div>
 
     <!-- 100% Data Safety Guarantee -->
@@ -9049,30 +9040,8 @@
 (function(){
   "use strict";
 
-  // Server Maintenance Countdown (Active)
-  (function initMaintenanceCountdown() {
-    var timerEl = document.getElementById("maintCountdownClock");
-    if (!timerEl) return;
-    var targetTime = Date.now() + 2.5 * 60 * 60 * 1000;
-    try {
-      var saved = localStorage.getItem("hoocooh_maint_target");
-      if (saved && Number(saved) > Date.now()) {
-        targetTime = Number(saved);
-      } else {
-        localStorage.setItem("hoocooh_maint_target", String(targetTime));
-      }
-    } catch(e){}
-    function tick() {
-      var diff = Math.max(0, targetTime - Date.now());
-      var h = Math.floor(diff / 3600000);
-      var m = Math.floor((diff % 3600000) / 60000);
-      var s = Math.floor((diff % 60000) / 1000);
-      var str = (h < 10 ? "0" + h : h) + ":" + (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
-      timerEl.textContent = str;
-    }
-    tick();
-    setInterval(tick, 1000);
-
+  // Server Maintenance Mode (Permanent until manually lifted)
+  (function initMaintenanceMode() {
     // Secret Admin Gesture (Tap 5 times to open admin panel - invisible to regular users)
     var triggerEl = document.getElementById("maintSecretAdminTrigger");
     if (triggerEl) {

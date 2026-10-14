@@ -1750,7 +1750,7 @@ module.exports = async (req, res) => {
       const photoUrl = `${baseUrl}/assets/welcome_banner.jpg?v=4`;
       const maintMsg = 
         `⚙️ <b>Server Maintenance in Progress</b>\n\n` +
-        `Our servers are currently undergoing scheduled maintenance and system optimization. The bot and mini app are temporarily paused for <b>2–3 hours</b> and will return online shortly.\n\n` +
+        `Our servers are currently undergoing scheduled maintenance and system optimization. The bot and mini app are temporarily paused and will return online once updates are complete.\n\n` +
         `🛡️ <b>100% Data Safety Guaranteed:</b>\n` +
         `All your coin balances, task rewards, and streak data are safely encrypted in our database. Nothing will be reset or lost!`;
 
@@ -1784,7 +1784,7 @@ module.exports = async (req, res) => {
     if (!isAdmin && chatId) {
       const quickNotice = 
         `⚙️ <b>Server Maintenance Underway</b>\n\n` +
-        `The system is currently paused for 2–3 hours for scheduled infrastructure upgrades. All user data and balances are 100% safe!`;
+        `The system is currently undergoing scheduled infrastructure upgrades. All user data and balances are 100% safe!`;
       await sendTelegramMsg(botToken, chatId, quickNotice, {
         reply_markup: {
           inline_keyboard: [
