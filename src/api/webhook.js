@@ -9,6 +9,14 @@ const { purgeExpiredBannedUsers } = require("../lib/userHelper");
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET_KEY || "hoocooh_admin_2026";
 
+let cachedWelcomePhotoBuf = null;
+try {
+  const p = path.join(process.cwd(), "public/assets/welcome_banner.jpg");
+  if (fs.existsSync(p)) {
+    cachedWelcomePhotoBuf = fs.readFileSync(p);
+  }
+} catch(e){}
+
 function escapeHtml(text) {
   if (!text) return "";
   return String(text)
@@ -63,6 +71,24 @@ async function sendTelegramMsg(botToken, chatId, text, options = {}) {
       basePayload.reply_markup = options.reply_markup;
     }
 
+    // Fast path: If photoFileId is provided, Telegram serves it from CDN in ~50ms
+    if (options.photoFileId) {
+      try {
+        const photoPayload = Object.assign({}, basePayload, {
+          photo: options.photoFileId,
+          caption: text
+        });
+        const res = await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(photoPayload)
+        });
+        const data = await res.json();
+        if (data && data.ok) return data;
+        console.warn("sendPhoto with fileId failed, falling back to buffer:", data);
+      } catch (err) {}
+    }
+
     // If photoBuffer is provided, send as multipart photo
     if (options.photoBuffer) {
       try {
@@ -82,7 +108,13 @@ async function sendTelegramMsg(botToken, chatId, text, options = {}) {
           body: formData
         });
         const data = await res.json();
-        if (data && data.ok) return data;
+        if (data && data.ok) {
+          if (data.result && data.result.photo && data.result.photo.length > 0) {
+            const fid = data.result.photo[data.result.photo.length - 1].file_id;
+            global._welcomeBannerFileId = fid;
+          }
+          return data;
+        }
         console.warn("sendPhoto buffer was not ok, falling back to sendMessage:", data);
       } catch (photoErr) {
         console.warn("sendPhoto buffer error, falling back to sendMessage:", photoErr.message);
@@ -1270,6 +1302,90 @@ module.exports = async (req, res) => {
     const command = firstWord.split("@")[0]; // removes bot username e.g. /admin@mybot -> /admin
 
     // ----------------------------------------------------
+    // Command: /start (High Priority - Instant User Welcome)
+    // ----------------------------------------------------
+    if (command === "/start") {
+      let userLang = "en";
+      let hasSelected = false;
+      let db = null;
+      try {
+        db = await getDb();
+        if (db) {
+          const u = await db.collection("users").findOne({ telegramId: senderId });
+          if (u) {
+            if (u.isBanned) {
+              const banMsg = 
+                `🚫 <b>Access Denied: Account Suspended</b>\n\n` +
+                `Your account has been permanently suspended due to security violation or automated script tampering.\n\n` +
+                `<i>Reason: ${escapeHtml(u.banReason || "Security violation detected")}</i>`;
+              await sendTelegramMsg(botToken, chatId, banMsg);
+              res.status(200).json({ ok: true, banned: true });
+              return;
+            }
+            if (u.language) userLang = u.language;
+            if (u.languageSelected === true) hasSelected = true;
+          }
+        }
+      } catch(e){}
+
+      let appUrl = `${baseUrl}/index.html?lang=${userLang}`;
+      if (!hasSelected) {
+        appUrl += `&needLang=1`;
+      }
+      const startParam = parts[1] || "";
+      if (startParam) {
+        appUrl += `&tgWebAppStartParam=${encodeURIComponent(startParam)}`;
+        if (db) {
+          (async () => {
+            try {
+              const inviterId = String(startParam).replace(/^ref_/, "").trim();
+              if (inviterId && /^\d+$/.test(inviterId) && String(inviterId) !== String(senderId)) {
+                const inviter = await db.collection("users").findOne({
+                  $or: [{ telegramId: inviterId }, { telegramId: Number(inviterId) }]
+                });
+                if (inviter && String(inviter.telegramId) !== String(senderId)) {
+                  await db.collection("users").updateOne(
+                    { telegramId: String(senderId), referredBy: { $in: [null, undefined] } },
+                    { $set: { referredBy: String(inviter.telegramId) } }
+                  );
+                }
+              }
+            } catch(refErr){}
+          })();
+        }
+      }
+
+      const photoUrl = `${baseUrl}/assets/welcome_banner.jpg?v=4`;
+      const langDict = WELCOME_MESSAGES[userLang] || WELCOME_MESSAGES.en;
+
+      await sendTelegramMsg(botToken, chatId, langDict.text, {
+        photoFileId: global._welcomeBannerFileId,
+        photoBuffer: cachedWelcomePhotoBuf,
+        photoMime: "image/jpeg",
+        photoUrl: photoUrl,
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: langDict.btnStart,
+                web_app: { url: appUrl }
+              }
+            ],
+            [
+              {
+                text: langDict.btnLang,
+                callback_data: "choose_lang"
+              }
+            ]
+          ]
+        }
+      });
+
+      res.status(200).json({ ok: true, sent: true });
+      return;
+    }
+
+    // ----------------------------------------------------
     // Command: /admin
     // ----------------------------------------------------
     if (command === "/admin") {
@@ -1628,95 +1744,6 @@ module.exports = async (req, res) => {
           return;
         }
       }
-    }
-
-    // ----------------------------------------------------
-    // Command: /start
-    // ----------------------------------------------------
-    if (command === "/start") {
-      let userLang = "en";
-      let hasSelected = false;
-      let db = null;
-      try {
-        db = await getDb();
-        if (db) {
-          const u = await db.collection("users").findOne({ telegramId: senderId });
-          if (u) {
-            if (u.isBanned) {
-              const banMsg = 
-                `🚫 <b>Access Denied: Account Suspended</b>\n\n` +
-                `Your account has been permanently suspended due to security violation or automated script tampering.\n\n` +
-                `<i>Reason: ${escapeHtml(u.banReason || "Security violation detected")}</i>`;
-              await sendTelegramMsg(botToken, chatId, banMsg);
-              res.status(200).json({ ok: true, banned: true });
-              return;
-            }
-            if (u.language) userLang = u.language;
-            if (u.languageSelected === true) hasSelected = true;
-          }
-        }
-      } catch(e){}
-
-      let appUrl = `${baseUrl}/index.html?lang=${userLang}`;
-      if (!hasSelected) {
-        appUrl += `&needLang=1`;
-      }
-      const startParam = parts[1] || "";
-      if (startParam) {
-        appUrl += `&tgWebAppStartParam=${encodeURIComponent(startParam)}`;
-        try {
-          if (db) {
-            const inviterId = String(startParam).replace(/^ref_/, "").trim();
-            if (inviterId && /^\d+$/.test(inviterId) && String(inviterId) !== String(senderId)) {
-              const inviter = await db.collection("users").findOne({
-                $or: [{ telegramId: inviterId }, { telegramId: Number(inviterId) }]
-              });
-              if (inviter && String(inviter.telegramId) !== String(senderId)) {
-                await db.collection("users").updateOne(
-                  { telegramId: String(senderId), referredBy: { $in: [null, undefined] } },
-                  { $set: { referredBy: String(inviter.telegramId) } }
-                );
-              }
-            }
-          }
-        } catch(refErr){}
-      }
-
-      let welcomePhotoBuf = null;
-      try {
-        const p = path.join(process.cwd(), "public/assets/welcome_banner.jpg");
-        if (fs.existsSync(p)) {
-          welcomePhotoBuf = fs.readFileSync(p);
-        }
-      } catch(e){}
-
-      const photoUrl = `${baseUrl}/assets/welcome_banner.jpg?v=4`;
-      const langDict = WELCOME_MESSAGES[userLang] || WELCOME_MESSAGES.en;
-
-      await sendTelegramMsg(botToken, chatId, langDict.text, {
-        photoBuffer: welcomePhotoBuf,
-        photoMime: "image/jpeg",
-        photoUrl: photoUrl,
-        reply_markup: {
-          inline_keyboard: [
-            [
-              {
-                text: langDict.btnStart,
-                web_app: { url: appUrl }
-              }
-            ],
-            [
-              {
-                text: langDict.btnLang,
-                callback_data: "choose_lang"
-              }
-            ]
-          ]
-        }
-      });
-
-      res.status(200).json({ ok: true, sent: true });
-      return;
     }
 
     // All other messages - return 200 OK
