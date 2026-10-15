@@ -1,11 +1,12 @@
 const { getDb } = require("../lib/mongodb");
 const { validateInitData } = require("../lib/telegramAuth");
 const { findOrCreateUser, findUserById } = require("../lib/userHelper");
-const { mineIsReady, dailyStatus, MINE_INTERVAL_MS, LEVEL_NAMES, getMultiplierForLevel, MAX_TAP_ENERGY, ENERGY_RECHARGE_RATE_MS, calculateCurrentEnergy, MINE_REWARD } = require("../lib/gameLogic");
+const { mineIsReady, dailyStatus, MINE_INTERVAL_MS, LEVEL_NAMES, getMultiplierForLevel } = require("../lib/gameLogic");
 const { generateVerificationImage } = require("../lib/verificationImage");
 const { notifyInviterReferralSuccess } = require("../lib/miningReminder");
 const { createActionToken } = require("../lib/actionSigner");
 const { checkVelocityLimit } = require("../lib/velocityLimiter");
+const { checkDailyRequestQuota } = require("../lib/dailyQuotaLimiter");
 const { REFERRAL_VELOCITY_WINDOW_MS, REFERRAL_VELOCITY_THRESHOLD } = require("../lib/constants");
 
 let cachedBotUsername = null;
@@ -22,26 +23,27 @@ async function fetchBotUsername(token) {
       return cachedBotUsername;
     }
   } catch(e) {}
-  return "hoocooh_miner_bot";
+  return "treasure_hunt12_bot";
 }
 
 let cachedAppSettings = null;
 let cachedAppSettingsTime = 0;
 async function getCachedAppSettings(db) {
   const now = Date.now();
-  if (cachedAppSettings && (now - cachedAppSettingsTime < 60000)) {
+  if (cachedAppSettings && (now - cachedAppSettingsTime < 20000)) {
     return cachedAppSettings;
   }
   try {
     const s = await db.collection("settings").findOne({ key: "app_settings" });
     cachedAppSettings = {
       watchAdReward: (s && typeof s.watchAdReward === "number" && s.watchAdReward > 0) ? s.watchAdReward : 10,
-      coinRate: (s && typeof s.coinPriceUsd === "number" && s.coinPriceUsd > 0) ? s.coinPriceUsd : 0.00003
+      coinRate: (s && typeof s.coinPriceUsd === "number" && s.coinPriceUsd > 0) ? s.coinPriceUsd : 0.00003,
+      adMissionReward: (s && typeof s.adMissionReward === "number" && s.adMissionReward > 0) ? s.adMissionReward : 20
     };
     cachedAppSettingsTime = now;
     return cachedAppSettings;
   } catch(e) {
-    return { watchAdReward: 10, coinRate: 0.00003 };
+    return { watchAdReward: 10, coinRate: 0.00003, adMissionReward: 20 };
   }
 }
 
@@ -81,6 +83,10 @@ module.exports = async (req, res) => {
     const now = Date.now();
     const db = await getDb();
     const users = db.collection("users");
+
+    if (!(await checkDailyRequestQuota(users, telegramId, res))) {
+      return;
+    }
 
     const rawStartParam = String(
       (req.query && req.query.start_param) ||
@@ -177,7 +183,7 @@ module.exports = async (req, res) => {
         const expiresAt = now + (2 * 60 * 1000); // 2 minutes
 
         const captionText =
-          `🔐 <b>HOOCOOH MINER · Verify It's you</b>\n\n` +
+          `🏹 <b>TREASURE HUNT · Verify It's you</b>\n\n` +
           `Here is your secure 4-digit verification code.\n` +
           `👉 <b>Check the image above!</b>\n\n` +
           `⏱ <b>Validity: 2 minutes</b>\n` +
@@ -190,7 +196,7 @@ module.exports = async (req, res) => {
           const formData = new FormData();
           formData.append("chat_id", telegramId);
           const blob = new Blob([imageBuffer], { type: "image/png" });
-          formData.append("photo", blob, `hoocooh_verify_${now}.png`);
+          formData.append("photo", blob, `treasure_verify_${now}.png`);
           formData.append("caption", captionText);
           formData.append("parse_mode", "HTML");
 
@@ -206,6 +212,25 @@ module.exports = async (req, res) => {
           }
         } catch (photoErr) {
           console.warn("sendPhoto exception:", photoErr.message);
+        }
+
+        // Fallback: if sendPhoto failed due to photo issues, deliver code as clean Telegram text message
+        if (!sentSuccess && !tgErrorDesc.includes("blocked") && !tgErrorDesc.includes("chat not found")) {
+          try {
+            const fallbackMsgRes = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                chat_id: telegramId,
+                text: `🏹 <b>TREASURE HUNT · Verify It's you</b>\n\nYour 4-digit verification code is: <code>${codeStr}</code>\n\n⏱ <b>Validity: 2 minutes</b>\n<i>Enter this code in the app to unlock access.</i>`,
+                parse_mode: "HTML"
+              })
+            });
+            const fallbackData = await fallbackMsgRes.json();
+            if (fallbackData && fallbackData.ok) {
+              sentSuccess = true;
+            }
+          } catch(e) {}
         }
 
         if (sentSuccess) {
@@ -273,7 +298,7 @@ module.exports = async (req, res) => {
             res.status(400).json({ error: "Verification code has expired (2 minutes limit). Please request a new code." });
             return;
           }
-          res.status(400).json({ error: "Incorrect verification code! Check the image in @hoocoohmine_bot and try again." });
+          res.status(400).json({ error: "Incorrect verification code! Check the image in @treasure_hunt12_bot and try again." });
           return;
         }
 
@@ -314,7 +339,7 @@ module.exports = async (req, res) => {
           { $set: { isIdentityVerified: true, identityVerifiedAt: now } }
         );
 
-        // Process referral: reward inviter ONLY when the recruited user completes verification!
+        // Bind referredBy if passed in start_param and not yet set (DO NOT reward until user enters Home!)
         let referrerId = user.referredBy;
         const paramToTest = String((req.body && req.body.start_param) || tgUser.start_param || (req.query && req.query.start_param) || "").trim();
         if (!referrerId && paramToTest) {
@@ -326,85 +351,7 @@ module.exports = async (req, res) => {
           }
         }
 
-        let userBalance = Number(user.balance) || 0;
-        let referralRewardGiven = false;
-
-        if (referrerId && String(referrerId) !== telegramId) {
-          const inviter = await findUserById(users, referrerId);
-          if (inviter && String(inviter.telegramId) !== telegramId) {
-            const welcomeBonus = 50; // New verified recruit gets 50 HOOCOOH
-
-            // ATOMIC one-time claim: only succeeds if referralRewarded is not already true.
-            // Whichever request wins this update (modifiedCount 1) pays the inviter + sends the
-            // notification. Any duplicate/parallel request gets modifiedCount 0 and does NOTHING,
-            // so one referred user can NEVER reward the inviter twice or trigger a 2nd message.
-            const claimRefRes = await users.updateOne(
-              { _id: user._id, referralRewarded: { $ne: true } },
-              {
-                $set: {
-                  referredBy: String(inviter.telegramId),
-                  referralRewarded: true,
-                  referralRewardedAt: now
-                },
-                $inc: { balance: welcomeBonus }
-              }
-            );
-
-            if (claimRefRes && claimRefRes.modifiedCount === 1) {
-              const freshRecruit = await users.findOne({ _id: user._id });
-              userBalance = Number(freshRecruit ? freshRecruit.balance : (userBalance + welcomeBonus)) || 0;
-              user.balance = userBalance;
-
-              // Reward inviter: +1 recruit, +100 HOOCOOH to earnings and balance + track referral velocity (NEWTUBE-TON architecture)
-              const nowDate = new Date();
-              const inviterUpdateRes = await users.findOneAndUpdate(
-                { _id: inviter._id },
-                {
-                  $inc: {
-                    recruitsCount: 1,
-                    refEarnings: 100,
-                    balance: 100
-                  },
-                  $push: { recentReferralSignups: { $each: [nowDate], $slice: -50 } }
-                },
-                { returnDocument: "after" }
-              );
-              const inviterDoc = inviterUpdateRes?.value !== undefined ? inviterUpdateRes.value : inviterUpdateRes;
-              if (inviterDoc && !inviterDoc.velocityFlaggedAt) {
-                const windowStart = Date.now() - REFERRAL_VELOCITY_WINDOW_MS;
-                const recentCount = (inviterDoc.recentReferralSignups || []).filter(t => new Date(t).getTime() >= windowStart).length;
-                if (recentCount >= REFERRAL_VELOCITY_THRESHOLD) {
-                  const justFlagged = await users.updateOne(
-                    { _id: inviterDoc._id, velocityFlaggedAt: { $exists: false } },
-                    { $set: { velocityFlaggedAt: nowDate, velocityFlaggedReason: "referral_velocity" } }
-                  );
-                  const adminId = process.env.ADMIN_TELEGRAM_ID;
-                  const bToken = process.env.TELEGRAM_BOT_TOKEN;
-                  if (justFlagged.modifiedCount > 0 && adminId && bToken) {
-                    const minutes = Math.round(REFERRAL_VELOCITY_WINDOW_MS / 60000);
-                    const alertMsg =
-                      `⚠️ <b>Referral velocity alert (no action taken)</b>\n\n` +
-                      `Referrer <code>${inviter.telegramId}</code> just crossed <b>${REFERRAL_VELOCITY_THRESHOLD}+</b> referral signups within <b>${minutes} minutes</b>.\n\n` +
-                      `Review their referral activity in the Admin Panel.`;
-                    fetch(`https://api.telegram.org/bot${bToken}/sendMessage`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ chat_id: String(adminId), text: alertMsg, parse_mode: "HTML" })
-                    }).catch(() => {});
-                  }
-                }
-              }
-
-              // Notify inviter via Telegram bot with Open HOOCOOH Mine button (sent exactly once)
-              const reqProto = req.headers["x-forwarded-proto"] || "https";
-              const reqHost = req.headers["x-forwarded-host"] || req.headers.host;
-              const userBaseUrl = reqHost ? `${reqProto}://${reqHost}` : "";
-              notifyInviterReferralSuccess(process.env.TELEGRAM_BOT_TOKEN, inviter, user, userBaseUrl).catch(() => {});
-
-              referralRewardGiven = true;
-            }
-          }
-        }
+        const userBalance = Number(user.balance) || 0;
 
         res.status(200).json({
           ok: true,
@@ -412,23 +359,20 @@ module.exports = async (req, res) => {
           identityVerifiedAt: now,
           expiresAt: now + (24 * 60 * 60 * 1000),
           balance: userBalance,
-          referralRewardGiven: referralRewardGiven,
           message: "Identity verified successfully!"
         });
         return;
       }
 
-      // Verification: Check status (24 hours validity check)
+      // Verification: Check status
       if (action === "check_status" || action === "check_verification_status") {
-        const isVerified24h = Boolean(
+        const isVerified = Boolean(
           user &&
-          user.isIdentityVerified === true &&
-          user.identityVerifiedAt &&
-          (Date.now() - Number(user.identityVerifiedAt) < 24 * 60 * 60 * 1000)
+          user.isIdentityVerified === true
         );
         res.status(200).json({
           ok: true,
-          isVerified: isVerified24h
+          isVerified: isVerified
         });
         return;
       }
@@ -451,79 +395,78 @@ module.exports = async (req, res) => {
             { _id: user._id, $or: [{ referredBy: null }, { referredBy: { $exists: false } }] },
             { $set: { referredBy: String(inviter.telegramId) } }
           );
+        }
+      }
+    }
 
-          const isVerifiedNow = Boolean(
-            user.isIdentityVerified === true &&
-            user.identityVerifiedAt &&
-            (now - Number(user.identityVerifiedAt) < 24 * 60 * 60 * 1000)
+    // REFERRAL RULE:
+    // Referral is counted ONLY when the recruited user has verified their identity AND entered Home!
+    if (user.isIdentityVerified === true && user.referralRewarded !== true && user.referredBy && String(user.referredBy) !== telegramId) {
+      const welcomeBonus = 50; // Recruit gets 50 TREASURE welcome bonus
+
+      // Atomic one-time claim: only succeeds if referralRewarded is not already true
+      const claimRefRes = await users.updateOne(
+        { _id: user._id, isIdentityVerified: true, referralRewarded: { $ne: true } },
+        {
+          $set: {
+            referralRewarded: true,
+            referralRewardedAt: now
+          },
+          $inc: { balance: welcomeBonus }
+        }
+      );
+
+      if (claimRefRes && claimRefRes.modifiedCount === 1) {
+        user.balance = (Number(user.balance) || 0) + welcomeBonus;
+        user.referralRewarded = true;
+
+        const inviter = await findUserById(users, user.referredBy);
+        if (inviter && String(inviter.telegramId) !== telegramId) {
+          const nowDate = new Date();
+          const inviterUpdateRes = await users.findOneAndUpdate(
+            { _id: inviter._id },
+            {
+              $inc: {
+                recruitsCount: 1,
+                refEarnings: 100,
+                balance: 100
+              },
+              $push: { recentReferralSignups: { $each: [nowDate], $slice: -50 } }
+            },
+            { returnDocument: "after" }
           );
 
-          if (isVerifiedNow && !user.referralRewarded) {
-            const welcomeBonus = 50; // Verified recruit gets 50 HOOCOOH
-
-            // ATOMIC one-time claim (same guard as submit_code): only one request can ever win it.
-            const claimRefRes = await users.updateOne(
-              { _id: user._id, referralRewarded: { $ne: true } },
-              {
-                $set: { referredBy: user.referredBy, referralRewarded: true, referralRewardedAt: now },
-                $inc: { balance: welcomeBonus }
-              }
-            );
-
-            if (claimRefRes && claimRefRes.modifiedCount === 1) {
-              user.balance = (Number(user.balance) || 0) + welcomeBonus;
-
-              // Reward inviter: +1 recruit, +100 HOOCOOH to earnings and balance + track referral velocity (NEWTUBE-TON architecture)
-              const nowDate = new Date();
-              const inviterUpdateRes = await users.findOneAndUpdate(
-                { _id: inviter._id },
-                {
-                  $inc: {
-                    recruitsCount: 1,
-                    refEarnings: 100,
-                    balance: 100
-                  },
-                  $push: { recentReferralSignups: { $each: [nowDate], $slice: -50 } }
-                },
-                { returnDocument: "after" }
+          const inviterDoc = inviterUpdateRes?.value !== undefined ? inviterUpdateRes.value : inviterUpdateRes;
+          if (inviterDoc && !inviterDoc.velocityFlaggedAt) {
+            const windowStart = Date.now() - REFERRAL_VELOCITY_WINDOW_MS;
+            const recentCount = (inviterDoc.recentReferralSignups || []).filter(t => new Date(t).getTime() >= windowStart).length;
+            if (recentCount >= REFERRAL_VELOCITY_THRESHOLD) {
+              const justFlagged = await users.updateOne(
+                { _id: inviterDoc._id, velocityFlaggedAt: { $exists: false } },
+                { $set: { velocityFlaggedAt: nowDate, velocityFlaggedReason: "referral_velocity" } }
               );
-              const inviterDoc = inviterUpdateRes?.value !== undefined ? inviterUpdateRes.value : inviterUpdateRes;
-              if (inviterDoc && !inviterDoc.velocityFlaggedAt) {
-                const windowStart = Date.now() - REFERRAL_VELOCITY_WINDOW_MS;
-                const recentCount = (inviterDoc.recentReferralSignups || []).filter(t => new Date(t).getTime() >= windowStart).length;
-                if (recentCount >= REFERRAL_VELOCITY_THRESHOLD) {
-                  const justFlagged = await users.updateOne(
-                    { _id: inviterDoc._id, velocityFlaggedAt: { $exists: false } },
-                    { $set: { velocityFlaggedAt: nowDate, velocityFlaggedReason: "referral_velocity" } }
-                  );
-                  const adminId = process.env.ADMIN_TELEGRAM_ID;
-                  const bToken = process.env.TELEGRAM_BOT_TOKEN;
-                  if (justFlagged.modifiedCount > 0 && adminId && bToken) {
-                    const minutes = Math.round(REFERRAL_VELOCITY_WINDOW_MS / 60000);
-                    const alertMsg =
-                      `⚠️ <b>Referral velocity alert (no action taken)</b>\n\n` +
-                      `Referrer <code>${inviter.telegramId}</code> just crossed <b>${REFERRAL_VELOCITY_THRESHOLD}+</b> referral signups within <b>${minutes} minutes</b>.\n\n` +
-                      `Review their referral activity in the Admin Panel.`;
-                    fetch(`https://api.telegram.org/bot${bToken}/sendMessage`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ chat_id: String(adminId), text: alertMsg, parse_mode: "HTML" })
-                    }).catch(() => {});
-                  }
-                }
+              const adminId = process.env.ADMIN_TELEGRAM_ID;
+              const bToken = process.env.TELEGRAM_BOT_TOKEN;
+              if (justFlagged.modifiedCount > 0 && adminId && bToken) {
+                const minutes = Math.round(REFERRAL_VELOCITY_WINDOW_MS / 60000);
+                const alertMsg =
+                  `⚠️ <b>Referral velocity alert (no action taken)</b>\n\n` +
+                  `Referrer <code>${inviter.telegramId}</code> just crossed <b>${REFERRAL_VELOCITY_THRESHOLD}+</b> referral signups within <b>${minutes} minutes</b>.\n\n` +
+                  `Review their referral activity in the Admin Panel.`;
+                fetch(`https://api.telegram.org/bot${bToken}/sendMessage`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ chat_id: String(adminId), text: alertMsg, parse_mode: "HTML" })
+                }).catch(() => {});
               }
-
-              // Notify inviter via Telegram bot (sent exactly once)
-              notifyInviterReferralSuccess(process.env.TELEGRAM_BOT_TOKEN, inviter, user).catch(() => {});
             }
-          } else {
-            // Unverified: simply record referredBy. Inviter gets NOTHING until verification!
-            // Never overwrites an already-rewarded user or an already-bound inviter.
-            await users.updateOne(
-              { _id: user._id, referralRewarded: { $ne: true }, referredBy: null },
-              { $set: { referredBy: user.referredBy } }
-            );
           }
+
+          // Notify inviter via Telegram bot
+          const reqProto = req.headers["x-forwarded-proto"] || "https";
+          const reqHost = req.headers["x-forwarded-host"] || req.headers.host;
+          const userBaseUrl = reqHost ? `${reqProto}://${reqHost}` : "";
+          notifyInviterReferralSuccess(process.env.TELEGRAM_BOT_TOKEN, inviter, user, userBaseUrl).catch(() => {});
         }
       }
     }
@@ -566,11 +509,6 @@ module.exports = async (req, res) => {
       totalDailyEarned: user.totalDailyEarned || 0,
       mineReady: mineIsReady(user.lastMineCollectedAt),
       mineIntervalMs: MINE_INTERVAL_MS,
-      mineReward: MINE_REWARD,
-      energy: calculateCurrentEnergy(user, now),
-      maxEnergy: MAX_TAP_ENERGY,
-      energyRechargeRateMs: ENERGY_RECHARGE_RATE_MS,
-      lastEnergySyncAt: user.lastEnergySyncAt || user.lastMineCollectedAt || (now - MINE_INTERVAL_MS),
       dailyStatusNow: dailyStatus(user.lastCheckinAt),
       adsWatchedToday: watchedToday,
       adsEarnedToday: earnedToday,
@@ -581,11 +519,7 @@ module.exports = async (req, res) => {
       language: user.language || "en",
       languageSelected: user.languageSelected === true,
       termsAccepted: user.termsAccepted === true,
-      isIdentityVerified: Boolean(
-        user.isIdentityVerified === true &&
-        user.identityVerifiedAt &&
-        (now - Number(user.identityVerifiedAt) < 24 * 60 * 60 * 1000)
-      ),
+      isIdentityVerified: Boolean(user && user.isIdentityVerified === true),
       identityVerifiedAt: user.identityVerifiedAt || 0,
       referralRewarded: user.referralRewarded === true,
       penaltyNotice: user.penaltyNotice || null,
@@ -600,7 +534,11 @@ module.exports = async (req, res) => {
       botUsername: botUsername,
       ...(await (async () => {
         const s = await getCachedAppSettings(db);
-        return { watchAdReward: s.watchAdReward, coinRate: s.coinRate };
+        return {
+          watchAdReward: s.watchAdReward,
+          coinRate: s.coinRate,
+          adMissionReward: s.adMissionReward
+        };
       })())
     });
   } catch (err) {

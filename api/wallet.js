@@ -3,9 +3,74 @@ const { validateInitData } = require("../lib/telegramAuth");
 const { findOrCreateUser } = require("../lib/userHelper");
 const crypto = require("crypto");
 const { checkVelocityLimit } = require("../lib/velocityLimiter");
+const { checkDailyRequestQuota } = require("../lib/dailyQuotaLimiter");
 
-// Base rate fallback: 1 HOOCOOH Coin = $0.00003 USD
+// Base rate fallback: 1 TREASURE Coin = $0.00003 USD
 const COIN_RATE = 0.00003;
+
+async function detectRhythmicWithdrawalCluster(withdrawalsCol, usersCol, newTxId, newCreatedAt, currentTelegramId) {
+  try {
+    const recent = await withdrawalsCol.find({}).sort({ createdAt: -1 }).limit(25).toArray();
+    if (recent.length < 10) return false;
+
+    let streakCount = 0;
+    const clusterIds = [];
+    const clusterUids = [];
+
+    for (let i = 0; i < recent.length - 1; i++) {
+      const diffMs = Number(recent[i].createdAt) - Number(recent[i + 1].createdAt);
+      // Rhythmic bot distance check: 8s to 25s distance (e.g. 10s, 13s, 20s)
+      if (diffMs >= 8000 && diffMs <= 25000) {
+        streakCount++;
+        clusterIds.push(recent[i]._id, recent[i + 1]._id);
+        clusterUids.push(String(recent[i].telegramId), String(recent[i + 1].telegramId));
+      } else {
+        if (streakCount >= 9) break; // 9 consecutive intervals = 10 consecutive withdrawals
+        streakCount = 0;
+        clusterIds.length = 0;
+        clusterUids.length = 0;
+      }
+    }
+
+    if (streakCount >= 9) {
+      const uniqueIds = [...new Set(clusterIds)];
+      const uniqueUids = [...new Set(clusterUids)];
+
+      await withdrawalsCol.updateMany(
+        { _id: { $in: uniqueIds } },
+        {
+          $set: {
+            isSuspicious: true,
+            isSuspiciousWithdrawalDistance: true,
+            suspiciousReason: "Automated rhythmic cluster withdrawal detected (consecutive 10s-20s interval across 10+ requests)"
+          }
+        }
+      );
+
+      await usersCol.updateMany(
+        {
+          $or: [
+            { telegramId: { $in: uniqueUids } },
+            { telegramId: { $in: uniqueUids.map(Number).filter(Boolean) } }
+          ]
+        },
+        {
+          $set: {
+            isSuspicious: true,
+            securityFlag: "FLAG_RHYTHMIC_WITHDRAW_CLUSTER",
+            suspiciousReason: "Automated rhythmic cluster withdrawal detected (spaced by 10s-20s distance across 10+ requests)",
+            lastSuspiciousAt: Date.now()
+          }
+        }
+      );
+
+      return true;
+    }
+  } catch (err) {
+    console.error("detectRhythmicWithdrawalCluster error:", err);
+  }
+  return false;
+}
 
 async function getCoinRate(db) {
   try {
@@ -50,6 +115,10 @@ module.exports = async (req, res) => {
     const db = await getDb();
     const usersCol = db.collection("users");
     const withdrawalsCol = db.collection("withdrawals");
+
+    if (!(await checkDailyRequestQuota(usersCol, telegramId, res))) {
+      return;
+    }
 
     let user = await findOrCreateUser(usersCol, tgUser);
     if (!user) {
@@ -130,7 +199,7 @@ module.exports = async (req, res) => {
 
         const numAmount = parseInt(amount, 10);
         if (isNaN(numAmount) || numAmount < 1000) {
-          res.status(400).json({ error: "Minimum withdrawal amount is 1,000 HOOCOOH Coins" });
+          res.status(400).json({ error: "Minimum withdrawal amount is 1,000 TREASURE Coins" });
           return;
         }
 
@@ -226,6 +295,13 @@ module.exports = async (req, res) => {
         const usdtVal = Number(calculateCoinsUsdt(numAmount, activeCoinRate).toFixed(4));
         const tonVal = Number((usdtVal * TON_PER_USD).toFixed(6));
 
+        const isUserSuspicious = Boolean(
+          user.isSuspicious ||
+          user.isHighRiskHacker ||
+          user.isFakeAdBypasser ||
+          (user.adSkipUnder9sStrikes > 0)
+        );
+
         // Record withdrawal transaction in MongoDB with PENDING status
         const txDoc = {
           telegramId,
@@ -236,10 +312,15 @@ module.exports = async (req, res) => {
           network: "TON",
           status: "PENDING",
           txHash: "",
+          isSuspicious: isUserSuspicious,
+          suspiciousReason: isUserSuspicious ? (user.suspiciousReason || "Flagged account") : "",
           createdAt: now
         };
 
         const insertRes = await withdrawalsCol.insertOne(txDoc);
+
+        // Check if this withdrawal is part of a rhythmic cluster attack (10+ requests spaced 10s-20s apart)
+        await detectRhythmicWithdrawalCluster(withdrawalsCol, usersCol, insertRes.insertedId, now, telegramId);
 
         res.status(200).json({
           ok: true,

@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const { getDb } = require("../lib/mongodb");
 const { validateInitData } = require("../lib/telegramAuth");
 const { checkVelocityLimit } = require("../lib/velocityLimiter");
+const { checkDailyRequestQuota } = require("../lib/dailyQuotaLimiter");
 
 const CHALLENGE_EXPIRY_MS = 120 * 1000; // 2 minutes
 const TOKEN_EXPIRY_MS = 90 * 1000;      // 90 seconds
@@ -36,6 +37,10 @@ module.exports = async (req, res) => {
   try {
     const db = await getDb();
     const usersCol = db.collection("users");
+
+    if (!(await checkDailyRequestQuota(usersCol, uid, res))) {
+      return;
+    }
     const challengesCol = db.collection("captcha_challenges");
     const tokensCol = db.collection("captcha_tokens");
 

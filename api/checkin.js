@@ -4,6 +4,7 @@ const { findOrCreateUser } = require("../lib/userHelper");
 const { dailyStatus, rewardForCycleDay } = require("../lib/gameLogic");
 const { verifyActionToken, createActionToken } = require("../lib/actionSigner");
 const { checkVelocityLimit } = require("../lib/velocityLimiter");
+const { checkDailyRequestQuota } = require("../lib/dailyQuotaLimiter");
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
@@ -32,6 +33,10 @@ module.exports = async (req, res) => {
   try {
     const db = await getDb();
     const users = db.collection("users");
+
+    if (!(await checkDailyRequestQuota(users, uid, res))) {
+      return;
+    }
     let user = await findOrCreateUser(users, tgUser);
 
     if (user && user.isBanned) {
@@ -75,6 +80,7 @@ module.exports = async (req, res) => {
       return;
     }
 
+    const now = Date.now();
     let dailyCycle = Number(user.dailyCycle) || 1;
     let dailyDayIndex = Number(user.dailyDayIndex) || 0;
 
@@ -88,6 +94,8 @@ module.exports = async (req, res) => {
         dailyCycle = Math.max(2, dailyCycle + 1);
       }
     }
+
+    const reward = rewardForCycleDay(dailyCycle, dailyDayIndex);
 
     // Atomically claim daily checkin bonus (impossible for concurrent requests to both claim)
     const cutoff24h = now - (24 * 60 * 60 * 1000);

@@ -3,6 +3,7 @@ const { validateInitData } = require("../lib/telegramAuth");
 const { findOrCreateUser } = require("../lib/userHelper");
 const { LEVEL_NAMES, getMultiplierForLevel, getUpgradeCostForLevel } = require("../lib/gameLogic");
 const { checkVelocityLimit } = require("../lib/velocityLimiter");
+const { checkDailyRequestQuota } = require("../lib/dailyQuotaLimiter");
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
@@ -31,6 +32,10 @@ module.exports = async (req, res) => {
   try {
     const db = await getDb();
     const users = db.collection("users");
+
+    if (!(await checkDailyRequestQuota(users, uid, res))) {
+      return;
+    }
     let user = await findOrCreateUser(users, tgUser);
 
     if (user && user.isBanned) {

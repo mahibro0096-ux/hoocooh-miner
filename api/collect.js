@@ -1,9 +1,10 @@
 const { getDb } = require("../lib/mongodb");
 const { validateInitData } = require("../lib/telegramAuth");
 const { findOrCreateUser } = require("../lib/userHelper");
-const { mineIsReady, MINE_REWARD, getMultiplierForLevel, MAX_TAP_ENERGY, calculateCurrentEnergy } = require("../lib/gameLogic");
+const { mineIsReady, MINE_REWARD, getMultiplierForLevel } = require("../lib/gameLogic");
 const { verifyActionToken, createActionToken } = require("../lib/actionSigner");
 const { checkVelocityLimit } = require("../lib/velocityLimiter");
+const { checkDailyRequestQuota } = require("../lib/dailyQuotaLimiter");
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
@@ -32,6 +33,10 @@ module.exports = async (req, res) => {
   try {
     const db = await getDb();
     const users = db.collection("users");
+
+    if (!(await checkDailyRequestQuota(users, telegramId, res))) {
+      return;
+    }
     let user = await findOrCreateUser(users, tgUser);
 
     if (user && user.isBanned) {
@@ -77,10 +82,9 @@ module.exports = async (req, res) => {
 
     const minerLevel = Math.max(1, Math.min(10, user.minerLevel || 1));
     const multiplier = getMultiplierForLevel(minerLevel);
-    const now = Date.now();
-    const availableEnergy = calculateCurrentEnergy(user, now);
-    const reward = Math.max(1, Math.min(50, availableEnergy > 0 ? availableEnergy : Math.round(MINE_REWARD * multiplier)));
+    const reward = Math.round(MINE_REWARD * multiplier);
 
+    const now = Date.now();
     const mineIntervalMs = 2 * 60 * 60 * 1000;
     const cutoffTime = now - mineIntervalMs;
 
@@ -101,13 +105,7 @@ module.exports = async (req, res) => {
           totalMinedCoins: reward,
           totalMinedClaims: 1
         },
-        $set: {
-          energy: 0,
-          lastEnergySyncAt: now,
-          lastMineCollectedAt: now,
-          mineReminderSent: false,
-          lastActiveAt: new Date()
-        }
+        $set: { lastMineCollectedAt: now, mineReminderSent: false, lastActiveAt: new Date() }
       }
     );
 
@@ -122,8 +120,6 @@ module.exports = async (req, res) => {
     res.status(200).json({
       balance: newBalance,
       lastMineCollectedAt: now,
-      energy: 0,
-      maxEnergy: MAX_TAP_ENERGY,
       reward: reward,
       multiplier: multiplier,
       minerLevel: minerLevel,

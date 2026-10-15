@@ -576,6 +576,7 @@
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
           <button class="btn-success" id="bulkApproveBtn" style="font-size: 12px; padding: 6px 14px; font-weight: 800;">⚡ Approve All Pending</button>
+          <button class="btn-danger" id="banAllSuspiciousBtn" style="display: none; font-size: 12px; padding: 6px 14px; font-weight: 800; background: #dc2626; border-color: #ef4444;">🚫 Ban All Suspicious</button>
           <button class="btn-danger" id="stopAutoPayBtn" style="display: none; font-size: 12px; padding: 6px 14px; font-weight: 800;">⏹️ Turn OFF Auto-Pay</button>
         </div>
       </div>
@@ -615,7 +616,10 @@
       </div>
 
       <div class="filter-row">
-        <button class="pill-filter active" data-filter="PENDING">Pending Only</button>
+        <button class="pill-filter active" data-filter="PENDING">Pending Clean</button>
+        <button class="pill-filter" data-filter="SUSPICIOUS" id="susFilterBtn" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.4);">
+          ⚠️ Suspicious & High Risk <span id="susFilterBadge" style="display: none; background: #ef4444; color: #fff; padding: 1px 7px; border-radius: 10px; font-size: 10.5px; font-weight: 800; margin-left: 4px;">0</span>
+        </button>
         <button class="pill-filter" data-filter="APPROVED">Approved</button>
         <button class="pill-filter" data-filter="REJECTED">Rejected</button>
         <button class="pill-filter" data-filter="ALL">All Records</button>
@@ -1322,6 +1326,16 @@
           if (hrTxt) hrTxt.textContent = data.highRiskUnbannedCount;
         }
 
+        var susBadge = document.getElementById("susFilterBadge");
+        if (susBadge && data.pendingSuspiciousCount !== undefined) {
+          if (data.pendingSuspiciousCount > 0) {
+            susBadge.textContent = data.pendingSuspiciousCount;
+            susBadge.style.display = "inline-block";
+          } else {
+            susBadge.style.display = "none";
+          }
+        }
+
         var badge = document.getElementById("pendingCountBadge");
         if (data.pendingWithdrawals > 0) {
           badge.textContent = data.pendingWithdrawals;
@@ -1347,10 +1361,36 @@
   });
 
   async function loadWithdrawals() {
+    var bulkApproveBtn = document.getElementById("bulkApproveBtn");
+    var banAllSuspiciousBtn = document.getElementById("banAllSuspiciousBtn");
+    var susFilterBadge = document.getElementById("susFilterBadge");
+
     withdrawalsList.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-dim);">Loading requests...</td></tr>';
     try {
       var data = await apiAdmin("GET", { action: "withdrawals", status: currentFilter });
       if (data.ok) {
+        if (data.pendingSuspiciousCount !== undefined && susFilterBadge) {
+          if (data.pendingSuspiciousCount > 0) {
+            susFilterBadge.textContent = data.pendingSuspiciousCount;
+            susFilterBadge.style.display = "inline-block";
+          } else {
+            susFilterBadge.style.display = "none";
+          }
+        }
+
+        if (currentFilter === "SUSPICIOUS") {
+          if (bulkApproveBtn) bulkApproveBtn.style.display = "none";
+          if (banAllSuspiciousBtn) {
+            banAllSuspiciousBtn.style.display = (data.withdrawals && data.withdrawals.length > 0) ? "inline-block" : "none";
+          }
+        } else if (currentFilter === "PENDING") {
+          if (bulkApproveBtn) bulkApproveBtn.style.display = "inline-block";
+          if (banAllSuspiciousBtn) banAllSuspiciousBtn.style.display = "none";
+        } else {
+          if (bulkApproveBtn) bulkApproveBtn.style.display = "none";
+          if (banAllSuspiciousBtn) banAllSuspiciousBtn.style.display = "none";
+        }
+
         if (!data.withdrawals || data.withdrawals.length === 0) {
           withdrawalsList.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-dim); padding: 24px;">No withdrawal requests found for this filter.</td></tr>';
           return;
@@ -1551,6 +1591,12 @@
     var reason = prompt("Enter rejection reason (User will receive this & coins will be refunded):", "Suspicious multi-account or bot activity");
     if (!reason) return;
 
+    var confirmType = prompt("⚠️ Confirm Rejection?\n\nCoins will be refunded to user.\nType YES to confirm rejection:");
+    if (!confirmType || confirmType.trim().toUpperCase() !== "YES") {
+      alert("Rejection cancelled. You must type YES to reject.");
+      return;
+    }
+
     isActionProcessing = true;
     try {
       var res = await apiAdmin("POST", null, { action: "reject_withdrawal", withdrawalId: id, reason: reason });
@@ -1573,6 +1619,12 @@
     var reason = prompt(`Permanently suspend user UID ${uid}? User will never be able to open or use the miner:`, "Cheating / Termux / Multi-Account violation");
     if (!reason) return;
 
+    var confirmType = prompt(`⛔ PERMANENT ACCOUNT BAN\n\nAre you sure you want to permanently suspend UID ${uid}?\nType YES to confirm ban:`);
+    if (!confirmType || confirmType.trim().toUpperCase() !== "YES") {
+      alert("Ban cancelled. You must type YES to ban.");
+      return;
+    }
+
     isActionProcessing = true;
     try {
       var res = await apiAdmin("POST", null, { action: "ban_user", telegramId: uid, reason: reason, withdrawalId: wId });
@@ -1589,6 +1641,47 @@
       isActionProcessing = false;
     }
   };
+
+  // Ban All Suspicious Withdrawals & Users Handler
+  var banAllSuspiciousBtn = document.getElementById("banAllSuspiciousBtn");
+  if (banAllSuspiciousBtn) {
+    banAllSuspiciousBtn.addEventListener("click", async function(){
+      if (isActionProcessing) return;
+
+      var promptMsg = "🚨 DANGER: BAN ALL SUSPICIOUS & HIGH RISK USERS\n\n" +
+        "This will permanently BAN all users in the suspicious queue and REJECT their pending withdrawals.\n\n" +
+        "Are you sure you want to proceed?\n" +
+        "Type YES to confirm:";
+
+      var confirmInput = prompt(promptMsg);
+      if (!confirmInput || confirmInput.trim().toUpperCase() !== "YES") {
+        alert("Action cancelled. You must type YES to ban all suspicious users.");
+        return;
+      }
+
+      isActionProcessing = true;
+      banAllSuspiciousBtn.disabled = true;
+      banAllSuspiciousBtn.innerHTML = "<span>⏳ Banning All Suspicious...</span>";
+
+      try {
+        var res = await apiAdmin("POST", null, { action: "ban_all_suspicious_withdrawals" });
+        if (res && res.ok) {
+          alert(res.message || `Successfully banned ${res.bannedUsersCount || 0} suspicious user(s)!`);
+          showToast(`🚫 Banned ${res.bannedUsersCount || 0} suspicious users!`);
+          loadWithdrawals();
+          loadStats();
+        } else {
+          alert("❌ " + ((res && res.error) || "Failed to ban suspicious users"));
+        }
+      } catch(err) {
+        alert("❌ Error: " + (err.message || err));
+      } finally {
+        banAllSuspiciousBtn.disabled = false;
+        banAllSuspiciousBtn.innerHTML = "<span>🚫 Ban All Suspicious</span>";
+        isActionProcessing = false;
+      }
+    });
+  }
 
   // Bulk Auto-Pay Queue State
   var isAutoPayRunning = false;
@@ -2235,6 +2328,13 @@
   window.banUserAction = async function(uid) {
     var reason = prompt(`Suspend UID ${uid}? User will immediately see the "Your account has been suspended" screen:`, "Cheating / Violation of terms");
     if (!reason) return;
+
+    var confirmType = prompt(`⛔ PERMANENT ACCOUNT BAN\n\nAre you sure you want to permanently suspend UID ${uid}?\nType YES to confirm ban:`);
+    if (!confirmType || confirmType.trim().toUpperCase() !== "YES") {
+      alert("Ban cancelled. You must type YES to ban.");
+      return;
+    }
+
     try {
       var res = await apiAdmin("POST", null, { action: "ban_user", telegramId: uid, reason: reason });
       if (res.ok) {

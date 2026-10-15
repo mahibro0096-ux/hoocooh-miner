@@ -6,6 +6,7 @@ const { processMiningReminders } = require("../lib/miningReminder");
 const { ObjectId } = require("mongodb");
 const { verifyActionToken, createActionToken } = require("../lib/actionSigner");
 const { checkVelocityLimit } = require("../lib/velocityLimiter");
+const { checkDailyRequestQuota } = require("../lib/dailyQuotaLimiter");
 
 module.exports = async (req, res) => {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
@@ -111,6 +112,10 @@ module.exports = async (req, res) => {
     const db = await getDb();
     const tasksCol = db.collection("tasks");
     const usersCol = db.collection("users");
+
+    if (!(await checkDailyRequestQuota(usersCol, telegramId, res))) {
+      return;
+    }
 
     // Retrieve or merge unified user record
     const user = await findOrCreateUser(usersCol, tgUser);
@@ -246,7 +251,7 @@ module.exports = async (req, res) => {
         const chatId = "@" + channel;
         try {
           const botId = botToken.split(":")[0];
-          let botUsername = "HOOCOOH Bot";
+          let botUsername = "Treasure Bot";
           try {
             const botMeRes = await fetch(`https://api.telegram.org/bot${botToken}/getMe`);
             const botMeData = await botMeRes.json();
@@ -383,7 +388,7 @@ module.exports = async (req, res) => {
                   return;
                 } else if (!desc.includes("chat not found")) {
                   res.status(400).json({
-                    error: `Please join ${targetChatId} to claim your +10 HOOCOOH reward!`
+                    error: `Please join ${targetChatId} to claim your +10 TREASURE reward!`
                   });
                   return;
                 }
@@ -391,7 +396,7 @@ module.exports = async (req, res) => {
                 const memberStatus = checkData.result && checkData.result.status;
                 if (memberStatus === "left" || memberStatus === "kicked" || !memberStatus) {
                   res.status(400).json({
-                    error: `You must join ${targetChatId} first to claim your +10 HOOCOOH reward!`
+                    error: `You must join ${targetChatId} first to claim your +10 TREASURE reward!`
                   });
                   return;
                 }
