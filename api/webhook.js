@@ -1823,22 +1823,23 @@ module.exports = async (req, res) => {
         return;
       }
 
-      // If user hasn't selected a language yet, prompt for language selection first!
-      if (!hasSelected) {
-        const langDict = MIGRATION_MESSAGES[userLang] || MIGRATION_MESSAGES.bn;
-        await sendTelegramMsg(botToken, chatId, langDict.promptLang, {
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: "🇧🇩 বাংলা", callback_data: `set_lang_bn_${refTag}` }],
-              [{ text: "🇬🇧 English", callback_data: `set_lang_en_${refTag}` }],
-              [{ text: "🇷🇺 Русский", callback_data: `set_lang_ru_${refTag}` }],
-              [{ text: "🇸🇦 العربية", callback_data: `set_lang_ar_${refTag}` }]
-            ]
-          }
-        });
-        res.status(200).json({ ok: true, promptLanguage: true });
-        return;
-      }
+      // Regular Users: ALWAYS prompt for language selection first when entering the bot (/start)
+      const promptLang = 
+        `🌐 <b>Select Language / ভাষা নির্বাচন করুন</b>\n\n` +
+        `অনুগ্রহ করে আপনার ভাষা বেছে নিন / Please choose your language:`;
+
+      await sendTelegramMsg(botToken, chatId, promptLang, {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "🇧🇩 বাংলা", callback_data: `set_lang_bn_${refTag}` }],
+            [{ text: "🇬🇧 English", callback_data: `set_lang_en_${refTag}` }],
+            [{ text: "🇷🇺 Русский", callback_data: `set_lang_ru_${refTag}` }],
+            [{ text: "🇸🇦 العربية", callback_data: `set_lang_ar_${refTag}` }]
+          ]
+        }
+      });
+      res.status(200).json({ ok: true, promptLanguage: true });
+      return;
 
       // Regular Users with selected language: Send Security & Migration Announcement
       const langDict = MIGRATION_MESSAGES[userLang] || MIGRATION_MESSAGES.bn;

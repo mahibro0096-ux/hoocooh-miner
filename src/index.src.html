@@ -536,6 +536,113 @@
     color: #ffffff;
   }
 
+  /* Language Selection Prompt Modal (Appears upon entering app) */
+  .maint-lang-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000000;
+    background: rgba(7, 11, 20, 0.94);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+  }
+  .maint-lang-modal-overlay.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .maint-lang-modal-card {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.98));
+    border: 1.5px solid rgba(14, 165, 233, 0.4);
+    border-radius: 24px;
+    padding: 26px 20px;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 30px rgba(14, 165, 233, 0.25);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+    box-sizing: border-box;
+  }
+  .maint-lang-modal-icon {
+    font-size: 40px;
+    animation: maintGlow 2s ease-in-out infinite alternate;
+  }
+  .maint-lang-modal-title {
+    font-size: 21px;
+    font-weight: 800;
+    color: #ffffff;
+    margin: 0;
+  }
+  .maint-lang-modal-sub {
+    font-size: 13px;
+    font-weight: 600;
+    color: #94a3b8;
+    margin-top: -4px;
+    margin-bottom: 6px;
+  }
+  .maint-lang-options {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .maint-lang-opt-btn {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 13px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    color: #ffffff;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+    text-align: left;
+  }
+  .maint-lang-opt-btn:hover,
+  .maint-lang-opt-btn:active {
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.25), rgba(2, 132, 199, 0.35));
+    border-color: #38bdf8;
+    transform: scale(1.02);
+    box-shadow: 0 4px 16px rgba(14, 165, 233, 0.3);
+  }
+  .maint-lang-opt-btn .flag {
+    font-size: 26px;
+    flex-shrink: 0;
+  }
+  .maint-lang-opt-btn .txt {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+  }
+  .maint-lang-opt-btn .name {
+    font-size: 15px;
+    font-weight: 800;
+    color: #ffffff;
+  }
+  .maint-lang-opt-btn .sub {
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+  }
+  .maint-lang-opt-btn .arrow {
+    font-size: 16px;
+    color: #38bdf8;
+    font-weight: 700;
+  }
+
   /* ===================================================
      NEXT-LEVEL CYBER GAMING ARENA (HOME SCREEN OVERHAUL)
      =================================================== */
@@ -7264,6 +7371,49 @@
 <div id="serverMaintenanceScreen" class="server-maintenance-overlay">
   <div class="maint-container">
     
+    <!-- Language Selection Prompt Modal (Appears upon entering the app) -->
+    <div id="maintLangModal" class="maint-lang-modal-overlay">
+      <div class="maint-lang-modal-card">
+        <div class="maint-lang-modal-icon">🌐</div>
+        <h2 class="maint-lang-modal-title">Select Language</h2>
+        <div class="maint-lang-modal-sub">ভাষা নির্বাচন করুন • Choose Language</div>
+        <div class="maint-lang-options">
+          <button type="button" class="maint-lang-opt-btn" data-lang="bn">
+            <span class="flag">🇧🇩</span>
+            <div class="txt">
+              <span class="name">বাংলা</span>
+              <span class="sub">Bengali</span>
+            </div>
+            <span class="arrow">➜</span>
+          </button>
+          <button type="button" class="maint-lang-opt-btn" data-lang="en">
+            <span class="flag">🇬🇧</span>
+            <div class="txt">
+              <span class="name">English</span>
+              <span class="sub">English</span>
+            </div>
+            <span class="arrow">➜</span>
+          </button>
+          <button type="button" class="maint-lang-opt-btn" data-lang="ru">
+            <span class="flag">🇷🇺</span>
+            <div class="txt">
+              <span class="name">Русский</span>
+              <span class="sub">Russian</span>
+            </div>
+            <span class="arrow">➜</span>
+          </button>
+          <button type="button" class="maint-lang-opt-btn" data-lang="ar">
+            <span class="flag">🇸🇦</span>
+            <div class="txt">
+              <span class="name">العربية</span>
+              <span class="sub">Arabic</span>
+            </div>
+            <span class="arrow">➜</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Language Switcher Bar -->
     <div class="maint-lang-bar">
       <button type="button" class="maint-lang-btn active" data-lang="bn">🇧🇩 বাংলা</button>
@@ -9268,7 +9418,20 @@
       });
     }
 
-    // Wire up buttons
+    // Wire up Language Selection Modal buttons (First screen upon entering the app)
+    var modalEl = document.getElementById("maintLangModal");
+    var optBtns = document.querySelectorAll(".maint-lang-opt-btn");
+    optBtns.forEach(function(b) {
+      b.addEventListener("click", function() {
+        var l = this.getAttribute("data-lang");
+        setLanguage(l);
+        if (modalEl) {
+          modalEl.classList.add("hidden");
+        }
+      });
+    });
+
+    // Wire up top language switcher bar buttons
     var langBtns = document.querySelectorAll(".maint-lang-btn");
     langBtns.forEach(function(b) {
       b.addEventListener("click", function() {
