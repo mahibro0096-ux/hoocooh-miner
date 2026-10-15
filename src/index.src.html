@@ -373,143 +373,167 @@
     letter-spacing: 0.4px;
     margin: 0;
   }
+  .maint-lang-bar {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+  }
+  .maint-lang-btn {
+    padding: 7px 14px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 20px;
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+  }
+  .maint-lang-btn.active {
+    background: linear-gradient(135deg, #0284c7, #0ea5e9);
+    border-color: #38bdf8;
+    color: #ffffff;
+    box-shadow: 0 0 14px rgba(14, 165, 233, 0.45);
+  }
   .maint-desc-card {
-    background: rgba(15, 23, 42, 0.75);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(239, 68, 68, 0.35);
     border-radius: 16px;
     padding: 14px 16px;
     backdrop-filter: blur(12px);
     display: flex;
     flex-direction: column;
     gap: 8px;
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
     width: 100%;
     box-sizing: border-box;
   }
   .maint-msg-en-main {
     font-size: 13.5px;
     line-height: 1.55;
-    color: #cbd5e1;
-    font-weight: 500;
+    color: #f1f5f9;
+    font-weight: 600;
     text-align: center;
   }
-  .maint-timer-card {
-    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(180, 83, 9, 0.05));
-    border: 1px solid rgba(245, 158, 11, 0.3);
-    border-radius: 14px;
-    padding: 12px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    box-sizing: border-box;
-  }
-  .maint-timer-lbl {
+  .maint-safe-banner {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    border-radius: 16px;
+    padding: 14px 16px;
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    text-align: left;
-  }
-  .maint-timer-lbl .t-sub {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    color: #f59e0b;
-    text-transform: uppercase;
-  }
-  .maint-timer-lbl .t-main {
-    font-size: 12px;
-    font-weight: 600;
-    color: #94a3b8;
-  }
-  .maint-timer-val {
-    font-family: 'Space Grotesk', monospace;
-    font-size: 22px;
-    font-weight: 800;
-    color: #f59e0b;
-    letter-spacing: 1px;
-    text-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
-  }
-  .maint-safe-banner {
-    background: rgba(16, 185, 129, 0.08);
-    border: 1px solid rgba(16, 185, 129, 0.25);
-    border-radius: 14px;
-    padding: 11px 14px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
+    gap: 8px;
     width: 100%;
     box-sizing: border-box;
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.12);
+  }
+  .maint-safe-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
   .maint-safe-icon {
     font-size: 20px;
-    flex-shrink: 0;
-  }
-  .maint-safe-text {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    text-align: left;
   }
   .maint-safe-title {
-    font-size: 12px;
+    font-size: 13.5px;
     font-weight: 800;
     color: #34d399;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.2px;
   }
-  .maint-safe-sub {
-    font-size: 11px;
+  .maint-safe-list {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 12px;
     color: #a7f3d0;
-    line-height: 1.4;
-  }
-  .maint-status-list {
-    width: 100%;
+    line-height: 1.6;
     display: flex;
     flex-direction: column;
-    gap: 7px;
+    gap: 4px;
+    text-align: left;
   }
-  .maint-status-row {
+  .maint-newapp-card {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.95));
+    border: 1.5px solid rgba(34, 197, 94, 0.4);
+    border-radius: 16px;
+    padding: 14px 16px;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: space-between;
-    padding: 9px 13px;
-    background: rgba(15, 23, 42, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 11px;
+    gap: 8px;
+    width: 100%;
+    box-sizing: border-box;
+    box-shadow: 0 0 24px rgba(34, 197, 94, 0.18);
+    text-align: center;
+  }
+  .maint-newapp-pill {
+    padding: 3px 10px;
+    background: rgba(34, 197, 94, 0.18);
+    border: 1px solid rgba(34, 197, 94, 0.4);
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 800;
+    color: #4ade80;
+    letter-spacing: 1px;
+  }
+  .maint-newapp-url {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: #ffffff;
+    word-break: break-all;
+    line-height: 1.4;
+  }
+  .maint-newapp-hint {
     font-size: 11.5px;
-  }
-  .maint-status-row .lbl {
     color: #94a3b8;
+  }
+  .maint-btn-open-app {
     display: flex;
     align-items: center;
-    gap: 6px;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 800;
+    border-radius: 14px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+    transition: transform 0.15s ease, opacity 0.15s ease;
+    box-sizing: border-box;
   }
-  .maint-status-row .val {
-    font-weight: 700;
+  .maint-btn-open-app:active {
+    transform: scale(0.98);
   }
-  .maint-status-row .val.ok { color: #34d399; }
-  .maint-status-row .val.progress { color: #f59e0b; }
   .maint-btn-channel {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
     width: 100%;
-    padding: 13px;
-    background: linear-gradient(135deg, #0284c7, #0369a1);
-    color: #ffffff;
-    font-size: 13.5px;
-    font-weight: 800;
-    border-radius: 13px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #cbd5e1;
+    font-size: 12.5px;
+    font-weight: 700;
+    border-radius: 12px;
     text-decoration: none;
-    border: none;
     cursor: pointer;
-    box-shadow: 0 4px 18px rgba(2, 132, 199, 0.35);
-    transition: transform 0.15s ease, opacity 0.15s ease;
     box-sizing: border-box;
+    transition: all 0.2s ease;
   }
-  .maint-btn-channel:active {
-    transform: scale(0.98);
+  .maint-btn-channel:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
   }
 
   /* ===================================================
@@ -7240,65 +7264,73 @@
 <div id="serverMaintenanceScreen" class="server-maintenance-overlay">
   <div class="maint-container">
     
+    <!-- Language Switcher Bar -->
+    <div class="maint-lang-bar">
+      <button type="button" class="maint-lang-btn active" data-lang="bn">🇧🇩 বাংলা</button>
+      <button type="button" class="maint-lang-btn" data-lang="en">🇬🇧 English</button>
+      <button type="button" class="maint-lang-btn" data-lang="ru">🇷🇺 Русский</button>
+      <button type="button" class="maint-lang-btn" data-lang="ar">🇸🇦 العربية</button>
+    </div>
+
     <!-- Top System Pulse Badge -->
     <div class="maint-hud-badge">
       <span class="maint-pulse-dot"></span>
-      <span>SYSTEM UPGRADE IN PROGRESS</span>
+      <span id="maintBadgeText">⚠️ নিরাপত্তা ও মাইগ্রেশন বিজ্ঞপ্তি</span>
     </div>
 
-    <!-- Holographic Server / Core Graphic -->
+    <!-- Holographic Server / Core Graphic (Secret 5-tap Admin Trigger) -->
     <div class="maint-visual-wrap" id="maintSecretAdminTrigger" title="System Node">
       <div class="maint-orbit-ring"></div>
       <div class="maint-orbit-ring-2"></div>
       <div class="maint-core-icon">
         <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
-          <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
-          <line x1="6" y1="6" x2="6.01" y2="6"></line>
-          <line x1="6" y1="18" x2="6.01" y2="18"></line>
-          <path d="M12 6h4"></path>
-          <path d="M12 18h4"></path>
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          <path d="M9 12l2 2 4-4"></path>
         </svg>
       </div>
     </div>
 
-    <!-- Main Headings (English Only) -->
+    <!-- Main Headings -->
     <div class="maint-text-center">
-      <h1 class="maint-title-en-big">Server Maintenance</h1>
-      <p class="maint-sub-en">Scheduled Infrastructure Upgrade Underway</p>
+      <h1 class="maint-title-en-big" id="maintTitle">অ্যাপ মাইগ্রেশন নোটিশ</h1>
+      <p class="maint-sub-en" id="maintSub">জরুরি নিরাপত্তা আপগ্রেড ও নতুন অ্যাপ</p>
     </div>
 
-    <!-- Primary Notice Card -->
+    <!-- Hack & Migration Explanation Card -->
     <div class="maint-desc-card">
-      <div class="maint-msg-en-main">
-        Our servers are currently undergoing scheduled maintenance and system optimization. The bot and mini app are temporarily paused and will resume automatically once updates are complete.
+      <div class="maint-msg-en-main" id="maintHackNotice">
+        আমাদের এই অ্যাপটি হ্যাক হওয়ার কারণে আমরা অ্যাপটি পরিবর্তন করেছি।
       </div>
     </div>
 
-    <!-- 100% Data Safety Guarantee -->
+    <!-- 100% Data & Balance Safety Guarantee -->
     <div class="maint-safe-banner">
-      <span class="maint-safe-icon">🛡️</span>
-      <div class="maint-safe-text">
-        <span class="maint-safe-title">100% Data Safety Guaranteed</span>
-        <span class="maint-safe-sub">All coin balances, completed tasks, and streak progress are securely encrypted in our database. Nothing will be reset or lost.</span>
+      <div class="maint-safe-header">
+        <span class="maint-safe-icon">🛡️</span>
+        <span class="maint-safe-title" id="maintSafeTitle">আপনাদের ব্যালেন্স ও ডাটা ১০০% সংরক্ষিত আছে</span>
       </div>
+      <ul class="maint-safe-list" id="maintSafeList">
+        <li>এই অ্যাপের ভেতরে আপনাদের সবার ব্যালেন্স সম্পূর্ণ সংরক্ষিত ও সুরক্ষিত আছে।</li>
+        <li>যার যত ব্যালেন্স ছিল, হুবহু তাই অক্ষত আছে—কোনো ব্যালেন্স মুছে যায়নি!</li>
+        <li>আপনারা যে টাস্ক অ্যাড বা সম্পন্ন করেছিলেন, সব ডাটাবেজে সম্পূর্ণ ঠিকভাবে সেভ আছে।</li>
+      </ul>
     </div>
 
-    <!-- Real-time Diagnostics List -->
-    <div class="maint-status-list">
-      <div class="maint-status-row">
-        <span class="lbl"><span>🗄️</span> Database & Vault</span>
-        <span class="val ok">🔒 100% Encrypted & Safe</span>
-      </div>
-      <div class="maint-status-row">
-        <span class="lbl"><span>⚙️</span> System Architecture</span>
-        <span class="val progress">Upgrading (95%)</span>
-      </div>
+    <!-- New App Target Card -->
+    <div class="maint-newapp-card">
+      <div class="maint-newapp-pill" id="maintNewAppPill">🚀 NEW APP</div>
+      <div class="maint-newapp-url" id="maintAppTargetLabel">👉 @treasure_hunt12_bot</div>
+      <div class="maint-newapp-hint" id="maintAppTargetNote">নিচের বাটনে ক্লিক করে সরাসরি নতুন অ্যাপে যোগ দিন!</div>
     </div>
+
+    <!-- Action Buttons -->
+    <a href="https://t.me/treasure_hunt12_bot" target="_blank" class="maint-btn-open-app" id="maintOpenBotBtn">
+      <span>🚀 Open @treasure_hunt12_bot</span>
+    </a>
 
     <!-- Official Payment Channel Button -->
     <a href="https://t.me/hoocoohpaylogs" target="_blank" class="maint-btn-channel" id="maintChannelBtn">
-      <span>📢 View Payment Channel & Proof Logs</span>
+      <span id="maintChannelBtnText">📢 Payment Channel & Proof Logs</span>
     </a>
 
   </div>
@@ -9040,8 +9072,83 @@
 (function(){
   "use strict";
 
-  // Server Maintenance Mode (Permanent until manually lifted)
-  (function initMaintenanceMode() {
+  // Security & Migration Announcement Mode
+  (function initMigrationScreen() {
+    var i18n = {
+      bn: {
+        badge: "⚠️ নিরাপত্তা ও মাইগ্রেশন বিজ্ঞপ্তি",
+        title: "অ্যাপ মাইগ্রেশন নোটিশ",
+        sub: "জরুরি নিরাপত্তা আপগ্রেড ও নতুন অ্যাপ",
+        hack: "আমাদের এই অ্যাপটি হ্যাক হওয়ার কারণে আমরা অ্যাপটি পরিবর্তন করেছি।",
+        safeTitle: "আপনাদের ব্যালেন্স ও ডাটা ১০০% সংরক্ষিত আছে",
+        safePoints: [
+          "এই অ্যাপের ভেতরে আপনাদের সবার ব্যালেন্স সম্পূর্ণ সংরক্ষিত ও সুরক্ষিত আছে।",
+          "যার যত ব্যালেন্স ছিল, হুবহু তাই অক্ষত আছে—কোনো ব্যালেন্স মুছে যায়নি!",
+          "আপনারা যে টাস্ক অ্যাড বা সম্পন্ন করেছিলেন, সব ডাটাবেজে সম্পূর্ণ ঠিকভাবে সেভ আছে।"
+        ],
+        newAppPill: "🚀 NEW APP",
+        hintNormal: "নিচের বাটনে ক্লিক করে সরাসরি নতুন অ্যাপে যোগ দিন!",
+        hintRef: "আপনার রেফারেল লিংক সংযুক্ত করা হয়েছে। সরাসরি নতুন অ্যাপে যোগ দিন!",
+        btnOpenNormal: "🚀 Open @treasure_hunt12_bot",
+        btnOpenRef: "🚀 Open @treasure_hunt12_bot (With Referral)",
+        channelBtn: "📢 পেমেন্ট চ্যানেল ও প্রুফ লগ"
+      },
+      en: {
+        badge: "⚠️ SECURITY & MIGRATION NOTICE",
+        title: "App Migration Notice",
+        sub: "Emergency Security Upgrade & New App",
+        hack: "Due to this app being hacked / security breach, we have officially moved to a new and secure app.",
+        safeTitle: "100% Balance & Data Safety Guaranteed",
+        safePoints: [
+          "Inside this app, everyone's balance is safely preserved.",
+          "Whatever balance you had remains 100% intact—nothing is lost!",
+          "All tasks that were added are safely saved in our database."
+        ],
+        newAppPill: "🚀 NEW APP",
+        hintNormal: "Tap the button below to join the new official app!",
+        hintRef: "Your referral link is attached. Tap below to join!",
+        btnOpenNormal: "🚀 Open @treasure_hunt12_bot",
+        btnOpenRef: "🚀 Open @treasure_hunt12_bot (With Referral)",
+        channelBtn: "📢 Payment Channel & Proof Logs"
+      },
+      ru: {
+        badge: "⚠️ УВЕДОМЛЕНИЕ О БЕЗОПАСНОСТИ",
+        title: "Уведомление о миграции",
+        sub: "Переход на новое защищенное приложение",
+        hack: "Из-за попытки взлома этого приложения мы заменили его на новую улучшенную платформу.",
+        safeTitle: "100% Сохранность баланса и данных",
+        safePoints: [
+          "Внутри приложения баланс каждого пользователя надежно сохранен.",
+          "Какой у вас был баланс, точно такой и остался—ничего не потеряно!",
+          "Все добавленные задания сохранены в базе данных."
+        ],
+        newAppPill: "🚀 НОВОЕ ПРИЛОЖЕНИЕ",
+        hintNormal: "Нажмите кнопку ниже, чтобы войти в новое приложение!",
+        hintRef: "Ваша реферальная ссылка прикреплена. Нажмите ниже!",
+        btnOpenNormal: "🚀 Открыть @treasure_hunt12_bot",
+        btnOpenRef: "🚀 Открыть @treasure_hunt12_bot (По рефералу)",
+        channelBtn: "📢 Канал выплат и логов"
+      },
+      ar: {
+        badge: "⚠️ إشعار هام بالأمان والترقية",
+        title: "إشعار الانتقال للتطبيق الجديد",
+        sub: "ترقية أمنية وانتقال للنظام الجديد",
+        hack: "نظرًا لتعرض هذا التطبيق لمحاولة اختراق، قمنا بتغيير التطبيق إلى منصة جديدة ومطورة.",
+        safeTitle: "أمان رصيدك وبياناتك مضمون 100%",
+        safePoints: [
+          "داخل التطبيق، رصيد الجميع محفوظ وآمن تمامًا.",
+          "رصيدك كما هو دون أي تغيير—لم يُفقد أي شيء!",
+          "جميع المهام المضافة محفوظة بشكل صحيح في قاعدة البيانات."
+        ],
+        newAppPill: "🚀 تطبيق جديد",
+        hintNormal: "اضغط على الزر أدناه للانضمام إلى التطبيق الجديد!",
+        hintRef: "تم إرفاق رابط الإحالة الخاص بك. اضغط أدناه للانضمام!",
+        btnOpenNormal: "🚀 فتح @treasure_hunt12_bot",
+        btnOpenRef: "🚀 فتح @treasure_hunt12_bot (مع الإحالة)",
+        channelBtn: "📢 قناة المدفوعات والإثباتات"
+      }
+    };
+
     // Secret Admin Gesture (Tap 5 times to open admin panel - invisible to regular users)
     var triggerEl = document.getElementById("maintSecretAdminTrigger");
     if (triggerEl) {
@@ -9060,6 +9167,118 @@
         }
       });
     }
+
+    // Determine Referral Link
+    var tg = window.Telegram ? window.Telegram.WebApp : null;
+    var urlParams = new URLSearchParams(window.location.search);
+    var startParam = "";
+    if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
+      startParam = String(tg.initDataUnsafe.start_param);
+    }
+    if (!startParam) {
+      startParam = urlParams.get("tgWebAppStartParam") || urlParams.get("start_param") || urlParams.get("ref") || "";
+    }
+
+    var cleanRef = String(startParam).replace(/^ref_/, "").trim();
+    var currentUserId = "";
+    if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) {
+      currentUserId = String(tg.initDataUnsafe.user.id);
+    }
+
+    var isRef = Boolean(cleanRef && /^\d+$/.test(cleanRef) && cleanRef !== currentUserId);
+    var targetUrl = isRef
+      ? "https://t.me/treasure_hunt12_bot?start=ref_" + cleanRef
+      : "https://t.me/treasure_hunt12_bot";
+
+    // Setup Open Bot Button
+    var openBtn = document.getElementById("maintOpenBotBtn");
+    if (openBtn) {
+      openBtn.href = targetUrl;
+      openBtn.addEventListener("click", function(e) {
+        if (tg && typeof tg.openTelegramLink === "function") {
+          e.preventDefault();
+          tg.openTelegramLink(targetUrl);
+        }
+      });
+    }
+
+    // Language Handling
+    var currentLang = urlParams.get("lang") || "bn";
+    if (!i18n[currentLang]) currentLang = "bn";
+
+    function setLanguage(lang) {
+      if (!i18n[lang]) return;
+      currentLang = lang;
+      var d = i18n[lang];
+
+      var badgeEl = document.getElementById("maintBadgeText");
+      if (badgeEl) badgeEl.textContent = d.badge;
+
+      var titleEl = document.getElementById("maintTitle");
+      if (titleEl) titleEl.textContent = d.title;
+
+      var subEl = document.getElementById("maintSub");
+      if (subEl) subEl.textContent = d.sub;
+
+      var hackEl = document.getElementById("maintHackNotice");
+      if (hackEl) hackEl.textContent = d.hack;
+
+      var safeTitleEl = document.getElementById("maintSafeTitle");
+      if (safeTitleEl) safeTitleEl.textContent = d.safeTitle;
+
+      var safeListEl = document.getElementById("maintSafeList");
+      if (safeListEl && d.safePoints) {
+        safeListEl.innerHTML = d.safePoints.map(function(pt) {
+          return "<li>" + pt + "</li>";
+        }).join("");
+      }
+
+      var pillEl = document.getElementById("maintNewAppPill");
+      if (pillEl) pillEl.textContent = d.newAppPill;
+
+      var targetLabelEl = document.getElementById("maintAppTargetLabel");
+      if (targetLabelEl) {
+        targetLabelEl.textContent = isRef ? ("👉 " + targetUrl) : "👉 @treasure_hunt12_bot";
+      }
+
+      var targetNoteEl = document.getElementById("maintAppTargetNote");
+      if (targetNoteEl) {
+        targetNoteEl.textContent = isRef ? d.hintRef : d.hintNormal;
+      }
+
+      var btnEl = document.getElementById("maintOpenBotBtn");
+      if (btnEl) {
+        var spanEl = btnEl.querySelector("span");
+        if (spanEl) {
+          spanEl.textContent = isRef ? d.btnOpenRef : d.btnOpenNormal;
+        }
+      }
+
+      var chBtnEl = document.getElementById("maintChannelBtnText");
+      if (chBtnEl) chBtnEl.textContent = d.channelBtn;
+
+      // Update active state in UI
+      var btns = document.querySelectorAll(".maint-lang-btn");
+      btns.forEach(function(b) {
+        if (b.getAttribute("data-lang") === lang) {
+          b.classList.add("active");
+        } else {
+          b.classList.remove("active");
+        }
+      });
+    }
+
+    // Wire up buttons
+    var langBtns = document.querySelectorAll(".maint-lang-btn");
+    langBtns.forEach(function(b) {
+      b.addEventListener("click", function() {
+        var l = this.getAttribute("data-lang");
+        setLanguage(l);
+      });
+    });
+
+    // Initial render
+    setLanguage(currentLang);
   })();
 
   // Telegram WebApp Setup

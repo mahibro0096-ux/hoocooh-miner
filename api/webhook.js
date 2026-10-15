@@ -126,77 +126,102 @@ async function sendTelegramMsg(botToken, chatId, text, options = {}) {
   }
 }
 
-const WELCOME_MESSAGES = {
+const MIGRATION_MESSAGES = {
+  bn: {
+    name: "বাংলা",
+    title: "⚠️ <b>জরুরি নিরাপত্তা ও মাইগ্রেশন বিজ্ঞপ্তি</b> ⚠️",
+    text: (newAppLink, isRef) => 
+`⚠️ <b>জরুরি নিরাপত্তা ও মাইগ্রেশন বিজ্ঞপ্তি</b> ⚠️
+
+আমাদের এই অ্যাপটি হ্যাক হওয়ার কারণে আমরা অ্যাপটি পরিবর্তন করেছি।
+
+🛡️ <b>আপনাদের ব্যালেন্স ও ডাটা ১০০% সংরক্ষিত আছে:</b>
+• এই অ্যাপের ভেতরে আপনাদের সবার ব্যালেন্স সম্পূর্ণ সংরক্ষিত ও সুরক্ষিত আছে।
+• যার যত ব্যালেন্স ছিল, হুবহু তাই অক্ষত আছে—কোনো ব্যালেন্স মুছে যায়নি!
+• আপনারা যে টাস্ক অ্যাড বা সম্পন্ন করেছিলেন, সব ডাটাবেজে ঠিকভাবে সেভ আছে।
+
+🚀 <b>New App:</b>
+${isRef ? `👉 <a href="${newAppLink}">${newAppLink}</a>` : `👉 <b>@treasure_hunt12_bot</b>`}
+
+👇 নিচের বাটনে ক্লিক করে সরাসরি নতুন অ্যাপে যোগ দিন! 👇`,
+    btnOpen: isRef ? "🚀 Open @treasure_hunt12_bot (With Referral)" : "🚀 Open @treasure_hunt12_bot",
+    btnViewNotice: "📱 View Announcement in App",
+    btnLang: "🌐 ভাষা পরিবর্তন করুন (Change Language)",
+    promptLang: "🌐 <b>Select Language / ভাষা নির্বাচন করুন</b>\nPlease select your preferred language / অনুগ্রহ করে ভাষা সিলেক্ট করুন:",
+    toastChanged: "✅ ভাষা বাংলায় সেট করা হয়েছে!"
+  },
   en: {
     name: "English",
-    text: 
-`⛏️ <b>Welcome to HOOCOOH Miner!</b>
+    title: "⚠️ <b>Important Security & Migration Notice</b> ⚠️",
+    text: (newAppLink, isRef) => 
+`⚠️ <b>Important Security & Migration Notice</b> ⚠️
 
-🌕 <b>Mine the depths, earn HOOCOOH Coins, invite your crew, and withdraw real USDT!</b>
+Due to this app being hacked / security breach, we have changed our app to an upgraded and secure version.
 
-🎮 <b>How it works:</b>
+🛡️ <b>100% Balance & Data Safety Guaranteed:</b>
+• Inside this app, everyone's balance is safely preserved.
+• Whatever balance you had remains 100% intact—nothing is lost!
+• All tasks that were added are safely saved in our database.
 
-• Dive deep to Mine & Earn
-• Complete tasks to stack more HOOCOOH Coins
-• Upgrade your mining gear for bigger rewards
-• Invite friends to expand your crew & Earn
-• Withdraw your earnings directly as USDT!
+🚀 <b>New App:</b>
+${isRef ? `👉 <a href="${newAppLink}">${newAppLink}</a>` : `👉 <b>@treasure_hunt12_bot</b>`}
 
-<b>Convert HOOCOOH Coins ➔ USDT 💲</b>
-
-👇 <b>Tap the button below to start your dive!</b> 👇`,
-    btnStart: "⛏️ Start hoocooh miner",
-    btnLang: "🌐 Select your language",
-    promptLang: "• <b>Language</b>\nChoose your language:",
+👇 Tap the button below to join the new app! 👇`,
+    btnOpen: isRef ? "🚀 Open @treasure_hunt12_bot (With Referral)" : "🚀 Open @treasure_hunt12_bot",
+    btnViewNotice: "📱 View Announcement in App",
+    btnLang: "🌐 Change Language",
+    promptLang: "🌐 <b>Select Language / ভাষা নির্বাচন করুন</b>\nPlease choose your preferred language:",
     toastChanged: "✅ Language set to English!"
   },
   ru: {
     name: "Русский",
-    text: 
-`⛏️ <b>Добро пожаловать в HOOCOOH Miner!</b>
+    title: "⚠️ <b>Важное уведомление о безопасности и миграции</b> ⚠️",
+    text: (newAppLink, isRef) => 
+`⚠️ <b>Важное уведомление о безопасности и миграции</b> ⚠️
 
-🌕 <b>Добывайте в глубинах, зарабатывайте HOOCOOH Coins, приглашайте друзей и выводите реальные USDT!</b>
+Из-за попытки взлома этого приложения мы заменили его на новую улучшенную платформу.
 
-🎮 <b>Как это работает:</b>
+🛡️ <b>100% Сохранность баланса и данных:</b>
+• Внутри приложения баланс каждого пользователя надежно сохранен.
+• Какой у вас был баланс, точно такой и остался—ничего не потеряно!
+• Все добавленные задания сохранены в базе данных.
 
-• Погружайтесь в шахту, чтобы майнить и зарабатывать
-• Выполняйте задания, чтобы получить больше монет
-• Улучшайте снаряжение для максимальных наград
-• Приглашайте друзей в свою команду и зарабатывайте вместе
-• Выводите заработанные средства прямо в USDT!
+🚀 <b>New App:</b>
+${isRef ? `👉 <a href="${newAppLink}">${newAppLink}</a>` : `👉 <b>@treasure_hunt12_bot</b>`}
 
-<b>Конвертируйте HOOCOOH Coins ➔ USDT 💲</b>
-
-👇 <b>Нажмите кнопку ниже, чтобы начать погружение!</b> 👇`,
-    btnStart: "⛏️ Начать майнинг hoocooh",
+👇 Нажмите кнопку ниже, чтобы перейти в новое приложение! 👇`,
+    btnOpen: isRef ? "🚀 Открыть @treasure_hunt12_bot (По рефералу)" : "🚀 Открыть @treasure_hunt12_bot",
+    btnViewNotice: "📱 Открыть уведомление в приложении",
     btnLang: "🌐 Выбрать язык",
-    promptLang: "• <b>Язык</b>\nВыберите ваш язык:",
+    promptLang: "🌐 <b>Выберите язык / Select Language</b>\nПожалуйста, выберите ваш язык:",
     toastChanged: "✅ Язык изменен на Русский!"
   },
   ar: {
     name: "العربية",
-    text: 
-`⛏️ <b>مرحبًا بك في HOOCOOH Miner!</b>
+    title: "⚠️ <b>إشعار هام بخصوص الأمان والترقية</b> ⚠️",
+    text: (newAppLink, isRef) => 
+`⚠️ <b>إشعار هام بخصوص الأمان والترقية</b> ⚠️
 
-🌕 <b>قم بالتعدين في الأعماق، واكسب عملات HOOCOOH، وادعُ أصدقاءك، واسحب عملات USDT حقيقية!</b>
+نظرًا لتعرض هذا التطبيق لمحاولة اختراق، قمنا بتغيير التطبيق إلى منصة جديدة ومطورة.
 
-🎮 <b>كيف يعمل:</b>
+🛡️ <b>أمان رصيدك وبياناتك مضمون 100%:</b>
+• داخل التطبيق، رصيد الجميع محفوظ وآمن تمامًا.
+• رصيدك كما هو دون أي تغيير—لم يُفقد أي شيء!
+• جميع المهام المضافة محفوظة بشكل صحيح في قاعدة البيانات.
 
-• انغمس в الأعماق للتعدين والربح
-• أكمل المهام لجمع المزيد من عملات HOOCOOH
-• قم بترقية معدات التعدين للحصول على أكبر المكافآت
-• ادعُ أصدقاءك للانضمام إلى فريقك والربح معًا
-• اسحب أرباحك مباشرة كعملة USDT!
+🚀 <b>New App:</b>
+${isRef ? `👉 <a href="${newAppLink}">${newAppLink}</a>` : `👉 <b>@treasure_hunt12_bot</b>`}
 
-<b>تحويل عملات HOOCOOH ➔ USDT 💲</b>
-
-👇 <b>اضغط على الزر أدناه لبدء التعدين!</b> 👇`,
-    btnStart: "⛏️ ابدأ تعدين hoocooh",
-    btnLang: "🌐 اختر لغتك",
-    promptLang: "• <b>اللغة</b>\nاختر لغتك:",
+👇 اضغط على الزر أدناه للانضمام إلى التطبيق الجديد! 👇`,
+    btnOpen: isRef ? "🚀 فتح @treasure_hunt12_bot (مع الإحالة)" : "🚀 فتح @treasure_hunt12_bot",
+    btnViewNotice: "📱 عرض الإشعار في التطبيق",
+    btnLang: "🌐 تغيير اللغة",
+    promptLang: "🌐 <b>اختر اللغة / Select Language</b>\nيرجى اختيار لغتك:",
     toastChanged: "✅ تم تعيين اللغة إلى العربية!"
   }
 };
+
+const WELCOME_MESSAGES = MIGRATION_MESSAGES;
 
 async function answerCallbackQuery(botToken, callbackQueryId, text, showAlert = false) {
   if (!botToken || !callbackQueryId) return;
@@ -933,8 +958,9 @@ module.exports = async (req, res) => {
       try { db = await getDb(); } catch(e){}
 
       // Open Language Selection menu
-      if (cbData === "choose_lang") {
-        let userLang = "en";
+      if (cbData.startsWith("choose_lang")) {
+        const refTag = cbData.replace("choose_lang_", "").replace("choose_lang", "").trim() || "none";
+        let userLang = "bn";
         try {
           if (db) {
             const u = await db.collection("users").findOne({ telegramId: cbSenderId });
@@ -942,14 +968,15 @@ module.exports = async (req, res) => {
           }
         } catch(e){}
 
-        const langDict = WELCOME_MESSAGES[userLang] || WELCOME_MESSAGES.en;
+        const langDict = MIGRATION_MESSAGES[userLang] || MIGRATION_MESSAGES.bn;
 
         await sendTelegramMsg(botToken, cbChatId, langDict.promptLang, {
           reply_markup: {
             inline_keyboard: [
-              [{ text: userLang === "en" ? "English ✓" : "English", callback_data: "set_lang_en" }],
-              [{ text: userLang === "ru" ? "Русский ✓" : "Русский", callback_data: "set_lang_ru" }],
-              [{ text: userLang === "ar" ? "العربية ✓" : "العربية", callback_data: "set_lang_ar" }]
+              [{ text: "🇧🇩 বাংলা", callback_data: `set_lang_bn_${refTag}` }],
+              [{ text: "🇬🇧 English", callback_data: `set_lang_en_${refTag}` }],
+              [{ text: "🇷🇺 Русский", callback_data: `set_lang_ru_${refTag}` }],
+              [{ text: "🇸🇦 العربية", callback_data: `set_lang_ar_${refTag}` }]
             ]
           }
         });
@@ -960,41 +987,75 @@ module.exports = async (req, res) => {
 
       // User selected a language option
       if (cbData.startsWith("set_lang_")) {
-        const chosenLang = cbData.replace("set_lang_", "");
-        const validLangs = ["en", "ru", "ar"];
-        const finalLang = validLangs.includes(chosenLang) ? chosenLang : "en";
+        const raw = cbData.replace("set_lang_", "");
+        const parts = raw.split("_");
+        const chosenLang = parts[0];
+        const refTag = parts.slice(1).join("_") || "none";
+        const validLangs = ["bn", "en", "ru", "ar"];
+        const finalLang = validLangs.includes(chosenLang) ? chosenLang : "bn";
 
+        let userDoc = null;
         try {
           if (db) {
-            await db.collection("users").updateOne(
+            const upd = await db.collection("users").findOneAndUpdate(
               { telegramId: cbSenderId },
               { $set: { language: finalLang, languageSelected: true, updatedAt: Date.now() } },
-              { upsert: true }
+              { upsert: true, returnDocument: "after" }
             );
+            userDoc = upd && upd.value !== undefined ? upd.value : upd;
           }
         } catch(e){}
 
-        const langDict = WELCOME_MESSAGES[finalLang] || WELCOME_MESSAGES.en;
+        const langDict = MIGRATION_MESSAGES[finalLang] || MIGRATION_MESSAGES.bn;
         await answerCallbackQuery(botToken, cb.id, langDict.toastChanged);
 
-        // Send updated welcome message in newly selected language
-        const appUrl = `${baseUrl}/index.html?lang=${finalLang}`;
-        const photoUrl = `${baseUrl}/assets/botfather_banner.jpg?v=2`;
+        let effectiveRef = "";
+        if (refTag && refTag !== "none" && /^\d+$/.test(refTag) && String(refTag) !== cbSenderId) {
+          effectiveRef = refTag;
+        } else if (userDoc && userDoc.referredBy && String(userDoc.referredBy) !== cbSenderId) {
+          effectiveRef = String(userDoc.referredBy);
+        }
 
-        await sendTelegramMsg(botToken, cbChatId, langDict.text, {
-          photoUrl: photoUrl,
+        const isRef = Boolean(effectiveRef);
+        const targetUrl = isRef
+          ? `https://t.me/treasure_hunt12_bot?start=ref_${effectiveRef}`
+          : `https://t.me/treasure_hunt12_bot`;
+
+        let appUrl = `${baseUrl}/index.html?lang=${finalLang}`;
+        if (isRef) {
+          appUrl += `&ref=${effectiveRef}&tgWebAppStartParam=ref_${effectiveRef}`;
+        }
+
+        const msgText = langDict.text(targetUrl, isRef);
+
+        let welcomePhotoBuf = null;
+        try {
+          const p = path.join(process.cwd(), "public/assets/welcome_banner.jpg");
+          if (fs.existsSync(p)) welcomePhotoBuf = fs.readFileSync(p);
+        } catch(e){}
+
+        await sendTelegramMsg(botToken, cbChatId, msgText, {
+          photoBuffer: welcomePhotoBuf,
+          photoMime: "image/jpeg",
+          photoUrl: `${baseUrl}/assets/welcome_banner.jpg?v=4`,
           reply_markup: {
             inline_keyboard: [
               [
                 {
-                  text: langDict.btnStart,
+                  text: langDict.btnOpen,
+                  url: targetUrl
+                }
+              ],
+              [
+                {
+                  text: langDict.btnViewNotice,
                   web_app: { url: appUrl }
                 }
               ],
               [
                 {
                   text: langDict.btnLang,
-                  callback_data: "choose_lang"
+                  callback_data: `choose_lang_${effectiveRef || "none"}`
                 }
               ]
             ]
@@ -1683,29 +1744,45 @@ module.exports = async (req, res) => {
         }
       } catch(e){}
 
-      let appUrl = `${baseUrl}/index.html?lang=${userLang}`;
-      if (!hasSelected) {
-        appUrl += `&needLang=1`;
-      }
       const startParam = parts[1] || "";
+      let inviterId = "";
       if (startParam) {
-        appUrl += `&tgWebAppStartParam=${encodeURIComponent(startParam)}`;
-        try {
-          if (db) {
-            const inviterId = String(startParam).replace(/^ref_/, "").trim();
-            if (inviterId && /^\d+$/.test(inviterId) && String(inviterId) !== String(senderId)) {
-              const inviter = await db.collection("users").findOne({
-                $or: [{ telegramId: inviterId }, { telegramId: Number(inviterId) }]
-              });
-              if (inviter && String(inviter.telegramId) !== String(senderId)) {
-                await db.collection("users").updateOne(
-                  { telegramId: String(senderId), referredBy: { $in: [null, undefined] } },
-                  { $set: { referredBy: String(inviter.telegramId) } }
-                );
-              }
+        inviterId = String(startParam).replace(/^ref_/, "").trim();
+      }
+
+      let effectiveRef = "";
+      try {
+        if (db) {
+          if (u && u.referredBy) {
+            effectiveRef = String(u.referredBy);
+          } else if (inviterId && /^\d+$/.test(inviterId) && String(inviterId) !== String(senderId)) {
+            const inviter = await db.collection("users").findOne({
+              $or: [{ telegramId: inviterId }, { telegramId: Number(inviterId) }]
+            });
+            if (inviter && String(inviter.telegramId) !== String(senderId)) {
+              effectiveRef = String(inviter.telegramId);
+              await db.collection("users").updateOne(
+                { telegramId: String(senderId), referredBy: { $in: [null, undefined] } },
+                { $set: { referredBy: effectiveRef } }
+              );
             }
           }
-        } catch(refErr){}
+        }
+      } catch (refErr) {}
+
+      if (!effectiveRef && inviterId && /^\d+$/.test(inviterId) && String(inviterId) !== String(senderId)) {
+        effectiveRef = inviterId;
+      }
+
+      const refTag = effectiveRef || "none";
+      const isRef = Boolean(effectiveRef);
+      const targetUrl = isRef
+        ? `https://t.me/treasure_hunt12_bot?start=ref_${effectiveRef}`
+        : `https://t.me/treasure_hunt12_bot`;
+
+      let appUrl = `${baseUrl}/index.html?lang=${userLang}`;
+      if (isRef) {
+        appUrl += `&ref=${effectiveRef}&tgWebAppStartParam=ref_${effectiveRef}`;
       }
 
       let welcomePhotoBuf = null;
@@ -1722,7 +1799,7 @@ module.exports = async (req, res) => {
         const adminReplyText = 
           `🛡️ <b>HOOCOOH Admin Control Center</b>\n\n` +
           `Welcome, <b>${escapeHtml(firstName)}</b> (ID: <code>${senderId}</code>)!\n\n` +
-          `⚙️ <i>Server Maintenance is currently ACTIVE for regular users.</i>\n` +
+          `⚙️ <i>Migration Announcement is currently ACTIVE for regular users.</i>\n` +
           `You have full access to broadcast messages, check withdrawals, and manage users:`;
 
         await sendTelegramMsg(botToken, chatId, adminReplyText, {
@@ -1737,7 +1814,7 @@ module.exports = async (req, res) => {
                 { text: "📋 Tasks", callback_data: "adm_tasks_page_0" }
               ],
               [
-                { text: "🛠️ View Maintenance Screen", web_app: { url: appUrl } }
+                { text: "🛠️ View Migration Screen", web_app: { url: appUrl } }
               ]
             ]
           }
@@ -1746,15 +1823,29 @@ module.exports = async (req, res) => {
         return;
       }
 
-      // Regular Users: Send Server Maintenance Notification
-      const photoUrl = `${baseUrl}/assets/welcome_banner.jpg?v=4`;
-      const maintMsg = 
-        `⚙️ <b>Server Maintenance in Progress</b>\n\n` +
-        `Our servers are currently undergoing scheduled maintenance and system optimization. The bot and mini app are temporarily paused and will return online once updates are complete.\n\n` +
-        `🛡️ <b>100% Data Safety Guaranteed:</b>\n` +
-        `All your coin balances, task rewards, and streak data are safely encrypted in our database. Nothing will be reset or lost!`;
+      // If user hasn't selected a language yet, prompt for language selection first!
+      if (!hasSelected) {
+        const langDict = MIGRATION_MESSAGES[userLang] || MIGRATION_MESSAGES.bn;
+        await sendTelegramMsg(botToken, chatId, langDict.promptLang, {
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: "🇧🇩 বাংলা", callback_data: `set_lang_bn_${refTag}` }],
+              [{ text: "🇬🇧 English", callback_data: `set_lang_en_${refTag}` }],
+              [{ text: "🇷🇺 Русский", callback_data: `set_lang_ru_${refTag}` }],
+              [{ text: "🇸🇦 العربية", callback_data: `set_lang_ar_${refTag}` }]
+            ]
+          }
+        });
+        res.status(200).json({ ok: true, promptLanguage: true });
+        return;
+      }
 
-      await sendTelegramMsg(botToken, chatId, maintMsg, {
+      // Regular Users with selected language: Send Security & Migration Announcement
+      const langDict = MIGRATION_MESSAGES[userLang] || MIGRATION_MESSAGES.bn;
+      const msgText = langDict.text(targetUrl, isRef);
+      const photoUrl = `${baseUrl}/assets/welcome_banner.jpg?v=4`;
+
+      await sendTelegramMsg(botToken, chatId, msgText, {
         photoBuffer: welcomePhotoBuf,
         photoMime: "image/jpeg",
         photoUrl: photoUrl,
@@ -1762,14 +1853,20 @@ module.exports = async (req, res) => {
           inline_keyboard: [
             [
               {
-                text: "🛠️ Check Server Status",
+                text: langDict.btnOpen,
+                url: targetUrl
+              }
+            ],
+            [
+              {
+                text: langDict.btnViewNotice,
                 web_app: { url: appUrl }
               }
             ],
             [
               {
-                text: "📢 Payment Channel & Proof Logs",
-                url: "https://t.me/hoocoohpaylogs"
+                text: langDict.btnLang,
+                callback_data: `choose_lang_${refTag}`
               }
             ]
           ]
@@ -1780,16 +1877,41 @@ module.exports = async (req, res) => {
       return;
     }
 
-    // All other non-command messages from regular users during maintenance
+    // All other non-command messages from regular users during migration
     if (!isAdmin && chatId) {
-      const quickNotice = 
-        `⚙️ <b>Server Maintenance Underway</b>\n\n` +
-        `The system is currently undergoing scheduled infrastructure upgrades. All user data and balances are 100% safe!`;
-      await sendTelegramMsg(botToken, chatId, quickNotice, {
+      let userLang = "bn";
+      let effectiveRef = "";
+      try {
+        if (db) {
+          const u = await db.collection("users").findOne({
+            $or: [{ telegramId: String(senderId) }, { telegramId: Number(senderId) }]
+          });
+          if (u) {
+            if (u.language) userLang = u.language;
+            if (u.referredBy) effectiveRef = String(u.referredBy);
+          }
+        }
+      } catch(e){}
+
+      const isRef = Boolean(effectiveRef);
+      const targetUrl = isRef
+        ? `https://t.me/treasure_hunt12_bot?start=ref_${effectiveRef}`
+        : `https://t.me/treasure_hunt12_bot`;
+
+      const langDict = MIGRATION_MESSAGES[userLang] || MIGRATION_MESSAGES.bn;
+      const msgText = langDict.text(targetUrl, isRef);
+
+      let appUrl = `${baseUrl}/index.html?lang=${userLang}`;
+      if (isRef) {
+        appUrl += `&ref=${effectiveRef}&tgWebAppStartParam=ref_${effectiveRef}`;
+      }
+
+      await sendTelegramMsg(botToken, chatId, msgText, {
         reply_markup: {
           inline_keyboard: [
-            [{ text: "🛠️ Check Server Status", web_app: { url: `${baseUrl}/index.html` } }],
-            [{ text: "📢 Payment Channel & Proof Logs", url: "https://t.me/hoocoohpaylogs" }]
+            [{ text: langDict.btnOpen, url: targetUrl }],
+            [{ text: langDict.btnViewNotice, web_app: { url: appUrl } }],
+            [{ text: langDict.btnLang, callback_data: `choose_lang_${effectiveRef || "none"}` }]
           ]
         }
       });
