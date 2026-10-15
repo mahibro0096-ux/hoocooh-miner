@@ -834,9 +834,15 @@ module.exports = async (req, res) => {
 `💳 <b>Wallet address:</b>\n` +
 `<code>${w.walletAddress}</code>\n` +
 `🔗 <b>Transaction id:</b> ${txLinkHtml}\n\n` +
-`BOT ---> @hoocoohmine_bot`;
+`BOT ---> @treasure_hunt12_bot`;
 
-            await sendTelegramMsg(botToken, channelId, channelMsg);
+            await sendTelegramMsg(botToken, channelId, channelMsg, {
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: "🚀 Open @treasure_hunt12_bot", url: "https://t.me/treasure_hunt12_bot" }]
+                ]
+              }
+            });
 
             // 2. Send 1:1 exact notification to the withdrawing user (matching media_1791525638939.png)
             if (w.telegramId) {

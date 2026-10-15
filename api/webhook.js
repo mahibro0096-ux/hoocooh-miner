@@ -339,9 +339,15 @@ async function handleAdminApproveWithdrawal(db, botToken, wid, baseUrl) {
 `💳 <b>Wallet address:</b>\n` +
 `<code>${w.walletAddress}</code>\n` +
 `🔗 <b>Transaction id:</b> ${txLinkHtml}\n\n` +
-`BOT ---> @hoocoohmine_bot`;
+`BOT ---> @treasure_hunt12_bot`;
 
-      await sendTelegramMsg(botToken, channelId, channelMsg);
+      await sendTelegramMsg(botToken, channelId, channelMsg, {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "🚀 Open @treasure_hunt12_bot", url: "https://t.me/treasure_hunt12_bot" }]
+          ]
+        }
+      });
 
       if (w.telegramId) {
         const userMsg = 
