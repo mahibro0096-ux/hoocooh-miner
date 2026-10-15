@@ -599,6 +599,21 @@
         </div>
       </div>
 
+      <!-- Hot Wallet Live Status Card -->
+      <div id="hotWalletStatusBar" style="background: rgba(0, 180, 216, 0.08); border: 1px solid rgba(0, 180, 216, 0.25); border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span id="hotWalletDot" style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #f59e0b;"></span>
+          <div>
+            <div style="font-size: 13px; font-weight: 700; color: #fff;" id="hotWalletTitle">Checking Hot Wallet Auto-Pay Status...</div>
+            <div style="font-size: 11.5px; color: var(--text-dim);" id="hotWalletSubtitle">Loading status...</div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button type="button" class="btn-secondary" id="checkHotWalletBtn" style="font-size: 11.5px; padding: 5px 12px; cursor: pointer;">🔄 Check Wallet</button>
+          <button type="button" class="btn-primary" id="setupHotWalletBtn" style="font-size: 11.5px; padding: 5px 12px; cursor: pointer;">⚙️ Setup 24 Words</button>
+        </div>
+      </div>
+
       <div class="filter-row">
         <button class="pill-filter active" data-filter="PENDING">Pending Only</button>
         <button class="pill-filter" data-filter="APPROVED">Approved</button>
@@ -1259,7 +1274,7 @@
       var panel = document.getElementById(target);
       if (panel) panel.classList.add("active");
 
-      if (target === "tabWithdrawals") loadWithdrawals();
+      if (target === "tabWithdrawals") { loadWithdrawals(); loadHotWalletStatus(); }
       if (target === "tabTasks") loadTasks();
       if (target === "tabBot") loadBotSettings();
       if (target === "tabUsers") checkHighRiskStats();
@@ -1270,6 +1285,7 @@
     loadStats();
     loadWithdrawals();
     loadTasks();
+    loadHotWalletStatus();
   }
 
   // 1. Stats
@@ -1411,6 +1427,81 @@
     } catch(e) {
       withdrawalsList.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--danger);">Failed to load withdrawals.</td></tr>';
     }
+  }
+
+  // Hot Wallet Auto-Pay Status Manager
+  var hotWalletDot = document.getElementById("hotWalletDot");
+  var hotWalletTitle = document.getElementById("hotWalletTitle");
+  var hotWalletSubtitle = document.getElementById("hotWalletSubtitle");
+  var checkHotWalletBtn = document.getElementById("checkHotWalletBtn");
+  var setupHotWalletBtn = document.getElementById("setupHotWalletBtn");
+
+  async function loadHotWalletStatus() {
+    if (!hotWalletTitle) return;
+    try {
+      var data = await apiAdmin("GET", { action: "autopay_status" });
+      if (data && data.ok && data.status) {
+        var s = data.status;
+        if (s.configured && s.enabled) {
+          hotWalletDot.style.background = "#10b981";
+          hotWalletTitle.innerHTML = `💎 Hot Wallet Ready (${s.walletType}) · Balance: <strong style="color: #00b4d8;">${Number(s.balanceTon).toFixed(4)} TON</strong>`;
+          var shortAddr = s.walletAddress ? (s.walletAddress.slice(0, 10) + '...' + s.walletAddress.slice(-8)) : '';
+          hotWalletSubtitle.innerHTML = `Address: <code>${shortAddr}</code> · Seqno: ${s.seqno} · Source: ${s.source === 'env' ? 'Vercel Env' : 'Database'}`;
+        } else if (s.configured && !s.enabled) {
+          hotWalletDot.style.background = "#f59e0b";
+          hotWalletTitle.innerHTML = `⚠️ Hot Wallet Configured but Auto-Pay is DISABLED`;
+          hotWalletSubtitle.innerHTML = s.message || "TON_AUTO_PAY is false.";
+        } else {
+          hotWalletDot.style.background = "#ef4444";
+          hotWalletTitle.innerHTML = `⚠️ Auto-Pay Not Configured (Mnemonic Missing)`;
+          hotWalletSubtitle.innerHTML = `${s.message || 'No 24 words set'}. Click [⚙️ Setup 24 Words] or set TON_WALLET_MNEMONIC in Vercel.`;
+        }
+      } else {
+        hotWalletDot.style.background = "#ef4444";
+        hotWalletTitle.innerHTML = `⚠️ Auto-Pay Status Unavailable`;
+        hotWalletSubtitle.innerHTML = "Could not fetch wallet status.";
+      }
+    } catch(e) {
+      if (hotWalletTitle) {
+        hotWalletDot.style.background = "#ef4444";
+        hotWalletTitle.innerHTML = `⚠️ Auto-Pay Status Check Error`;
+        hotWalletSubtitle.innerHTML = e.message || String(e);
+      }
+    }
+  }
+
+  if (checkHotWalletBtn) {
+    checkHotWalletBtn.addEventListener("click", function(){
+      showToast("⏳ Checking Hot Wallet on-chain...");
+      loadHotWalletStatus();
+    });
+  }
+
+  if (setupHotWalletBtn) {
+    setupHotWalletBtn.addEventListener("click", async function(){
+      var phrase = prompt("Enter your 24 secret words (mnemonic phrase) for the Hot Wallet:\n\n(It will be stored securely in your private MongoDB database so auto-pay sends TON directly to withdrawing users):");
+      if (!phrase || !phrase.trim()) return;
+
+      var clean = phrase.trim();
+      var words = clean.split(/[\s,]+/).filter(Boolean);
+      if (words.length !== 24 && words.length !== 12) {
+        alert(`❌ Invalid length: Found ${words.length} words, but TON wallets require 24 (or 12) words.`);
+        return;
+      }
+
+      showToast("⏳ Validating and saving hot wallet...");
+      try {
+        var res = await apiAdmin("POST", null, { action: "save_autopay_config", mnemonic: clean, autoPay: true });
+        if (res.ok) {
+          alert(`✅ Hot Wallet saved successfully!\n\nDerived Address: ${res.walletAddress}\n\nAuto-pay is now active!`);
+          loadHotWalletStatus();
+        } else {
+          alert("❌ " + (res.error || "Failed to save hot wallet"));
+        }
+      } catch(err) {
+        alert("❌ " + (err.message || err));
+      }
+    });
   }
 
   // Withdrawal Actions attached to window
@@ -1594,8 +1685,8 @@
             successCount++;
           } else {
             failCount++;
-            if (res.error && res.error.includes("INSUFFICIENT_HOT_WALLET_BALANCE")) {
-              alert("⚠️ Auto-pay halted: Hot wallet balance is insufficient!\n" + res.error);
+            if (res.error && (res.error.includes("INSUFFICIENT_HOT_WALLET_BALANCE") || res.error.includes("NOT sent") || res.error.includes("not configured") || res.error.includes("missing"))) {
+              alert("⚠️ Auto-pay halted:\n" + res.error);
               break;
             }
           }

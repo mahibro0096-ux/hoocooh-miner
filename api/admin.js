@@ -1,7 +1,7 @@
 const { getDb } = require("../lib/mongodb");
 const { ObjectId } = require("mongodb");
 const { validateInitData } = require("../lib/telegramAuth");
-const { dispatchTonPayout } = require("../lib/tonAutoPay");
+const { dispatchTonPayout, getTonAutoPayStatus, getTonAutoPayConfig } = require("../lib/tonAutoPay");
 const { purgeExpiredBannedUsers } = require("../lib/userHelper");
 const { startOrContinueBroadcast, processBroadcastQueue } = require("../lib/broadcastQueue");
 
@@ -652,6 +652,13 @@ module.exports = async (req, res) => {
         return;
       }
 
+      // 5b. Auto-Pay & Hot Wallet Status Diagnostics
+      if (action === "autopay_status" || action === "hot_wallet_status") {
+        const status = await getTonAutoPayStatus(db);
+        res.status(200).json({ ok: true, status });
+        return;
+      }
+
       if (action === "setup_indexes") {
         const {
           USER_INACTIVITY_TTL_SECONDS,
@@ -778,27 +785,23 @@ module.exports = async (req, res) => {
         if (!finalTx) {
           let autoPayRes;
           try {
-            autoPayRes = await dispatchTonPayout(w.walletAddress, tonVal, `HOOCOOH Payout UID ${w.telegramId}`);
+            autoPayRes = await dispatchTonPayout(w.walletAddress, tonVal, `HOOCOOH Payout UID ${w.telegramId}`, db);
           } catch (payErr) {
             await releasePayoutClaim();
             res.status(500).json({ error: `Auto-pay error: ${payErr && payErr.message ? payErr.message : payErr}` });
             return;
           }
-          if (autoPayRes.isConfigured) {
-            if (!autoPayRes.success) {
-              await releasePayoutClaim();
-              res.status(400).json({
-                error: `Auto-pay halted: ${autoPayRes.message || autoPayRes.error}`
-              });
-              return;
-            }
-            finalTx = autoPayRes.txHash;
-            autoPaySuccess = true;
-            autoPayMsg = autoPayRes.message || "On-chain transfer dispatched";
-          } else {
-            finalTx = "0x" + Math.random().toString(16).slice(2) + Math.random().toString(16).slice(2);
-            autoPayMsg = "Auto-pay env variables (TON_AUTO_PAY / TON_WALLET_MNEMONIC) not active. Approved manually.";
+          if (!autoPayRes.isConfigured || !autoPayRes.success) {
+            await releasePayoutClaim();
+            const haltReason = autoPayRes.message || autoPayRes.error || "Auto-pay is not configured or failed";
+            res.status(400).json({
+              error: `Auto-Pay failed (TON NOT sent): ${haltReason}`
+            });
+            return;
           }
+          finalTx = autoPayRes.txHash;
+          autoPaySuccess = true;
+          autoPayMsg = autoPayRes.message || "On-chain transfer dispatched";
         }
 
         // Finalize: PROCESSING (claimed above by this request) -> APPROVED
@@ -1343,6 +1346,55 @@ module.exports = async (req, res) => {
         await tasksCol.deleteOne(tQuery);
 
         res.status(200).json({ ok: true, message: "Task deleted successfully." });
+        return;
+      }
+
+      // 8b. Save TON Auto-Pay Hot Wallet Configuration (Stored securely in MongoDB settings)
+      if (action === "save_autopay_config") {
+        const { mnemonic, autoPay } = req.body || {};
+        if (!mnemonic || !String(mnemonic).trim()) {
+          res.status(400).json({ error: "Mnemonic phrase is required (24 or 12 words)" });
+          return;
+        }
+        const clean = String(mnemonic).trim().replace(/^["']|["']$/g, "").trim();
+        const words = clean.split(/[\s,]+/).map(w => w.replace(/["',]/g, "").trim().toLowerCase()).filter(Boolean);
+        if (words.length !== 24 && words.length !== 12) {
+          res.status(400).json({ error: `Invalid mnemonic length (${words.length} words found, expected 24 or 12).` });
+          return;
+        }
+        const { mnemonicToPrivateKey } = require("@ton/crypto");
+        const { WalletContractV5R1, WalletContractV4 } = require("@ton/ton");
+        let derivedAddr = "";
+        try {
+          const keyPair = await mnemonicToPrivateKey(words);
+          const w5 = WalletContractV5R1 ? WalletContractV5R1.create({ workchain: 0, publicKey: keyPair.publicKey }) : null;
+          const w4 = WalletContractV4.create({ workchain: 0, publicKey: keyPair.publicKey });
+          const chosen = w5 || w4;
+          derivedAddr = chosen.address.toString({ bounceable: false });
+        } catch (derErr) {
+          res.status(400).json({ error: `Could not derive wallet address from mnemonic: ${derErr.message}` });
+          return;
+        }
+
+        await db.collection("settings").updateOne(
+          { key: "ton_autopay" },
+          {
+            $set: {
+              key: "ton_autopay",
+              mnemonic: words.join(" "),
+              autoPay: autoPay !== false,
+              walletAddress: derivedAddr,
+              updatedAt: Date.now()
+            }
+          },
+          { upsert: true }
+        );
+
+        res.status(200).json({
+          ok: true,
+          message: "Hot wallet configured successfully!",
+          walletAddress: derivedAddr
+        });
         return;
       }
 
