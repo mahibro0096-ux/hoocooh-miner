@@ -59,7 +59,11 @@ function checkAdminAuth(req) {
 }
 
 async function sendTelegramMsg(botToken, chatId, text, options = {}) {
-  if (!botToken || !chatId) return false;
+  const token = (botToken || process.env.TELEGRAM_BOT_TOKEN || process.env.BOT_TOKEN || "").trim();
+  if (!token || !chatId) {
+    console.error("sendTelegramMsg: Missing bot token or chatId", { hasToken: !!token, chatId });
+    return false;
+  }
   try {
     const payload = {
       chat_id: String(chatId),
@@ -67,10 +71,10 @@ async function sendTelegramMsg(botToken, chatId, text, options = {}) {
       disable_web_page_preview: false
     };
 
-    let url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+    let url = `https://api.telegram.org/bot${token}/sendMessage`;
 
     if (options.photoUrl) {
-      url = `https://api.telegram.org/bot${botToken}/sendPhoto`;
+      url = `https://api.telegram.org/bot${token}/sendPhoto`;
       payload.photo = options.photoUrl;
       payload.caption = text;
     } else {
@@ -93,8 +97,16 @@ async function sendTelegramMsg(botToken, chatId, text, options = {}) {
       body: JSON.stringify(payload)
     });
     const data = await res.json();
+    if (!data.ok) {
+      console.error("sendTelegramMsg: Telegram API error:", {
+        chatId,
+        description: data.description,
+        error_code: data.error_code
+      });
+    }
     return data.ok;
   } catch (e) {
+    console.error("sendTelegramMsg: Network exception:", e && e.message ? e.message : e);
     return false;
   }
 }
@@ -175,7 +187,7 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const botToken = (process.env.TELEGRAM_BOT_TOKEN || process.env.BOT_TOKEN || "").trim();
 
   // ========================================================
   // Telegram WebApp Auto-Authentication (Via initData)
@@ -189,7 +201,7 @@ module.exports = async (req, res) => {
       return;
     }
     if (!botToken) {
-      res.status(500).json({ ok: false, error: "TELEGRAM_BOT_TOKEN is not configured in Vercel" });
+      res.status(500).json({ ok: false, error: "TELEGRAM_BOT_TOKEN or BOT_TOKEN is not configured in Vercel" });
       return;
     }
 

@@ -1434,7 +1434,19 @@
         loadWithdrawals();
         loadStats();
       } else {
-        alert("⚠️ " + (res.error || "Approval failed"));
+        var errMsg = res.error || "Approval failed";
+        var manualTx = prompt("⚠️ " + errMsg + "\n\nDo you want to approve manually by entering a custom TxHash? (Leave empty to cancel):");
+        if (manualTx && manualTx.trim()) {
+          showToast("⏳ Approving manually with TxHash...");
+          var manualRes = await apiAdmin("POST", null, { action: "approve_withdrawal", withdrawalId: id, txHash: manualTx.trim() });
+          if (manualRes.ok) {
+            showToast("✅ Approved manually with TxHash!");
+            loadWithdrawals();
+            loadStats();
+          } else {
+            alert("❌ " + (manualRes.error || "Manual approval failed"));
+          }
+        }
       }
     } catch(e) {
       alert("❌ " + (e.message || e));
